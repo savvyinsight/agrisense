@@ -13,11 +13,14 @@ import {
   Power as OnlineIcon,
 } from '@mui/icons-material';
 
-const DeviceCard = ({ device }) => {
+const DeviceCard = ({ device, liveTemp }) => {
   const statusColors = {
     online: 'success',
     offline: 'error',
   };
+
+  // Use liveTemp if available, otherwise use stored latestTemp
+  const displayTemp = liveTemp !== undefined ? liveTemp : device.latestTemp;
 
   return (
     <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
@@ -49,8 +52,11 @@ const DeviceCard = ({ device }) => {
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <SensorIcon color="primary" fontSize="small" />
           <Typography variant="body2">
-            Temperature: {device.latestTemp ? `${device.latestTemp}°C` : 'N/A'}
+            Temperature: {displayTemp ? `${displayTemp}°C` : 'N/A'}
           </Typography>
+          {liveTemp !== undefined && (
+            <Chip label="Live" size="small" color="primary" variant="outlined" />
+          )}
         </Box>
 
         {device.last_heartbeat && (

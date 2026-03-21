@@ -11,12 +11,16 @@ import {
   AppBar,
   Toolbar,
   IconButton,
+  Chip,
 } from '@mui/material';
 import LogoutIcon from '@mui/icons-material/Logout';
+import WifiIcon from '@mui/icons-material/Wifi';
+import WifiOffIcon from '@mui/icons-material/WifiOff';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../store/AuthContext';
 import { getDevices, getLatestReading } from '../../api/devices';
 import { logout } from '../../api/auth';
+import { useWebSocket } from '../../hooks/useWebSocket';
 import DeviceCard from '../../components/DeviceCard';
 
 const Dashboard = () => {
@@ -25,6 +29,23 @@ const Dashboard = () => {
   const [devices, setDevices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [liveUpdates, setLiveUpdates] = useState({});
+
+  // Get token for WebSocket
+  const token = localStorage.getItem('token');
+
+  // Handle WebSocket messages
+  const handleWebSocketMessage = (data) => {
+    if (data.type === 'sensor_data') {
+      const { device_id, sensor_type, value } = data.payload;
+      setLiveUpdates(prev => ({
+        ...prev,
+        [`${device_id}:${sensor_type}`]: value
+      }));
+    }
+  };
+
+  const { isConnected, send } = useWebSocket(token, handleWebSocketMessage);
 
   useEffect(() => {
     fetchDevices();
@@ -33,9 +54,11 @@ const Dashboard = () => {
   const fetchDevices = async () => {
     const result = await getDevices();
     if (result.success) {
+      const devicesList = result.data.devices || result.data || [];
+      
       // Fetch latest reading for each device
       const devicesWithData = await Promise.all(
-        result.data.devices.map(async (device) => {
+        devicesList.map(async (device) => {
           const reading = await getLatestReading(device.id, 'temperature');
           return {
             ...device,
@@ -71,6 +94,16 @@ const Dashboard = () => {
           <Typography variant="h6" sx={{ flexGrow: 1 }}>
             AgriSenseIoT Dashboard
           </Typography>
+          
+          {/* WebSocket Status */}
+          <Chip
+            icon={isConnected ? <WifiIcon /> : <WifiOffIcon />}
+            label={isConnected ? 'Live' : 'Offline'}
+            color={isConnected ? 'success' : 'error'}
+            size="small"
+            sx={{ mr: 2 }}
+          />
+          
           <Typography variant="body1" sx={{ mr: 2 }}>
             {user?.username}
           </Typography>
@@ -93,7 +126,10 @@ const Dashboard = () => {
           <Grid container spacing={3}>
             {devices.map((device) => (
               <Grid item xs={12} sm={6} md={4} key={device.id}>
-                <DeviceCard device={device} />
+                <DeviceCard 
+                  device={device} 
+                  liveTemp={liveUpdates[`${device.device_id}:temperature`]}
+                />
               </Grid>
             ))}
           </Grid>
