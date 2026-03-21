@@ -20,6 +20,7 @@ export const getDevice = async (id) => {
 
 export const getLatestReading = async (deviceId, sensorType = 'temperature') => {
   try {
+    // deviceId is the string like "sensor-001",not the numeric ID
     const response = await api.get(`/devices/${deviceId}/data/latest?sensor_type=${sensorType}`);
     return { success: true, data: response.data };
   } catch (error) {

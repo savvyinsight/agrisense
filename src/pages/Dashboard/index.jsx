@@ -59,7 +59,7 @@ const Dashboard = () => {
       // Fetch latest reading for each device
       const devicesWithData = await Promise.all(
         devicesList.map(async (device) => {
-          const reading = await getLatestReading(device.id, 'temperature');
+          const reading = await getLatestReading(device.device_id, 'temperature');
           return {
             ...device,
             latestTemp: reading.success ? reading.data.value : null,
