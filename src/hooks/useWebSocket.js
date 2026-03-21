@@ -7,6 +7,10 @@ export const useWebSocket = (token, onMessage) => {
   useEffect(() => {
     if (!token) return;
 
+    // Close existing connection first
+    if (wsRef.current){
+      wsRef.current.close()
+    }
     const ws = new WebSocket(`ws://localhost:8080/ws?token=${token}`);
     wsRef.current = ws;
 
@@ -16,8 +20,12 @@ export const useWebSocket = (token, onMessage) => {
     };
 
     ws.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      if (onMessage) onMessage(data);
+      try {
+        const data = JSON.parse(event.data);
+        if (onMessage) onMessage(data);
+      } catch (e) {
+        console.error('Failed to parse message',e)
+      }
     };
 
     ws.onclose = () => {
@@ -30,9 +38,11 @@ export const useWebSocket = (token, onMessage) => {
     };
 
     return () => {
-      ws.close();
+      if(wsRef.current && wsRef.current.readyState === WebSocket.OPEN){
+        wsRef.current.close();
+      }
     };
-  }, [token, onMessage]);
+  }, [token]);  // Only reconnect when token changes
 
   const send = (message) => {
     if (wsRef.current && isConnected) {
