@@ -12,19 +12,22 @@ import {
   Toolbar,
   IconButton,
   Chip,
+  Skeleton,
+  Badge,
 } from '@mui/material';
 import LogoutIcon from '@mui/icons-material/Logout';
 import WifiIcon from '@mui/icons-material/Wifi';
 import WifiOffIcon from '@mui/icons-material/WifiOff';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../store/AuthContext';
-import { getDevices, getLatestReading } from '../../api/devices';
 import { logout } from '../../api/auth';
 import { useWebSocket } from '../../hooks/useWebSocket';
 import DeviceCard from '../../components/DeviceCard';
 import SensorChart from '../../components/SensorChart';
 import NotificationsIcon from '@mui/icons-material/Notifications';
 import AlertPanel from '../../components/AlertPanel';
+import { DeviceCardSkeleton, ChartSkeleton, AlertSkeleton } from '../../components/SkeletonLoader';
+import { getDevices, getLatestReading, getActiveAlerts } from '../../api/devices';
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -37,6 +40,7 @@ const Dashboard = () => {
   const [selectedDevice, setSelectedDevice] = useState(null);
   const [alertPanelOpen, setAlertPanelOpen] = useState(false);
   const [liveAlert, setLiveAlert] = useState(null);
+  const [alerts, setAlerts] = useState([]);
 
   // Get token for WebSocket
   const token = localStorage.getItem('token');
@@ -71,7 +75,16 @@ const Dashboard = () => {
 
   useEffect(() => {
     fetchDevices();
+    fetchAlerts();
   }, []);
+
+  const fetchAlerts = async () => {
+  const result = await getActiveAlerts();
+  if (result.success) {
+    const alertsList = result.data.alerts || result.data || [];
+    setAlerts(alertsList);
+  }
+};
 
   const fetchDevices = async () => {
     const result = await getDevices();
@@ -102,38 +115,49 @@ const Dashboard = () => {
   };
 
   if (loading) {
-    return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
-        <CircularProgress />
+  return (
+    <Container maxWidth="lg" sx={{ mt: 4 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+        <Skeleton variant="text" width={200} height={40} />
+        <Skeleton variant="circular" width={40} height={40} />
       </Box>
-    );
-  }
+      <Grid container spacing={3}>
+        {[1, 2, 3].map((i) => (
+          <Grid item xs={12} sm={6} md={4} key={i}>
+            <DeviceCardSkeleton />
+          </Grid>
+        ))}
+      </Grid>
+    </Container>
+  );
+}
 
   return (
     <>
       <AppBar position="static">
-        <Toolbar>
-          <Typography variant="h6" sx={{ flexGrow: 1 }}>
+        <Toolbar sx={{ flexWrap: 'wrap', gap: 1 }}>
+          <Typography variant="h6" sx={{ flexGrow: 1, fontSize: { xs: '0.9rem', sm: '1.25rem' } }}>
             AgriSenseIoT Dashboard
           </Typography>
-
-          <IconButton color="inherit" onClick={() => setAlertPanelOpen(!alertPanelOpen)}>
-            <NotificationsIcon />
-          </IconButton>
           
-          {/* WebSocket Status */}
           <Chip
             icon={isConnected ? <WifiIcon /> : <WifiOffIcon />}
             label={isConnected ? 'Live' : 'Offline'}
             color={isConnected ? 'success' : 'error'}
             size="small"
-            sx={{ mr: 2 }}
           />
           
-          <Typography variant="body1" sx={{ mr: 2 }}>
+          <Typography variant="body2" sx={{ display: { xs: 'none', sm: 'block' } }}>
             {user?.username}
           </Typography>
-          <IconButton color="inherit" onClick={handleLogout}>
+          
+          <IconButton color="inherit" size="small" onClick={() => setAlertPanelOpen(!alertPanelOpen)}>
+            <Badge badgeContent={alerts?.length || 0} color="error">
+              <NotificationsIcon />
+            </Badge>
+          </IconButton>
+          
+          <IconButton color="inherit" size="small" onClick={handleLogout}>
             <LogoutIcon />
           </IconButton>
         </Toolbar>
@@ -149,7 +173,7 @@ const Dashboard = () => {
         {devices.length === 0 ? (
           <Alert severity="info">No devices found. Add a device to get started.</Alert>
         ) : (
-          <Grid container spacing={3}>
+          <Grid container spacing={{ xs: 1, sm: 2, md: 3 }}>
             {devices.map((device) => (
               <Grid item xs={12} sm={6} md={4} key={device.id}>
                 <DeviceCard 
