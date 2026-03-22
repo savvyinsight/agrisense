@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Container,
   Typography,
@@ -16,6 +17,7 @@ import LocationOnIcon from '@mui/icons-material/LocationOn';
 import { getDevicesDataLatest } from '../api/devices';
 
 const MapView = () => {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [deviceData, setDeviceData] = useState([]);

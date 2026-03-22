@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Container,
   Typography,
@@ -34,6 +35,7 @@ import AnalyticsIcon from '@mui/icons-material/Analytics';
 import { getAnalyticsReport } from '../api/devices';
 
 const Analytics = () => {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [reportData, setReportData] = useState(null);

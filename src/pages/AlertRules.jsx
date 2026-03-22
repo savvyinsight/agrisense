@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Container,
   Typography,
@@ -43,14 +44,16 @@ const emptyRule = {
   enabled: true,
 };
 
-const sensorTypes = [
-  { id: 1, name: 'Temperature' },
-  { id: 2, name: 'Humidity' },
-  { id: 3, name: 'Soil Moisture' },
-  { id: 4, name: 'Light Intensity' },
-];
-
 const AlertRules = () => {
+  const { t } = useTranslation();
+
+  const sensorTypes = [
+    { id: 1, name: t('alerts.temperature') },
+    { id: 2, name: t('alerts.humidity') },
+    { id: 3, name: t('alerts.soilMoisture') },
+    { id: 4, name: t('alerts.light') },
+  ];
+
   const [rules, setRules] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -158,20 +161,20 @@ const AlertRules = () => {
           mb: 3,
         }}
       >
-        <Typography variant="h4" fontWeight={700}>Alert Rules</Typography>
+        <Typography variant="h4" fontWeight={700}>{t('alerts.title')}</Typography>
         <Button
           sx={{ textTransform: 'none' }}
           variant="contained"
           startIcon={<AddCircleIcon />}
           onClick={openNew}
         >
-          Create Rule
+          {t('alerts.addRule')}
         </Button>
       </Box>
 
       <Paper sx={{ p: 2, mb: 3 }} elevation={2}>
         <Typography variant="body2" color="text.secondary">
-          Configure alert rules to monitor sensor thresholds and trigger notifications.
+          {t('alerts.subtitle')}
         </Typography>
       </Paper>
 
@@ -184,19 +187,19 @@ const AlertRules = () => {
           <Table>
             <TableHead>
               <TableRow>
-                <TableCell>Name</TableCell>
-                <TableCell>Sensor</TableCell>
-                <TableCell>Condition</TableCell>
-                <TableCell>Severity</TableCell>
-                <TableCell>Enabled</TableCell>
-                <TableCell align="right">Actions</TableCell>
+                <TableCell>{t('alerts.ruleName')}</TableCell>
+                <TableCell>{t('alerts.temperature')}</TableCell>
+                <TableCell>{t('alerts.condition')}</TableCell>
+                <TableCell>{t('alerts.severity')}</TableCell>
+                <TableCell>{t('alerts.active')}</TableCell>
+                <TableCell align="right">{t('devices.actions')}</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {rules.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={6} align="center" sx={{ py: 5 }}>
-                    No alert rules found. Click "Create Rule" to add your first one.
+                    {t('common.error')}. {t('common.add')} "{t('alerts.addRule')}" {t('common.view').toLowerCase()} {t('common.add')} {t('alerts.ruleName').toLowerCase()}.
                   </TableCell>
                 </TableRow>
               ) : (
@@ -242,28 +245,28 @@ const AlertRules = () => {
       )}
 
       <Dialog open={openDialog} fullWidth maxWidth="sm" onClose={closeDialog}>
-        <DialogTitle>{isEditMode ? 'Edit Alert Rule' : 'Create Alert Rule'}</DialogTitle>
+        <DialogTitle>{isEditMode ? t('alerts.editRule') : t('alerts.addRule')}</DialogTitle>
         <DialogContent sx={{ display: 'grid', gap: 16, mt: 1 }}>
           <TextField
-            label="Rule Name"
+            label={t('alerts.ruleName')}
             value={form.name}
             onChange={(e) => setField('name', e.target.value)}
             required
             fullWidth
           />
           <TextField
-            label="Device ID (optional)"
+            label={`${t('devices.deviceId')} (${t('common.view').toLowerCase()})`}
             value={form.device_id}
             onChange={(e) => setField('device_id', e.target.value)}
             fullWidth
-            helperText="Leave empty to apply to all devices"
+            helperText={t('alerts.condition')}
           />
 
           <FormControl fullWidth>
-            <InputLabel>Sensor Type</InputLabel>
+            <InputLabel>{t('alerts.temperature')}</InputLabel>
             <Select
               value={form.sensor_type_id}
-              label="Sensor Type"
+              label={t('alerts.temperature')}
               onChange={(e) => setField('sensor_type_id', e.target.value)}
             >
               {sensorTypes.map((sensor) => (
@@ -276,19 +279,19 @@ const AlertRules = () => {
 
           <Box sx={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: 2, alignItems: 'center' }}>
             <FormControl sx={{ minWidth: 80 }}>
-              <InputLabel>Condition</InputLabel>
+              <InputLabel>{t('alerts.condition')}</InputLabel>
               <Select
                 value={form.condition}
-                label="Condition"
+                label={t('alerts.condition')}
                 onChange={(e) => setField('condition', e.target.value)}
               >
-                <MenuItem value=">">&gt;</MenuItem>
-                <MenuItem value="<">&lt;</MenuItem>
-                <MenuItem value="=">=</MenuItem>
+                <MenuItem value=">">{t('alerts.greaterThan')}</MenuItem>
+                <MenuItem value="<">{t('alerts.lessThan')}</MenuItem>
+                <MenuItem value="=">{t('alerts.equals')}</MenuItem>
               </Select>
             </FormControl>
             <TextField
-              label="Threshold Value"
+              label={t('alerts.threshold')}
               type="number"
               value={form.threshold_value}
               onChange={(e) => setField('threshold_value', e.target.value)}
@@ -298,45 +301,45 @@ const AlertRules = () => {
           </Box>
 
           <TextField
-            label="Duration (seconds)"
+            label={`${t('common.refresh')} (${t('common.view').toLowerCase()})`}
             type="number"
             value={form.duration_seconds}
             onChange={(e) => setField('duration_seconds', e.target.value)}
             fullWidth
-            helperText="How long the condition must be true"
+            helperText={t('alerts.condition')}
           />
 
           <FormControl fullWidth>
-            <InputLabel>Severity</InputLabel>
+            <InputLabel>{t('alerts.severity')}</InputLabel>
             <Select
               value={form.severity}
-              label="Severity"
+              label={t('alerts.severity')}
               onChange={(e) => setField('severity', e.target.value)}
             >
-              <MenuItem value="info">Info</MenuItem>
-              <MenuItem value="warning">Warning</MenuItem>
-              <MenuItem value="critical">Critical</MenuItem>
+              <MenuItem value="info">{t('alerts.low')}</MenuItem>
+              <MenuItem value="warning">{t('alerts.medium')}</MenuItem>
+              <MenuItem value="critical">{t('alerts.high')}</MenuItem>
             </Select>
           </FormControl>
 
           <FormControl fullWidth>
-            <InputLabel>Status</InputLabel>
+            <InputLabel>{t('common.view')}</InputLabel>
             <Select
               value={form.enabled}
-              label="Status"
+              label={t('common.view')}
               onChange={(e) => setField('enabled', e.target.value)}
             >
-              <MenuItem value={true}>Enabled</MenuItem>
-              <MenuItem value={false}>Disabled</MenuItem>
+              <MenuItem value={true}>{t('alerts.active')}</MenuItem>
+              <MenuItem value={false}>{t('alerts.inactive')}</MenuItem>
             </Select>
           </FormControl>
 
           {error && <Alert severity="error">{error}</Alert>}
         </DialogContent>
         <DialogActions>
-          <Button onClick={closeDialog}>Cancel</Button>
+          <Button onClick={closeDialog}>{t('common.cancel')}</Button>
           <Button variant="contained" onClick={saveRule}>
-            {isEditMode ? 'Update' : 'Create'}
+            {isEditMode ? t('common.edit') : t('common.add')}
           </Button>
         </DialogActions>
       </Dialog>

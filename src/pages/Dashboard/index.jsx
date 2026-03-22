@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Container,
   Grid,
@@ -24,6 +25,7 @@ import { DeviceCardSkeleton, ChartSkeleton, AlertSkeleton } from '../../componen
 import { getDevices, getLatestReading, getActiveAlerts } from '../../api/devices';
 
 const Dashboard = () => {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const [devices, setDevices] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -129,11 +131,11 @@ const Dashboard = () => {
     <>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Typography variant="h5" gutterBottom>
-          Your Devices
+          {t('dashboard.title')}
         </Typography>
         <Chip
           icon={isConnected ? <WifiIcon /> : <WifiOffIcon />}
-          label={isConnected ? 'Live' : 'Offline'}
+          label={isConnected ? t('common.view') : t('devices.offline')}
           color={isConnected ? 'success' : 'error'}
           size="small"
         />
@@ -143,11 +145,11 @@ const Dashboard = () => {
         {error && <Alert severity="error">{error}</Alert>}
 
         <Typography variant="h5" gutterBottom>
-          Your Devices
+          {t('dashboard.deviceHealth')}
         </Typography>
 
         {devices.length === 0 ? (
-          <Alert severity="info">No devices found. Add a device to get started.</Alert>
+          <Alert severity="info">{t('devices.title')} - {t('common.add')} {t('devices.deviceName').toLowerCase()} {t('common.view').toLowerCase()}.</Alert>
         ) : (
           <Grid container spacing={{ xs: 1, sm: 2, md: 3 }}>
             {devices.map((device) => (

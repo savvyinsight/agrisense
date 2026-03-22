@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Container,
   Typography,
@@ -45,6 +46,7 @@ const emptyForm = {
 };
 
 const DeviceManagement = () => {
+  const { t } = useTranslation();
   const [devices, setDevices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -164,20 +166,20 @@ const DeviceManagement = () => {
           mb: 3,
         }}
       >
-        <Typography variant="h4" fontWeight={700}>Device Management</Typography>
+        <Typography variant="h4" fontWeight={700}>{t('devices.title')}</Typography>
         <Button
           sx={{ textTransform: 'none' }}
           variant="contained"
           startIcon={<AddCircleIcon />}
           onClick={openNew}
         >
-          Create Device
+          {t('devices.addDevice')}
         </Button>
       </Box>
 
       <Paper sx={{ p: 2, mb: 3 }} elevation={2}>
         <Typography variant="body2" color="text.secondary">
-          Manage registered devices, update configuration and view connection statuses.
+          {t('devices.subtitle')}
         </Typography>
       </Paper>
 
@@ -190,20 +192,20 @@ const DeviceManagement = () => {
           <Table>
             <TableHead>
               <TableRow>
-                <TableCell>Device ID</TableCell>
-                <TableCell>Name</TableCell>
-                <TableCell>Type</TableCell>
-                <TableCell>Location</TableCell>
-                <TableCell>Last Status</TableCell>
-                <TableCell>Reporting</TableCell>
-                <TableCell align="right">Actions</TableCell>
+                <TableCell>{t('devices.deviceId')}</TableCell>
+                <TableCell>{t('devices.deviceName')}</TableCell>
+                <TableCell>{t('devices.deviceType')}</TableCell>
+                <TableCell>{t('devices.location')}</TableCell>
+                <TableCell>{t('devices.status')}</TableCell>
+                <TableCell>{t('common.refresh')}</TableCell>
+                <TableCell align="right">{t('devices.actions')}</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {devices.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={7} align="center" sx={{ py: 5 }}>
-                    No devices found. Click "Create Device" to add your first one.
+                    {t('common.error')}. {t('common.add')} "{t('devices.addDevice')}" {t('common.view').toLowerCase()} {t('common.add')} {t('devices.deviceName').toLowerCase()}.
                   </TableCell>
                 </TableRow>
               ) : (
@@ -236,17 +238,17 @@ const DeviceManagement = () => {
       )}
 
       <Dialog open={openDialog} fullWidth maxWidth="sm" onClose={closeDialog}>
-        <DialogTitle>{isEditMode ? 'Edit Device' : 'Create Device'}</DialogTitle>
+        <DialogTitle>{isEditMode ? t('devices.editDevice') : t('devices.addDevice')}</DialogTitle>
         <DialogContent sx={{ display: 'grid', gap: 16, mt: 1 }}>
           <TextField
-            label="Device ID"
+            label={t('devices.deviceId')}
             value={form.device_id}
             onChange={(e) => setField('device_id', e.target.value)}
             required
             fullWidth
           />
           <TextField
-            label="Name"
+            label={t('devices.deviceName')}
             value={form.name}
             onChange={(e) => setField('name', e.target.value)}
             required
@@ -254,16 +256,16 @@ const DeviceManagement = () => {
           />
 
           <FormControl fullWidth>
-            <InputLabel>Type</InputLabel>
-            <Select value={form.type} label="Type" onChange={(e) => setField('type', e.target.value)}>
-              <MenuItem value="sensor">Sensor</MenuItem>
-              <MenuItem value="controller">Controller</MenuItem>
-              <MenuItem value="both">Both</MenuItem>
+            <InputLabel>{t('devices.deviceType')}</InputLabel>
+            <Select value={form.type} label={t('devices.deviceType')} onChange={(e) => setField('type', e.target.value)}>
+              <MenuItem value="sensor">{t('devices.sensor')}</MenuItem>
+              <MenuItem value="controller">{t('devices.controller')}</MenuItem>
+              <MenuItem value="both">{t('devices.gateway')}</MenuItem>
             </Select>
           </FormControl>
 
           <TextField
-            label="Location"
+            label={t('devices.location')}
             value={form.location}
             onChange={(e) => setField('location', e.target.value)}
             fullWidth
@@ -286,17 +288,17 @@ const DeviceManagement = () => {
 
           <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
             <TextField
-              label="Reporting Interval (s)"
+              label={t('devices.firmwareVersion')}
               type="number"
               value={form.config.reporting_interval}
               onChange={(e) => setField('config.reporting_interval', e.target.value)}
               fullWidth
             />
             <FormControl fullWidth>
-              <InputLabel>Temp Unit</InputLabel>
+              <InputLabel>{t('devices.batteryLevel')}</InputLabel>
               <Select
                 value={form.config.temperature_unit}
-                label="Temp Unit"
+                label={t('devices.batteryLevel')}
                 onChange={(e) => setField('config.temperature_unit', e.target.value)}
               >
                 <MenuItem value="celsius">Celsius</MenuItem>
@@ -308,8 +310,8 @@ const DeviceManagement = () => {
           {error && <Alert severity="error">{error}</Alert>}
         </DialogContent>
         <DialogActions>
-          <Button onClick={closeDialog}>Cancel</Button>
-          <Button variant="contained" onClick={saveDevice}>{isEditMode ? 'Update' : 'Create'}</Button>
+          <Button onClick={closeDialog}>{t('common.cancel')}</Button>
+          <Button variant="contained" onClick={saveDevice}>{isEditMode ? t('common.edit') : t('common.add')}</Button>
         </DialogActions>
       </Dialog>
 

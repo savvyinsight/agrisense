@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 
 import {
   Box,
@@ -32,21 +33,13 @@ import {
   AccountCircle,
   Logout,
   Notifications,
+  Language,
 } from '@mui/icons-material';
 import { useAuth } from '../store/AuthContext';
 import { logout } from '../api/auth';
 import { getActiveAlerts } from '../api/devices';
 
 const drawerWidth = 280;
-
-const navigationItems = [
-  { text: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard' },
-  { text: 'Devices', icon: <DevicesIcon />, path: '/devices' },
-  { text: 'Alerts', icon: <AlertsIcon />, path: '/alerts' },
-  { text: 'Automation', icon: <AutomationIcon />, path: '/automation' },
-  { text: 'Analytics', icon: <AnalyticsIcon />, path: '/analytics' },
-  { text: 'Map View', icon: <MapIcon />, path: '/map' },
-];
 
 const Layout = ({ children }) => {
   const theme = useTheme();
@@ -57,6 +50,17 @@ const Layout = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, isAdmin, setUser } = useAuth();
+  const { t, i18n } = useTranslation();
+
+  const navigationItems = [
+    { text: t('nav.dashboard'), icon: <DashboardIcon />, path: '/dashboard' },
+    { text: t('nav.devices'), icon: <DevicesIcon />, path: '/devices' },
+    { text: t('nav.alerts'), icon: <AlertsIcon />, path: '/alerts' },
+    { text: t('nav.automation'), icon: <AutomationIcon />, path: '/automation' },
+    { text: t('nav.analytics'), icon: <AnalyticsIcon />, path: '/analytics' },
+    { text: t('nav.map'), icon: <MapIcon />, path: '/map' },
+  ];
+
   const filteredNavigationItems = navigationItems.filter(item => {
     if (isAdmin()) return true;
     // Viewers can only see Dashboard, Analytics, and Map
@@ -77,6 +81,10 @@ const Layout = ({ children }) => {
 
   const handleAlertsClick = () => {
     navigate('/alerts');
+  };
+
+  const handleLanguageChange = (lng) => {
+    i18n.changeLanguage(lng);
   };
 
   // Load active alerts on component mount
@@ -171,6 +179,15 @@ const Layout = ({ children }) => {
           </IconButton>
 
           <IconButton
+            color="inherit"
+            size="large"
+            onClick={() => handleLanguageChange(i18n.language === 'en' ? 'zh' : 'en')}
+            title={t('language.chinese')}
+          >
+            <Language />
+          </IconButton>
+
+          <IconButton
             size="large"
             aria-label="account of current user"
             aria-controls="primary-search-account-menu"
@@ -252,11 +269,11 @@ const Layout = ({ children }) => {
         </MenuItem>
         <MenuItem onClick={handleProfileMenuClose}>
           <AccountCircle sx={{ mr: 1 }} />
-          Profile
+          {t('user.profile')}
         </MenuItem>
         <MenuItem onClick={handleLogout}>
           <Logout sx={{ mr: 1 }} />
-          Logout
+          {t('user.logout')}
         </MenuItem>
       </Menu>
     </Box>
