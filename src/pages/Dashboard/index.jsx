@@ -22,7 +22,7 @@ import { getDevices, getLatestReading } from '../../api/devices';
 import { logout } from '../../api/auth';
 import { useWebSocket } from '../../hooks/useWebSocket';
 import DeviceCard from '../../components/DeviceCard';
-import TemperatureChart from '../../components/TemperatureChart';
+import SensorChart from '../../components/SensorChart';
 import NotificationsIcon from '@mui/icons-material/Notifications';
 import AlertPanel from '../../components/AlertPanel';
 
@@ -164,10 +164,10 @@ const Dashboard = () => {
 
         {/* Chart Section*/}
         {selectedDevice && (
-          <Box sx={{mt:4}}>
-            <TemperatureChart
+          <Box sx={{ mt: 4 }}>
+            <SensorChart 
               deviceId={selectedDevice.device_id}
-              deviceName={selectedDevice.deviceName}
+              deviceName={selectedDevice.name}
             />
           </Box>
         )}
