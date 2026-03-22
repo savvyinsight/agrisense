@@ -23,6 +23,8 @@ import { logout } from '../../api/auth';
 import { useWebSocket } from '../../hooks/useWebSocket';
 import DeviceCard from '../../components/DeviceCard';
 import TemperatureChart from '../../components/TemperatureChart';
+import NotificationsIcon from '@mui/icons-material/Notifications';
+import AlertPanel from '../../components/AlertPanel';
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -33,18 +35,35 @@ const Dashboard = () => {
   const [liveUpdates, setLiveUpdates] = useState({});
   // state for selecte device
   const [selectedDevice, setSelectedDevice] = useState(null);
+  const [alertPanelOpen, setAlertPanelOpen] = useState(false);
+  const [liveAlert, setLiveAlert] = useState(null);
 
   // Get token for WebSocket
   const token = localStorage.getItem('token');
 
   // Handle WebSocket messages
   const handleWebSocketMessage = (data) => {
+    console.log('🔵 WebSocket received:', data);
     if (data.type === 'sensor_data') {
       const { device_id, sensor_type, value } = data.payload;
       setLiveUpdates(prev => ({
         ...prev,
         [`${device_id}:${sensor_type}`]: value
       }));
+      
+      // Detect temperature alerts (>30°C)
+      if (sensor_type === 'temperature' && value > 30) {
+        const alertData = {
+          id: Date.now(),
+          device_id: device_id,
+          message: `🔥 High temperature alert: ${value.toFixed(1)}°C`,
+          severity: value > 35 ? 'critical' : 'warning',
+          triggered_at: new Date().toISOString()
+        };
+        console.log('🚨 Alert detected:', alertData);
+        setLiveAlert(alertData);
+        setAlertPanelOpen(true);
+      }
     }
   };
 
@@ -97,6 +116,10 @@ const Dashboard = () => {
           <Typography variant="h6" sx={{ flexGrow: 1 }}>
             AgriSenseIoT Dashboard
           </Typography>
+
+          <IconButton color="inherit" onClick={() => setAlertPanelOpen(!alertPanelOpen)}>
+            <NotificationsIcon />
+          </IconButton>
           
           {/* WebSocket Status */}
           <Chip
@@ -148,6 +171,12 @@ const Dashboard = () => {
             />
           </Box>
         )}
+
+        <AlertPanel 
+          open={alertPanelOpen} 
+          onClose={() => setAlertPanelOpen(false)}
+          liveAlert={liveAlert}
+        />
       </Container>
     </>
   );
