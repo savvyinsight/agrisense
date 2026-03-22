@@ -70,3 +70,121 @@ export const getAlertHistory = async (page = 1, limit = 20) => {
     return { success: false, error: error.response?.data?.error };
   }
 };
+
+export const createDevice = async (device) => {
+  try {
+    const response = await api.post('/devices', device);
+    return { success: true, data: response.data };
+  } catch (error) {
+    return { success: false, error: error.response?.data?.error };
+  }
+};
+
+export const updateDevice = async (id, payload) => {
+  try {
+    const response = await api.put(`/devices/${id}`, payload);
+    return { success: true, data: response.data };
+  } catch (error) {
+    return { success: false, error: error.response?.data?.error };
+  }
+};
+
+export const deleteDevice = async (id) => {
+  try {
+    await api.delete(`/devices/${id}`);
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.response?.data?.error };
+  }
+};
+
+export const getDevicesByStatus = async (page = 1, limit = 20, status = 'online') => {
+  try {
+    const response = await api.get(`/devices?page=${page}&limit=${limit}&status=${status}`);
+    return { success: true, data: response.data };
+  } catch (error) {
+    return { success: false, error: error.response?.data?.error };
+  }
+};
+
+export const getDevicesDataLatest = async (deviceIds = []) => {
+  try {
+    if (!deviceIds.length) {
+      return { success: true, data: { devices: [] } };
+    }
+    const response = await api.get(`/devices/data/latest?device_ids=${deviceIds.join(',')}`);
+    return { success: true, data: response.data };
+  } catch (error) {
+    return { success: false, error: error.response?.data?.error };
+  }
+};
+
+export const createAlertRule = async (rule) => {
+  try {
+    const response = await api.post('/alerts/rules', rule);
+    return { success: true, data: response.data };
+  } catch (error) {
+    return { success: false, error: error.response?.data?.error };
+  }
+};
+
+export const getAlertRules = async () => {
+  try {
+    const response = await api.get('/alerts/rules');
+    return { success: true, data: response.data };
+  } catch (error) {
+    return { success: false, error: error.response?.data?.error };
+  }
+};
+
+export const createAutomationRule = async (rule) => {
+  try {
+    const response = await api.post('/automation/rules', rule);
+    return { success: true, data: response.data };
+  } catch (error) {
+    return { success: false, error: error.response?.data?.error };
+  }
+};
+
+export const getAutomationRules = async () => {
+  try {
+    const response = await api.get('/automation/rules');
+    return { success: true, data: response.data };
+  } catch (error) {
+    return { success: false, error: error.response?.data?.error };
+  }
+};
+
+export const sendCommand = async (deviceId, commandPayload) => {
+  try {
+    const response = await api.post(`/devices/${deviceId}/commands`, commandPayload);
+    return { success: true, data: response.data };
+  } catch (error) {
+    return { success: false, error: error.response?.data?.error };
+  }
+};
+
+export const getCommandStatus = async (deviceId, commandId) => {
+  try {
+    const response = await api.get(`/devices/${deviceId}/commands/${commandId}`);
+    return { success: true, data: response.data };
+  } catch (error) {
+    return { success: false, error: error.response?.data?.error };
+  }
+};
+
+export const getAnalyticsReport = async ({ deviceId, start, end, reportType = 'daily' }) => {
+  try {
+    const response = await api.get('/analytics/report', {
+      params: {
+        device_id: deviceId,
+        start,
+        end,
+        report_type: reportType,
+      },
+    });
+    return { success: true, data: response.data };
+  } catch (error) {
+    return { success: false, error: error.response?.data?.error };
+  }
+};

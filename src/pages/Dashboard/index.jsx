@@ -8,19 +8,13 @@ import {
   Box,
   CircularProgress,
   Alert,
-  AppBar,
-  Toolbar,
-  IconButton,
   Chip,
   Skeleton,
   Badge,
 } from '@mui/material';
-import LogoutIcon from '@mui/icons-material/Logout';
 import WifiIcon from '@mui/icons-material/Wifi';
 import WifiOffIcon from '@mui/icons-material/WifiOff';
-import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../store/AuthContext';
-import { logout } from '../../api/auth';
 import { useWebSocket } from '../../hooks/useWebSocket';
 import DeviceCard from '../../components/DeviceCard';
 import SensorChart from '../../components/SensorChart';
@@ -30,8 +24,7 @@ import { DeviceCardSkeleton, ChartSkeleton, AlertSkeleton } from '../../componen
 import { getDevices, getLatestReading, getActiveAlerts } from '../../api/devices';
 
 const Dashboard = () => {
-  const navigate = useNavigate();
-  const { user, setUser } = useAuth();
+  const { user } = useAuth();
   const [devices, setDevices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -116,7 +109,7 @@ const Dashboard = () => {
 
   if (loading) {
   return (
-    <Container maxWidth="lg" sx={{ mt: 4 }}>
+    <Container maxWidth="lg">
       <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
         <Skeleton variant="text" width={200} height={40} />
         <Skeleton variant="circular" width={40} height={40} />
@@ -134,36 +127,19 @@ const Dashboard = () => {
 
   return (
     <>
-      <AppBar position="static">
-        <Toolbar sx={{ flexWrap: 'wrap', gap: 1 }}>
-          <Typography variant="h6" sx={{ flexGrow: 1, fontSize: { xs: '0.9rem', sm: '1.25rem' } }}>
-            AgriSenseIoT Dashboard
-          </Typography>
-          
-          <Chip
-            icon={isConnected ? <WifiIcon /> : <WifiOffIcon />}
-            label={isConnected ? 'Live' : 'Offline'}
-            color={isConnected ? 'success' : 'error'}
-            size="small"
-          />
-          
-          <Typography variant="body2" sx={{ display: { xs: 'none', sm: 'block' } }}>
-            {user?.username}
-          </Typography>
-          
-          <IconButton color="inherit" size="small" onClick={() => setAlertPanelOpen(!alertPanelOpen)}>
-            <Badge badgeContent={alerts?.length || 0} color="error">
-              <NotificationsIcon />
-            </Badge>
-          </IconButton>
-          
-          <IconButton color="inherit" size="small" onClick={handleLogout}>
-            <LogoutIcon />
-          </IconButton>
-        </Toolbar>
-      </AppBar>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+        <Typography variant="h5" gutterBottom>
+          Your Devices
+        </Typography>
+        <Chip
+          icon={isConnected ? <WifiIcon /> : <WifiOffIcon />}
+          label={isConnected ? 'Live' : 'Offline'}
+          color={isConnected ? 'success' : 'error'}
+          size="small"
+        />
+      </Box>
 
-      <Container maxWidth="lg" sx={{ mt: 4 }}>
+      <Container maxWidth="lg">
         {error && <Alert severity="error">{error}</Alert>}
 
         <Typography variant="h5" gutterBottom>

@@ -17,10 +17,20 @@ export const AuthProvider = ({ children }) => {
     setLoading(false);
   }, []);
 
+  const isAdmin = () => {
+    return user?.role === 'admin';
+  };
+
+  const isViewer = () => {
+    return user?.role === 'viewer';
+  };
+
   const value = {
     user,
     setUser,
-    loading
+    loading,
+    isAdmin,
+    isViewer
   };
 
   return (
