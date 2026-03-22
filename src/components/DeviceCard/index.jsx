@@ -13,7 +13,7 @@ import {
   Power as OnlineIcon,
 } from '@mui/icons-material';
 
-const DeviceCard = ({ device, liveTemp }) => {
+const DeviceCard = ({ device, liveTemp,onClick }) => {
   const statusColors = {
     online: 'success',
     offline: 'error',
@@ -23,7 +23,18 @@ const DeviceCard = ({ device, liveTemp }) => {
   const displayTemp = liveTemp !== undefined ? liveTemp : device.latestTemp;
 
   return (
-    <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+    <Card 
+    sx={{ 
+        height: '100%', 
+        display: 'flex', 
+        flexDirection: 'column',
+        cursor: onClick ? 'pointer' : 'default',
+        transition:'transform 0.2s',
+        '&:hover': onClick ? { transform: 'scale(1.02)', } : {},
+      }}
+      onClick={onClick}
+    >
+      
       <CardContent>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
           <Typography variant="h6" component="div" noWrap>

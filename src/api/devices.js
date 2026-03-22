@@ -27,3 +27,18 @@ export const getLatestReading = async (deviceId, sensorType = 'temperature') => 
     return { success: false, error: error.response?.data?.error };
   }
 };
+
+export const getHistoricalData = async (deviceId, sensorType, start, end) => {
+  try {
+    const response = await api.get(`/devices/${deviceId}/data`, {
+      params: {
+        sensor_type: sensorType,
+        start: start,
+        end: end,
+      },
+    });
+    return { success: true, data: response.data };
+  } catch (error) {
+    return { success: false, error: error.response?.data?.error };
+  }
+};

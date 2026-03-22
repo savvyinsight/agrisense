@@ -22,6 +22,7 @@ import { getDevices, getLatestReading } from '../../api/devices';
 import { logout } from '../../api/auth';
 import { useWebSocket } from '../../hooks/useWebSocket';
 import DeviceCard from '../../components/DeviceCard';
+import TemperatureChart from '../../components/TemperatureChart';
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -30,6 +31,8 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [liveUpdates, setLiveUpdates] = useState({});
+  // state for selecte device
+  const [selectedDevice, setSelectedDevice] = useState(null);
 
   // Get token for WebSocket
   const token = localStorage.getItem('token');
@@ -129,10 +132,21 @@ const Dashboard = () => {
                 <DeviceCard 
                   device={device} 
                   liveTemp={liveUpdates[`${device.device_id}:temperature`]}
+                  onClick={() => setSelectedDevice(device)}
                 />
               </Grid>
             ))}
           </Grid>
+        )}
+
+        {/* Chart Section*/}
+        {selectedDevice && (
+          <Box sx={{mt:4}}>
+            <TemperatureChart
+              deviceId={selectedDevice.device_id}
+              deviceName={selectedDevice.deviceName}
+            />
+          </Box>
         )}
       </Container>
     </>
