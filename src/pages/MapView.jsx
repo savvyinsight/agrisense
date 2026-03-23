@@ -48,12 +48,12 @@ const MapView = () => {
         }}
       >
         <MapIcon sx={{ mr: 2, fontSize: 40 }} />
-        <Typography variant="h4" fontWeight={700}>Map View</Typography>
+        <Typography variant="h4" fontWeight={700}>{t('map.title')}</Typography>
       </Box>
 
       <Paper sx={{ p: 2, mb: 3 }} elevation={2}>
         <Typography variant="body2" color="text.secondary">
-          View device locations and real-time sensor data on an interactive map.
+          {t('map.subtitle')}
         </Typography>
       </Paper>
 
@@ -85,21 +85,21 @@ const MapView = () => {
             <Box sx={{ textAlign: 'center' }}>
               <MapIcon sx={{ fontSize: 64, color: '#ccc', mb: 2 }} />
               <Typography variant="h6" color="textSecondary">
-                Interactive Map Coming Soon
+                {t('map.deviceLocations')}
               </Typography>
               <Typography variant="body2" color="textSecondary">
-                Integration with mapping services planned
+                {t('map.integrationPlanned')}
               </Typography>
             </Box>
           </Paper>
 
           <Typography variant="h6" gutterBottom sx={{ mt: 3 }}>
-            Device Locations & Live Data
+            {t('map.deviceLocationsLiveData')}
           </Typography>
 
           {deviceData.length === 0 ? (
             <Alert severity="info">
-              No devices with location data found. Add latitude/longitude to device configurations.
+              {t('map.noDevicesWithLocation')}
             </Alert>
           ) : (
             <Grid container spacing={3}>
@@ -118,23 +118,23 @@ const MapView = () => {
                         </Typography>
                       ) : (
                         <Typography variant="body2" color="textSecondary" sx={{ mb: 1 }}>
-                          📍 Location not set
+                          📍 {t('map.locationNotSet')}
                         </Typography>
                       )}
 
                       <Typography variant="body2" sx={{ mb: 1 }}>
-                        Last Update: {device.last_update ? new Date(device.last_update).toLocaleString() : 'Never'}
+                        {t('map.lastUpdateLabel')} {device.last_update ? new Date(device.last_update).toLocaleString() : 'Never'}
                       </Typography>
 
                       {device.readings && (
                         <Box sx={{ mt: 2 }}>
                           <Typography variant="body2" fontWeight={600} sx={{ mb: 1 }}>
-                            Live Readings:
+                            {t('map.liveReadings')}
                           </Typography>
                           {Object.entries(device.readings).map(([sensor, value]) => (
                             <Box key={sensor} sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
                               <Typography variant="body2" sx={{ textTransform: 'capitalize' }}>
-                                {sensor.replace('_', ' ')}:
+                                {t(`alerts.${sensor}`)}:
                               </Typography>
                               <Chip
                                 label={`${value}${sensor === 'temperature' ? '°C' : sensor === 'humidity' ? '%' : ''}`}

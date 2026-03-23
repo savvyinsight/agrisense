@@ -137,7 +137,24 @@
     "conditionBased": "Condition Based",
     "editRule": "Edit Rule",
     "deleteRule": "Delete Rule",
-    "testAutomation": "Test Automation"
+    "testAutomation": "Test Automation",
+    "ruleName": "Rule Name",
+    "targetDeviceHelper": "The device that will perform the action",
+    "triggerConditions": "Trigger Conditions",
+    "durationSeconds": "Duration (seconds)",
+    "triggerDurationHelper": "How long the condition must be true before triggering",
+    "actionHeading": "Action",
+    "actionDuration": "Duration (seconds)",
+    "actionDurationHelper": "How long to run the action",
+    "powerLevel": "Power Level (%)",
+    "powerLevelHelper": "Power level for the action",
+    "noRulesFound": "No automation rules found. Click \"Add Automation Rule\" to create your first rule.",
+    "ruleUpdated": "Automation rule updated successfully",
+    "ruleCreated": "Automation rule created successfully",
+    "saveRuleError": "Failed to save automation rule",
+    "validationError": "Name, Target Device, and Trigger Value are required",
+    "unknownSensor": "Unknown",
+    "validationError": "Name, Target Device, and Trigger Value are required"
   },
   "analytics": {
     "title": "Analytics",
@@ -175,7 +192,14 @@
     "deviceInfo": "Device Information",
     "lastUpdate": "Last Update",
     "currentStatus": "Current Status",
-    "viewDetails": "View Details"
+    "viewDetails": "View Details",
+    "comingSoon": "Interactive Map Coming Soon",
+    "integrationPlanned": "Integration with mapping services planned",
+    "deviceLocationsLiveData": "Device Locations & Live Data",
+    "noDevicesWithLocation": "No devices with location data found. Add latitude/longitude to device configurations.",
+    "locationNotSet": "Location not set",
+    "lastUpdateLabel": "Last Update:",
+    "liveReadings": "Live Readings:"
   },
   "language": {
     "english": "English",

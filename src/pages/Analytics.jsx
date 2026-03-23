@@ -99,15 +99,15 @@ const Analytics = () => {
         }}
       >
         <AnalyticsIcon sx={{ mr: 2, fontSize: 40 }} />
-        <Typography variant="h4" fontWeight={700}>Analytics & Reports</Typography>
+        <Typography variant="h4" fontWeight={700}>{t('analytics.title')}</Typography>
       </Box>
 
       <Paper sx={{ p: 3, mb: 3 }} elevation={2}>
-        <Typography variant="h6" gutterBottom>Report Filters</Typography>
+        <Typography variant="h6" gutterBottom>{t('analytics.dateRange')}</Typography>
         <Grid container spacing={3} sx={{ mt: 1 }}>
           <Grid item xs={12} md={3}>
             <TextField
-              label="Device ID"
+              label={t('analytics.selectDevice')}
               value={filters.deviceId}
               onChange={(e) => handleFilterChange('deviceId', e.target.value)}
               fullWidth
@@ -117,7 +117,7 @@ const Analytics = () => {
           <Grid item xs={12} md={3}>
             <LocalizationProvider dateAdapter={AdapterDateFns}>
               <DatePicker
-                label="Start Date"
+                label={t('analytics.startDate')}
                 value={filters.startDate}
                 onChange={(date) => handleFilterChange('startDate', date)}
                 renderInput={(params) => <TextField {...params} fullWidth />}
@@ -127,7 +127,7 @@ const Analytics = () => {
           <Grid item xs={12} md={3}>
             <LocalizationProvider dateAdapter={AdapterDateFns}>
               <DatePicker
-                label="End Date"
+                label={t('analytics.endDate')}
                 value={filters.endDate}
                 onChange={(date) => handleFilterChange('endDate', date)}
                 renderInput={(params) => <TextField {...params} fullWidth />}
@@ -136,15 +136,15 @@ const Analytics = () => {
           </Grid>
           <Grid item xs={12} md={3}>
             <FormControl fullWidth>
-              <InputLabel>Report Type</InputLabel>
+              <InputLabel>{t('analytics.reportType')}</InputLabel>
               <Select
                 value={filters.reportType}
-                label="Report Type"
+                label={t('analytics.reportType')}
                 onChange={(e) => handleFilterChange('reportType', e.target.value)}
               >
-                <MenuItem value="daily">Daily</MenuItem>
-                <MenuItem value="weekly">Weekly</MenuItem>
-                <MenuItem value="monthly">Monthly</MenuItem>
+                <MenuItem value="daily">{t('analytics.daily')}</MenuItem>
+                <MenuItem value="weekly">{t('analytics.weekly')}</MenuItem>
+                <MenuItem value="monthly">{t('analytics.monthly')}</MenuItem>
               </Select>
             </FormControl>
           </Grid>
@@ -156,7 +156,7 @@ const Analytics = () => {
             disabled={loading}
             sx={{ textTransform: 'none' }}
           >
-            {loading ? <CircularProgress size={20} /> : 'Generate Report'}
+            {loading ? <CircularProgress size={20} /> : t('analytics.generateReport')}
           </Button>
         </Box>
       </Paper>

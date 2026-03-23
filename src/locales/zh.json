@@ -137,7 +137,25 @@
     "conditionBased": "基于条件",
     "editRule": "编辑规则",
     "deleteRule": "删除规则",
-    "testAutomation": "测试自动化"
+    "testAutomation": "测试自动化",
+    "ruleName": "规则名称",
+    "targetDeviceHelper": "执行操作的设备",
+    "triggerConditions": "触发条件",
+    "durationSeconds": "持续时间（秒）",
+    "triggerDurationHelper": "条件必须为真多长时间才能触发",
+    "actionHeading": "动作",
+    "actionDuration": "持续时间（秒）",
+    "actionDurationHelper": "运行动作的时间长度",
+    "powerLevel": "功率水平（%）",
+    "powerLevelHelper": "动作的功率水平",
+    "noRulesFound": "未找到自动化规则。点击\"添加自动化规则\"创建您的第一个规则。",
+    "ruleUpdated": "自动化规则更新成功",
+    "ruleCreated": "自动化规则创建成功",
+    "saveRuleError": "保存自动化规则失败",
+    "validationError": "名称、目标设备和触发值是必需的",
+    "ruleUpdated": "自动化规则更新成功",
+    "ruleCreated": "自动化规则创建成功",
+    "saveRuleError": "保存自动化规则失败"
   },
   "analytics": {
     "title": "分析",
@@ -175,7 +193,14 @@
     "deviceInfo": "设备信息",
     "lastUpdate": "最后更新",
     "currentStatus": "当前状态",
-    "viewDetails": "查看详情"
+    "viewDetails": "查看详情",
+    "comingSoon": "交互式地图即将推出",
+    "integrationPlanned": "计划与地图服务集成",
+    "deviceLocationsLiveData": "设备位置和实时数据",
+    "noDevicesWithLocation": "未找到带有位置数据的设备。请在设备配置中添加纬度和经度。",
+    "locationNotSet": "位置未设置",
+    "lastUpdateLabel": "最后更新：",
+    "liveReadings": "实时读数："
   },
   "language": {
     "english": "English",

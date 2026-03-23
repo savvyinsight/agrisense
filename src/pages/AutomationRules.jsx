@@ -46,21 +46,9 @@ const emptyRule = {
   enabled: true,
 };
 
-const sensorTypes = [
-  { id: 1, name: 'Temperature' },
-  { id: 2, name: 'Humidity' },
-  { id: 3, name: 'Soil Moisture' },
-  { id: 4, name: 'Light Intensity' },
-];
-
-const commands = [
-  { value: 'turn_on', label: 'Turn On' },
-  { value: 'turn_off', label: 'Turn Off' },
-  { value: 'set_power', label: 'Set Power Level' },
-];
-
 const AutomationRules = () => {
   const { t } = useTranslation();
+  // Add all these state declarations:
   const [rules, setRules] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -69,6 +57,19 @@ const AutomationRules = () => {
   const [isEditMode, setIsEditMode] = useState(false);
   const [selectedRule, setSelectedRule] = useState(null);
   const [form, setForm] = useState(emptyRule);
+
+  const sensorTypes = [
+    { id: 1, name: t('alerts.temperature') },
+    { id: 2, name: t('alerts.humidity') },
+    { id: 3, name: t('alerts.soilMoisture') },
+    { id: 4, name: t('alerts.light') },
+  ];
+
+  const commands = [
+    { value: 'turn_on', label: t('automation.turnOn') },
+    { value: 'turn_off', label: t('automation.turnOff') },
+    { value: 'set_power', label: t('automation.setValue') },
+  ];
 
   const loadRules = async () => {
     setLoading(true);
@@ -133,7 +134,7 @@ const AutomationRules = () => {
 
   const saveRule = async () => {
     if (!form.name || !form.target_device_id || !form.trigger_value) {
-      setError('Name, Target Device, and Trigger Value are required');
+      setError(t('automation.validationError'));
       return;
     }
 
@@ -157,11 +158,11 @@ const AutomationRules = () => {
     const result = await createAutomationRule(payload);
 
     if (result.success) {
-      setSuccess(`Automation rule ${isEditMode ? 'updated' : 'created'} successfully`);
+      setSuccess(isEditMode ? t('automation.ruleUpdated') : t('automation.ruleCreated'));
       closeDialog();
       loadRules();
     } else {
-      setError(result.error || 'Failed to save automation rule');
+      setError(result.error || t('automation.saveRuleError'));
     }
   };
 
@@ -183,20 +184,20 @@ const AutomationRules = () => {
           mb: 3,
         }}
       >
-        <Typography variant="h4" fontWeight={700}>Automation Rules</Typography>
+        <Typography variant="h4" fontWeight={700}>{t('automation.title')}</Typography>
         <Button
           sx={{ textTransform: 'none' }}
           variant="contained"
           startIcon={<AddCircleIcon />}
           onClick={openNew}
         >
-          Create Rule
+          {t('automation.addRule')}
         </Button>
       </Box>
 
       <Paper sx={{ p: 2, mb: 3 }} elevation={2}>
         <Typography variant="body2" color="text.secondary">
-          Set up automated actions based on sensor conditions, like irrigation when soil moisture is low.
+          {t('automation.subtitle')}
         </Typography>
       </Paper>
 
@@ -209,18 +210,17 @@ const AutomationRules = () => {
           <Table>
             <TableHead>
               <TableRow>
-                <TableCell>Name</TableCell>
-                <TableCell>Trigger</TableCell>
-                <TableCell>Action</TableCell>
-                <TableCell>Enabled</TableCell>
-                <TableCell align="right">Actions</TableCell>
+                <TableCell>{t('automation.trigger')}</TableCell>
+                <TableCell>{t('automation.action')}</TableCell>
+                <TableCell>{t('automation.enabled')}</TableCell>
+                <TableCell align="right">{t('devices.actions')}</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {rules.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={5} align="center" sx={{ py: 5 }}>
-                    No automation rules found. Click "Create Rule" to add your first one.
+                    {t('automation.noRulesFound')}
                   </TableCell>
                 </TableRow>
               ) : (
@@ -237,7 +237,7 @@ const AutomationRules = () => {
                     </TableCell>
                     <TableCell>
                       <Chip
-                        label={rule.enabled ? 'Enabled' : 'Disabled'}
+                        label={rule.enabled ? t('automation.enabled') : t('automation.disabled')}
                         size="small"
                         color={rule.enabled ? 'success' : 'default'}
                       />
@@ -263,10 +263,10 @@ const AutomationRules = () => {
       )}
 
       <Dialog open={openDialog} fullWidth maxWidth="md" onClose={closeDialog}>
-        <DialogTitle>{isEditMode ? 'Edit Automation Rule' : 'Create Automation Rule'}</DialogTitle>
+        <DialogTitle>{isEditMode ? t('automation.editRule') : t('automation.addRule')}</DialogTitle>
         <DialogContent sx={{ display: 'grid', gap: 16, mt: 1 }}>
           <TextField
-            label="Rule Name"
+            label={t('automation.ruleName')}
             value={form.name}
             onChange={(e) => setField('name', e.target.value)}
             required
@@ -274,21 +274,21 @@ const AutomationRules = () => {
           />
 
           <TextField
-            label="Target Device ID"
+            label={t('devices.deviceId')}
             value={form.target_device_id}
             onChange={(e) => setField('target_device_id', e.target.value)}
             required
             fullWidth
-            helperText="The device that will perform the action"
+            helperText={t('automation.targetDeviceHelper')}
           />
 
-          <Typography variant="h6" sx={{ mt: 2 }}>Trigger Conditions</Typography>
+          <Typography variant="h6" sx={{ mt: 2 }}>{t('automation.triggerConditions')}</Typography>
 
           <FormControl fullWidth>
-            <InputLabel>Sensor Type</InputLabel>
+            <InputLabel>{t('devices.deviceType')}</InputLabel>
             <Select
               value={form.trigger_sensor_type_id}
-              label="Sensor Type"
+              label={t('devices.deviceType')}
               onChange={(e) => setField('trigger_sensor_type_id', e.target.value)}
             >
               {sensorTypes.map((sensor) => (
@@ -301,10 +301,10 @@ const AutomationRules = () => {
 
           <Box sx={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: 2, alignItems: 'center' }}>
             <FormControl sx={{ minWidth: 80 }}>
-              <InputLabel>Condition</InputLabel>
+              <InputLabel>{t('alerts.condition')}</InputLabel>
               <Select
                 value={form.trigger_condition}
-                label="Condition"
+                label={t('alerts.condition')}
                 onChange={(e) => setField('trigger_condition', e.target.value)}
               >
                 <MenuItem value=">">&gt;</MenuItem>
@@ -313,7 +313,7 @@ const AutomationRules = () => {
               </Select>
             </FormControl>
             <TextField
-              label="Trigger Value"
+              label={t('alerts.threshold')}
               type="number"
               value={form.trigger_value}
               onChange={(e) => setField('trigger_value', e.target.value)}
@@ -323,21 +323,21 @@ const AutomationRules = () => {
           </Box>
 
           <TextField
-            label="Duration (seconds)"
+            label={t('automation.durationSeconds')}
             type="number"
             value={form.trigger_duration_seconds}
             onChange={(e) => setField('trigger_duration_seconds', e.target.value)}
             fullWidth
-            helperText="How long the condition must be true before triggering"
+            helperText={t('automation.triggerDurationHelper')}
           />
 
-          <Typography variant="h6" sx={{ mt: 2 }}>Action</Typography>
+          <Typography variant="h6" sx={{ mt: 2 }}>{t('automation.actionHeading')}</Typography>
 
           <FormControl fullWidth>
-            <InputLabel>Command</InputLabel>
+            <InputLabel>{t('automation.action')}</InputLabel>
             <Select
               value={form.action_command}
-              label="Command"
+              label={t('automation.action')}
               onChange={(e) => setField('action_command', e.target.value)}
             >
               {commands.map((cmd) => (
@@ -350,41 +350,41 @@ const AutomationRules = () => {
 
           <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
             <TextField
-              label="Duration (seconds)"
+              label={t('automation.actionDuration')}
               type="number"
               value={form.action_parameters.duration}
               onChange={(e) => setField('action_parameters.duration', e.target.value)}
               fullWidth
-              helperText="How long to run the action"
+              helperText={t('automation.actionDurationHelper')}
             />
             <TextField
-              label="Power Level (%)"
+              label={t('automation.powerLevel')}
               type="number"
               value={form.action_parameters.power}
               onChange={(e) => setField('action_parameters.power', e.target.value)}
               fullWidth
-              helperText="Power level for the action"
+              helperText={t('automation.powerLevelHelper')}
             />
           </Box>
 
           <FormControl fullWidth>
-            <InputLabel>Status</InputLabel>
+            <InputLabel>{t('common.status')}</InputLabel>
             <Select
               value={form.enabled}
-              label="Status"
+              label={t('common.status')}
               onChange={(e) => setField('enabled', e.target.value)}
             >
-              <MenuItem value={true}>Enabled</MenuItem>
-              <MenuItem value={false}>Disabled</MenuItem>
+              <MenuItem value={true}>{t('automation.enabled')}</MenuItem>
+              <MenuItem value={false}>{t('automation.disabled')}</MenuItem>
             </Select>
           </FormControl>
 
           {error && <Alert severity="error">{error}</Alert>}
         </DialogContent>
         <DialogActions>
-          <Button onClick={closeDialog}>Cancel</Button>
+          <Button onClick={closeDialog}>{t('common.cancel')}</Button>
           <Button variant="contained" onClick={saveRule}>
-            {isEditMode ? 'Update' : 'Create'}
+            {isEditMode ? t('common.edit') : t('common.add')}
           </Button>
         </DialogActions>
       </Dialog>
