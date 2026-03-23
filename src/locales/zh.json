@@ -152,10 +152,7 @@
     "ruleUpdated": "自动化规则更新成功",
     "ruleCreated": "自动化规则创建成功",
     "saveRuleError": "保存自动化规则失败",
-    "validationError": "名称、目标设备和触发值是必需的",
-    "ruleUpdated": "自动化规则更新成功",
-    "ruleCreated": "自动化规则创建成功",
-    "saveRuleError": "保存自动化规则失败"
+    "validationError": "名称、目标设备和触发值是必需的"
   },
   "analytics": {
     "title": "分析",

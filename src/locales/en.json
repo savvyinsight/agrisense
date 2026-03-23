@@ -153,8 +153,7 @@
     "ruleCreated": "Automation rule created successfully",
     "saveRuleError": "Failed to save automation rule",
     "validationError": "Name, Target Device, and Trigger Value are required",
-    "unknownSensor": "Unknown",
-    "validationError": "Name, Target Device, and Trigger Value are required"
+    "unknownSensor": "Unknown"
   },
   "analytics": {
     "title": "Analytics",

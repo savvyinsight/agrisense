@@ -283,7 +283,7 @@ const AlertRules = () => {
               onChange={(e) => setField('device_id', e.target.value)}
               disabled={deviceLoading}
             >
-              <MenuItem value={null}>{t('devices.allDevices')}</MenuItem>
+              <MenuItem value={null}>{t('All Device')}</MenuItem>
               {devices.map((device) => (
                 <MenuItem key={device.id} value={device.id}>
                   {device.device_id} - {device.name}
