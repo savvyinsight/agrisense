@@ -31,11 +31,11 @@ import {
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddCircleIcon from '@mui/icons-material/AddCircle';
-import { getAlertRules, createAlertRule } from '../api/devices';
+import { getAlertRules, createAlertRule, getDevices } from '../api/devices';
 
 const emptyRule = {
   name: '',
-  device_id: '',
+  device_id: null,
   sensor_type_id: 1, // temperature
   condition: '>',
   threshold_value: '',
@@ -54,6 +54,10 @@ const AlertRules = () => {
     { id: 4, name: t('alerts.light') },
   ];
 
+  const getSensorName = (id) => {
+    return sensorTypes.find(s => s.id === id)?.name || 'Unknown';
+  };
+
   const [rules, setRules] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -62,6 +66,8 @@ const AlertRules = () => {
   const [isEditMode, setIsEditMode] = useState(false);
   const [selectedRule, setSelectedRule] = useState(null);
   const [form, setForm] = useState(emptyRule);
+  const [devices, setDevices] = useState([]);
+  const [deviceLoading, setDeviceLoading] = useState(true);
 
   const loadRules = async () => {
     setLoading(true);
@@ -75,8 +81,20 @@ const AlertRules = () => {
     setLoading(false);
   };
 
+  const loadDevices = async () => {
+    setDeviceLoading(true);
+    const res = await getDevices();
+    if (res.success) {
+      setDevices(res.data.devices || []);
+    } else {
+      setError(res.error || 'Unable to load devices');
+    }
+    setDeviceLoading(false);
+  };
+
   useEffect(() => {
     loadRules();
+    loadDevices();
   }, []);
 
   const openNew = () => {
@@ -139,8 +157,10 @@ const AlertRules = () => {
     }
   };
 
-  const getSensorName = (id) => {
-    return sensorTypes.find(s => s.id === id)?.name || 'Unknown';
+  const getDeviceLabel = (deviceId) => {
+    if (!deviceId) return t('devices.allDevices');
+    const device = devices.find(d => d.id === deviceId);
+    return device ? `${device.device_id} - ${device.name}` : 'Unknown Device';
   };
 
   const getSeverityColor = (severity) => {
@@ -188,6 +208,7 @@ const AlertRules = () => {
             <TableHead>
               <TableRow>
                 <TableCell>{t('alerts.ruleName')}</TableCell>
+                <TableCell>{t('devices.deviceId')}</TableCell>
                 <TableCell>{t('alerts.temperature')}</TableCell>
                 <TableCell>{t('alerts.condition')}</TableCell>
                 <TableCell>{t('alerts.severity')}</TableCell>
@@ -198,7 +219,7 @@ const AlertRules = () => {
             <TableBody>
               {rules.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} align="center" sx={{ py: 5 }}>
+                  <TableCell colSpan={7} align="center" sx={{ py: 5 }}>
                     {t('common.error')}. {t('common.add')} "{t('alerts.addRule')}" {t('common.view').toLowerCase()} {t('common.add')} {t('alerts.ruleName').toLowerCase()}.
                   </TableCell>
                 </TableRow>
@@ -254,13 +275,22 @@ const AlertRules = () => {
             required
             fullWidth
           />
-          <TextField
-            label={`${t('devices.deviceId')} (${t('common.view').toLowerCase()})`}
-            value={form.device_id}
-            onChange={(e) => setField('device_id', e.target.value)}
-            fullWidth
-            helperText={t('alerts.condition')}
-          />
+          <FormControl fullWidth>
+            <InputLabel>{t('devices.deviceId')}</InputLabel>
+            <Select
+              value={form.device_id}
+              label={t('devices.deviceId')}
+              onChange={(e) => setField('device_id', e.target.value)}
+              disabled={deviceLoading}
+            >
+              <MenuItem value={null}>{t('devices.allDevices')}</MenuItem>
+              {devices.map((device) => (
+                <MenuItem key={device.id} value={device.id}>
+                  {device.device_id} - {device.name}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
 
           <FormControl fullWidth>
             <InputLabel>{t('alerts.temperature')}</InputLabel>
