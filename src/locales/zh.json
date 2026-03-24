@@ -88,9 +88,11 @@
     "deviceId": "设备ID",
     "firmwareVersion": "固件版本",
     "batteryLevel": "电池电量",
-    "signalStrength": "信号强度"
+    "signalStrength": "信号强度",
+    "targetDevice": "目标设备",
+    "allDevices": "所有设备"
   },
-  "alerts": {
+  "alertRules": {
     "title": "警报规则",
     "subtitle": "为您的设备配置警报",
     "addRule": "添加警报规则",
@@ -164,6 +166,8 @@
     "testAutomation": "测试自动化",
     "ruleName": "规则名称",
     "targetDeviceHelper": "执行操作的设备",
+    "targetDevice": "目标设备",
+    "allDevices": "所有设备",
     "triggerConditions": "触发条件",
     "durationSeconds": "持续时间（秒）",
     "triggerDurationHelper": "条件必须为真多长时间才能触发",

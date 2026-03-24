@@ -31,11 +31,11 @@ import {
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddCircleIcon from '@mui/icons-material/AddCircle';
-import { getAutomationRules, createAutomationRule } from '../api/devices';
+import { getAutomationRules, createAutomationRule, deleteAutomationRule, getDevices } from '../api/devices';
 
 const emptyRule = {
   name: '',
-  target_device_id: '',
+  target_device_id: 0,
   trigger_type: 'sensor',
   trigger_sensor_type_id: 1, // temperature
   trigger_condition: '>',
@@ -50,6 +50,8 @@ const AutomationRules = () => {
   const { t } = useTranslation();
   // Add all these state declarations:
   const [rules, setRules] = useState([]);
+  const [devices, setDevices] = useState([]);
+  const [deviceLoading, setDeviceLoading] = useState(true);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -59,10 +61,10 @@ const AutomationRules = () => {
   const [form, setForm] = useState(emptyRule);
 
   const sensorTypes = [
-    { id: 1, name: t('alerts.temperature') },
-    { id: 2, name: t('alerts.humidity') },
-    { id: 3, name: t('alerts.soilMoisture') },
-    { id: 4, name: t('alerts.light') },
+    { id: 1, name: t('alertRules.temperature') },
+    { id: 2, name: t('alertRules.humidity') },
+    { id: 3, name: t('alertRules.soilMoisture') },
+    { id: 4, name: t('alertRules.light') },
   ];
 
   const commands = [
@@ -83,8 +85,20 @@ const AutomationRules = () => {
     setLoading(false);
   };
 
+  const loadDevices = async () => {
+    setDeviceLoading(true);
+    const res = await getDevices();
+    if (res.success) {
+      setDevices(res.data.devices || []);
+    } else {
+      setError(res.error || 'Unable to load devices');
+    }
+    setDeviceLoading(false);
+  };
+
   useEffect(() => {
     loadRules();
+    loadDevices();
   }, []);
 
   const openNew = () => {
@@ -99,7 +113,7 @@ const AutomationRules = () => {
     setSelectedRule(rule);
     setForm({
       name: rule.name || '',
-      target_device_id: rule.target_device_id || '',
+      target_device_id: rule.target_device_id || 0,
       trigger_type: rule.trigger_type || 'sensor',
       trigger_sensor_type_id: rule.trigger_sensor_type_id || 1,
       trigger_condition: rule.trigger_condition || '>',
@@ -133,7 +147,7 @@ const AutomationRules = () => {
   };
 
   const saveRule = async () => {
-    if (!form.name || !form.target_device_id || !form.trigger_value) {
+    if (!form.name || !form.trigger_value) {
       setError(t('automation.validationError'));
       return;
     }
@@ -166,12 +180,32 @@ const AutomationRules = () => {
     }
   };
 
+  const deleteRule = async (ruleId) => {
+    if (!window.confirm(t('common.confirm') + ' ' + t('automation.deleteRule') + '?')) {
+      return;
+    }
+
+    const result = await deleteAutomationRule(ruleId);
+    if (result.success) {
+      setSuccess(t('automation.deleteRule') + ' ' + t('common.success'));
+      loadRules();
+    } else {
+      setError(result.error || t('automation.deleteRule') + ' ' + t('common.error'));
+    }
+  };
+
   const getSensorName = (id) => {
     return sensorTypes.find(s => s.id === id)?.name || 'Unknown';
   };
 
   const getCommandLabel = (command) => {
     return commands.find(c => c.value === command)?.label || command;
+  };
+
+  const getDeviceLabel = (deviceId) => {
+    if (deviceId === 0) return t('devices.allDevices');
+    const device = devices.find(d => d.id === deviceId);
+    return device ? `${device.device_id} - ${device.name}` : 'Unknown Device';
   };
 
   return (
@@ -210,6 +244,7 @@ const AutomationRules = () => {
           <Table>
             <TableHead>
               <TableRow>
+                <TableCell>{t('devices.deviceId')}</TableCell>
                 <TableCell>{t('automation.trigger')}</TableCell>
                 <TableCell>{t('automation.action')}</TableCell>
                 <TableCell>{t('automation.enabled')}</TableCell>
@@ -226,7 +261,7 @@ const AutomationRules = () => {
               ) : (
                 rules.map((rule) => (
                   <TableRow key={rule.id} hover>
-                    <TableCell>{rule.name}</TableCell>
+                    <TableCell>{getDeviceLabel(rule.target_device_id)}</TableCell>
                     <TableCell>
                       {getSensorName(rule.trigger_sensor_type_id)} {rule.trigger_condition} {rule.trigger_value}
                       {rule.trigger_duration_seconds > 0 && ` for ${rule.trigger_duration_seconds}s`}
@@ -249,7 +284,7 @@ const AutomationRules = () => {
                         </IconButton>
                       </Tooltip>
                       <Tooltip title="Delete">
-                        <IconButton size="small" color="error">
+                        <IconButton onClick={() => deleteRule(rule.id)} size="small" color="error">
                           <DeleteIcon />
                         </IconButton>
                       </Tooltip>
@@ -273,14 +308,21 @@ const AutomationRules = () => {
             fullWidth
           />
 
-          <TextField
-            label={t('devices.deviceId')}
-            value={form.target_device_id}
-            onChange={(e) => setField('target_device_id', e.target.value)}
-            required
-            fullWidth
-            helperText={t('automation.targetDeviceHelper')}
-          />
+          <FormControl fullWidth>
+            <InputLabel>{t('devices.targetDevice')}</InputLabel>
+            <Select
+              value={form.target_device_id}
+              label={t('devices.targetDevice')}
+              onChange={(e) => setField('target_device_id', e.target.value)}
+            >
+              <MenuItem value={0}>{t('devices.allDevices')}</MenuItem>
+              {devices.map((device) => (
+                <MenuItem key={device.id} value={device.id}>
+                  {`${device.device_id} — ${device.name}`}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
 
           <Typography variant="h6" sx={{ mt: 2 }}>{t('automation.triggerConditions')}</Typography>
 
@@ -301,10 +343,10 @@ const AutomationRules = () => {
 
           <Box sx={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: 2, alignItems: 'center' }}>
             <FormControl sx={{ minWidth: 80 }}>
-              <InputLabel>{t('alerts.condition')}</InputLabel>
+              <InputLabel>{t('alertRules.condition')}</InputLabel>
               <Select
                 value={form.trigger_condition}
-                label={t('alerts.condition')}
+                label={t('alertRules.condition')}
                 onChange={(e) => setField('trigger_condition', e.target.value)}
               >
                 <MenuItem value=">">&gt;</MenuItem>
@@ -313,7 +355,7 @@ const AutomationRules = () => {
               </Select>
             </FormControl>
             <TextField
-              label={t('alerts.threshold')}
+              label={t('alertRules.threshold')}
               type="number"
               value={form.trigger_value}
               onChange={(e) => setField('trigger_value', e.target.value)}

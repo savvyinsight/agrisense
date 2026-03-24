@@ -88,9 +88,11 @@
     "deviceId": "Device ID",
     "firmwareVersion": "Firmware Version",
     "batteryLevel": "Battery Level",
-    "signalStrength": "Signal Strength"
+    "signalStrength": "Signal Strength",
+    "targetDevice": "Target Device",
+    "allDevices": "All Devices"
   },
-  "alerts": {
+  "alertRules": {
     "title": "Alert Rules",
     "subtitle": "Configure alerts for your devices",
     "addRule": "Add Alert Rule",
@@ -164,6 +166,8 @@
     "testAutomation": "Test Automation",
     "ruleName": "Rule Name",
     "targetDeviceHelper": "The device that will perform the action",
+    "targetDevice": "Target Device",
+    "allDevices": "All Devices",
     "triggerConditions": "Trigger Conditions",
     "durationSeconds": "Duration (seconds)",
     "triggerDurationHelper": "How long the condition must be true before triggering",

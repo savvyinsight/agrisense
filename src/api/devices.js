@@ -146,6 +146,15 @@ export const getAlertRules = async () => {
   }
 };
 
+export const deleteAlertRule = async (ruleId) => {
+  try {
+    await api.delete(`/alerts/rules/${ruleId}`);
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.response?.data?.error };
+  }
+};
+
 export const createAutomationRule = async (rule) => {
   try {
     const response = await api.post('/automation/rules', rule);
@@ -159,6 +168,15 @@ export const getAutomationRules = async () => {
   try {
     const response = await api.get('/automation/rules');
     return { success: true, data: response.data };
+  } catch (error) {
+    return { success: false, error: error.response?.data?.error };
+  }
+};
+
+export const deleteAutomationRule = async (ruleId) => {
+  try {
+    await api.delete(`/automation/rules/${ruleId}`);
+    return { success: true };
   } catch (error) {
     return { success: false, error: error.response?.data?.error };
   }

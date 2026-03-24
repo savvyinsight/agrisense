@@ -31,7 +31,7 @@ import {
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddCircleIcon from '@mui/icons-material/AddCircle';
-import { getAlertRules, createAlertRule, getDevices } from '../api/devices';
+import { getAlertRules, createAlertRule, deleteAlertRule, getDevices } from '../api/devices';
 
 const emptyRule = {
   name: '',
@@ -48,10 +48,10 @@ const AlertRules = () => {
   const { t } = useTranslation();
 
   const sensorTypes = [
-    { id: 1, name: t('alerts.temperature') },
-    { id: 2, name: t('alerts.humidity') },
-    { id: 3, name: t('alerts.soilMoisture') },
-    { id: 4, name: t('alerts.light') },
+    { id: 1, name: t('alertRules.temperature') },
+    { id: 2, name: t('alertRules.humidity') },
+    { id: 3, name: t('alertRules.soilMoisture') },
+    { id: 4, name: t('alertRules.light') },
   ];
 
   const getSensorName = (id) => {
@@ -157,6 +157,20 @@ const AlertRules = () => {
     }
   };
 
+  const deleteRule = async (ruleId) => {
+    if (!window.confirm(t('common.confirm') + ' ' + t('alertRules.deleteRule') + '?')) {
+      return;
+    }
+
+    const result = await deleteAlertRule(ruleId);
+    if (result.success) {
+      setSuccess(t('alertRules.deleteRule') + ' ' + t('common.success'));
+      loadRules();
+    } else {
+      setError(result.error || t('alertRules.deleteRule') + ' ' + t('common.error'));
+    }
+  };
+
   const getDeviceLabel = (deviceId) => {
     if (!deviceId) return t('devices.allDevices');
     const device = devices.find(d => d.id === deviceId);
@@ -181,7 +195,7 @@ const AlertRules = () => {
           mb: 3,
         }}
       >
-        <Typography variant="h4" fontWeight={700}>{t('alerts.title')}</Typography>
+        <Typography variant="h4" fontWeight={700}>{t('alertRules.title')}</Typography>
         <Button
           sx={{ textTransform: 'none' }}
           variant="contained"
@@ -207,12 +221,12 @@ const AlertRules = () => {
           <Table>
             <TableHead>
               <TableRow>
-                <TableCell>{t('alerts.ruleName')}</TableCell>
+                <TableCell>{t('alertRules.ruleName')}</TableCell>
                 <TableCell>{t('devices.deviceId')}</TableCell>
-                <TableCell>{t('alerts.temperature')}</TableCell>
-                <TableCell>{t('alerts.condition')}</TableCell>
-                <TableCell>{t('alerts.severity')}</TableCell>
-                <TableCell>{t('alerts.active')}</TableCell>
+                <TableCell>{t('alertRules.temperature')}</TableCell>
+                <TableCell>{t('alertRules.condition')}</TableCell>
+                <TableCell>{t('alertRules.severity')}</TableCell>
+                <TableCell>{t('alertRules.active')}</TableCell>
                 <TableCell align="right">{t('devices.actions')}</TableCell>
               </TableRow>
             </TableHead>
@@ -220,7 +234,7 @@ const AlertRules = () => {
               {rules.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={7} align="center" sx={{ py: 5 }}>
-                    {t('common.error')}. {t('common.add')} "{t('alerts.addRule')}" {t('common.view').toLowerCase()} {t('common.add')} {t('alerts.ruleName').toLowerCase()}.
+                    {t('common.error')}. {t('common.add')} "{t('alertRules.addRule')}" {t('common.view').toLowerCase()} {t('common.add')} {t('alertRules.ruleName').toLowerCase()}.
                   </TableCell>
                 </TableRow>
               ) : (
@@ -252,7 +266,7 @@ const AlertRules = () => {
                         </IconButton>
                       </Tooltip>
                       <Tooltip title="Delete">
-                        <IconButton size="small" color="error">
+                        <IconButton onClick={() => deleteRule(rule.id)} size="small" color="error">
                           <DeleteIcon />
                         </IconButton>
                       </Tooltip>
@@ -266,10 +280,10 @@ const AlertRules = () => {
       )}
 
       <Dialog open={openDialog} fullWidth maxWidth="sm" onClose={closeDialog}>
-        <DialogTitle>{isEditMode ? t('alerts.editRule') : t('alerts.addRule')}</DialogTitle>
+        <DialogTitle>{isEditMode ? t('alertRules.editRule') : t('alertRules.addRule')}</DialogTitle>
         <DialogContent sx={{ display: 'grid', gap: 16, mt: 1 }}>
           <TextField
-            label={t('alerts.ruleName')}
+            label={t('alertRules.ruleName')}
             value={form.name}
             onChange={(e) => setField('name', e.target.value)}
             required
@@ -283,7 +297,7 @@ const AlertRules = () => {
               onChange={(e) => setField('device_id', e.target.value)}
               disabled={deviceLoading}
             >
-              <MenuItem value={null}>{t('All Device')}</MenuItem>
+              <MenuItem value={null}>{t('devices.allDevices')}</MenuItem>
               {devices.map((device) => (
                 <MenuItem key={device.id} value={device.id}>
                   {device.device_id} - {device.name}
@@ -293,10 +307,10 @@ const AlertRules = () => {
           </FormControl>
 
           <FormControl fullWidth>
-            <InputLabel>{t('alerts.temperature')}</InputLabel>
+            <InputLabel>{t('alertRules.temperature')}</InputLabel>
             <Select
               value={form.sensor_type_id}
-              label={t('alerts.temperature')}
+              label={t('alertRules.temperature')}
               onChange={(e) => setField('sensor_type_id', e.target.value)}
             >
               {sensorTypes.map((sensor) => (
@@ -309,19 +323,19 @@ const AlertRules = () => {
 
           <Box sx={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: 2, alignItems: 'center' }}>
             <FormControl sx={{ minWidth: 80 }}>
-              <InputLabel>{t('alerts.condition')}</InputLabel>
+              <InputLabel>{t('alertRules.condition')}</InputLabel>
               <Select
                 value={form.condition}
-                label={t('alerts.condition')}
+                label={t('alertRules.condition')}
                 onChange={(e) => setField('condition', e.target.value)}
               >
-                <MenuItem value=">">{t('alerts.greaterThan')}</MenuItem>
-                <MenuItem value="<">{t('alerts.lessThan')}</MenuItem>
-                <MenuItem value="=">{t('alerts.equals')}</MenuItem>
+                <MenuItem value=">">{t('alertRules.greaterThan')}</MenuItem>
+                <MenuItem value="<">{t('alertRules.lessThan')}</MenuItem>
+                <MenuItem value="=">{t('alertRules.equals')}</MenuItem>
               </Select>
             </FormControl>
             <TextField
-              label={t('alerts.threshold')}
+              label={t('alertRules.threshold')}
               type="number"
               value={form.threshold_value}
               onChange={(e) => setField('threshold_value', e.target.value)}
@@ -336,19 +350,19 @@ const AlertRules = () => {
             value={form.duration_seconds}
             onChange={(e) => setField('duration_seconds', e.target.value)}
             fullWidth
-            helperText={t('alerts.condition')}
+            helperText={t('alertRules.condition')}
           />
 
           <FormControl fullWidth>
-            <InputLabel>{t('alerts.severity')}</InputLabel>
+            <InputLabel>{t('alertRules.severity')}</InputLabel>
             <Select
               value={form.severity}
-              label={t('alerts.severity')}
+              label={t('alertRules.severity')}
               onChange={(e) => setField('severity', e.target.value)}
             >
-              <MenuItem value="info">{t('alerts.low')}</MenuItem>
-              <MenuItem value="warning">{t('alerts.medium')}</MenuItem>
-              <MenuItem value="critical">{t('alerts.high')}</MenuItem>
+              <MenuItem value="info">{t('alertRules.low')}</MenuItem>
+              <MenuItem value="warning">{t('alertRules.medium')}</MenuItem>
+              <MenuItem value="critical">{t('alertRules.high')}</MenuItem>
             </Select>
           </FormControl>
 
@@ -359,8 +373,8 @@ const AlertRules = () => {
               label={t('common.view')}
               onChange={(e) => setField('enabled', e.target.value)}
             >
-              <MenuItem value={true}>{t('alerts.active')}</MenuItem>
-              <MenuItem value={false}>{t('alerts.inactive')}</MenuItem>
+              <MenuItem value={true}>{t('alertRules.active')}</MenuItem>
+              <MenuItem value={false}>{t('alertRules.inactive')}</MenuItem>
             </Select>
           </FormControl>
 
