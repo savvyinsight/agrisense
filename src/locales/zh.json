@@ -3,6 +3,7 @@
     "dashboard": "仪表板",
     "devices": "设备",
     "alerts": "警报",
+    "alertRules": "警报规则",
     "automation": "自动化",
     "analytics": "分析",
     "map": "地图视图"
@@ -115,6 +116,29 @@
     "alertHistory": "警报历史",
     "triggered": "已触发",
     "acknowledged": "已确认"
+  },
+  "alerts": {
+    "title": "警报",
+    "subtitle": "监控和管理系统警报",
+    "activeAlerts": "活跃警报",
+    "alertHistory": "警报历史",
+    "severity": "严重程度",
+    "message": "消息",
+    "triggeredAt": "触发时间",
+    "acknowledgedAt": "确认时间",
+    "status": "状态",
+    "active": "活跃",
+    "acknowledged": "已确认",
+    "resolved": "已解决",
+    "acknowledge": "确认",
+    "noActiveAlerts": "无活跃警报",
+    "noAlertHistory": "无警报历史",
+    "confirmResolve": "确认解决",
+    "resolveConfirmMessage": "您确定要将此警报标记为已解决吗？",
+    "acknowledgeSuccess": "警报确认成功",
+    "resolveSuccess": "警报已解决",
+    "acknowledgeError": "确认警报失败",
+    "resolveError": "解决警报失败"
   },
   "automation": {
     "title": "自动化规则",

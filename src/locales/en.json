@@ -3,6 +3,7 @@
     "dashboard": "Dashboard",
     "devices": "Devices",
     "alerts": "Alerts",
+    "alertRules": "Alert Rules",
     "automation": "Automation",
     "analytics": "Analytics",
     "map": "Map View"
@@ -115,6 +116,29 @@
     "alertHistory": "Alert History",
     "triggered": "Triggered",
     "acknowledged": "Acknowledged"
+  },
+  "alerts": {
+    "title": "Alerts",
+    "subtitle": "Monitor and manage system alerts",
+    "activeAlerts": "Active Alerts",
+    "alertHistory": "Alert History",
+    "severity": "Severity",
+    "message": "Message",
+    "triggeredAt": "Triggered At",
+    "acknowledgedAt": "Acknowledged At",
+    "status": "Status",
+    "active": "Active",
+    "acknowledged": "Acknowledged",
+    "resolved": "Resolved",
+    "acknowledge": "Acknowledge",
+    "noActiveAlerts": "No active alerts",
+    "noAlertHistory": "No alert history",
+    "confirmResolve": "Confirm Resolve",
+    "resolveConfirmMessage": "Are you sure you want to resolve this alert? This will mark it as resolved.",
+    "acknowledgeSuccess": "Alert acknowledged successfully",
+    "resolveSuccess": "Alert resolved successfully",
+    "acknowledgeError": "Failed to acknowledge alert",
+    "resolveError": "Failed to resolve alert"
   },
   "automation": {
     "title": "Automation Rules",

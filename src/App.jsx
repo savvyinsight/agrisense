@@ -8,6 +8,7 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import DeviceManagement from './pages/DeviceManagement';
 import AlertRules from './pages/AlertRules';
+import Alerts from './pages/Alerts';
 import AutomationRules from './pages/AutomationRules';
 import Analytics from './pages/Analytics';
 import MapView from './pages/MapView';
@@ -77,7 +78,8 @@ function App() {
                           <DeviceManagement />
                         </AdminRoute>
                       } />
-                      <Route path="alerts" element={
+                      <Route path="alerts" element={<Alerts />} />
+                      <Route path="alert-rules" element={
                         <AdminRoute>
                           <AlertRules />
                         </AdminRoute>
