@@ -204,7 +204,9 @@
     "startDate": "开始日期",
     "endDate": "结束日期",
     "selectDevice": "选择设备",
-    "allDevices": "所有设备"
+    "allDevices": "所有设备",
+    "selectDeviceRequired": "请选择设备",
+    "deviceNotFound": "未找到所选设备"
   },
   "map": {
     "title": "地图视图",

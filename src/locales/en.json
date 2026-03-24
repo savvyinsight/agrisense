@@ -205,7 +205,9 @@
     "startDate": "Start Date",
     "endDate": "End Date",
     "selectDevice": "Select Device",
-    "allDevices": "All Devices"
+    "allDevices": "All Devices",
+    "selectDeviceRequired": "Please select a device",
+    "deviceNotFound": "Selected device not found"
   },
   "map": {
     "title": "Map View",

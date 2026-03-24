@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Container,
@@ -32,13 +32,15 @@ import {
   Bar,
 } from 'recharts';
 import AnalyticsIcon from '@mui/icons-material/Analytics';
-import { getAnalyticsReport } from '../api/devices';
+import { getAnalyticsReport, getDevices } from '../api/devices';
 
 const Analytics = () => {
   const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [reportData, setReportData] = useState(null);
+  const [devices, setDevices] = useState([]);
+  const [deviceLoading, setDeviceLoading] = useState(true);
   const [filters, setFilters] = useState({
     deviceId: '',
     startDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // 30 days ago
@@ -50,9 +52,31 @@ const Analytics = () => {
     setFilters((prev) => ({ ...prev, [field]: value }));
   };
 
+  const loadDevices = async () => {
+    setDeviceLoading(true);
+    const res = await getDevices();
+    if (res.success) {
+      setDevices(res.data.devices || []);
+    } else {
+      setError(res.error || 'Unable to load devices');
+    }
+    setDeviceLoading(false);
+  };
+
+  useEffect(() => {
+    loadDevices();
+  }, []);
+
   const generateReport = async () => {
     if (!filters.deviceId) {
-      setError('Please enter a Device ID');
+      setError(t('analytics.selectDeviceRequired'));
+      return;
+    }
+
+    // Find the selected device to get its device_id string
+    const selectedDevice = devices.find(d => d.id === filters.deviceId);
+    if (!selectedDevice) {
+      setError(t('analytics.deviceNotFound'));
       return;
     }
 
@@ -60,7 +84,7 @@ const Analytics = () => {
     setError('');
 
     const params = {
-      deviceId: filters.deviceId,
+      deviceId: selectedDevice.id,
       start: filters.startDate.toISOString(),
       end: filters.endDate.toISOString(),
       reportType: filters.reportType,
@@ -106,15 +130,23 @@ const Analytics = () => {
         <Typography variant="h6" gutterBottom>{t('analytics.dateRange')}</Typography>
         <Grid container spacing={3} sx={{ mt: 1 }}>
           <Grid item xs={12} md={3}>
-            <TextField
-              label={t('analytics.selectDevice')}
-              value={filters.deviceId}
-              onChange={(e) => handleFilterChange('deviceId', e.target.value)}
-              fullWidth
-              required
-            />
+            <FormControl fullWidth required>
+              <InputLabel>{t('analytics.selectDevice')}</InputLabel>
+              <Select
+                value={filters.deviceId}
+                label={t('analytics.selectDevice')}
+                onChange={(e) => handleFilterChange('deviceId', e.target.value)}
+                disabled={deviceLoading}
+              >
+                {devices.map((device) => (
+                  <MenuItem key={device.id} value={device.id}>
+                    {device.device_id} - {device.name}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
           </Grid>
-          <Grid item xs={12} md={3}>
+          <Grid item xs={12} md={2}>
             <LocalizationProvider dateAdapter={AdapterDateFns}>
               <DatePicker
                 label={t('analytics.startDate')}
@@ -124,7 +156,7 @@ const Analytics = () => {
               />
             </LocalizationProvider>
           </Grid>
-          <Grid item xs={12} md={3}>
+          <Grid item xs={12} md={2}>
             <LocalizationProvider dateAdapter={AdapterDateFns}>
               <DatePicker
                 label={t('analytics.endDate')}
@@ -134,7 +166,7 @@ const Analytics = () => {
               />
             </LocalizationProvider>
           </Grid>
-          <Grid item xs={12} md={3}>
+          <Grid item xs={12} md={4}>
             <FormControl fullWidth>
               <InputLabel>{t('analytics.reportType')}</InputLabel>
               <Select
