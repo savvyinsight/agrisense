@@ -101,15 +101,36 @@ const Analytics = () => {
     setLoading(false);
   };
 
-  const formatChartData = (data) => {
-    if (!data || !Array.isArray(data)) return [];
+  const getSensorDataByType = (sensorType) => {
+    if (!reportData?.sensor_reports) return null;
+    return reportData.sensor_reports.find(s => s.sensor_type === sensorType);
+  };
 
-    return data.map((item) => ({
-      date: item.date || item.timestamp?.split('T')[0],
-      temperature: item.temperature_avg || item.temperature,
-      humidity: item.humidity_avg || item.humidity,
-      soilMoisture: item.soil_moisture_avg || item.soil_moisture,
-      lightIntensity: item.light_intensity_avg || item.light_intensity,
+  const calculateAverages = (sensorData) => {
+    if (!sensorData?.data || sensorData.data.length === 0) {
+      return { avg: 0, min: 0, max: 0 };
+    }
+    const values = sensorData.data.map(d => d.avg);
+    const mins = sensorData.data.map(d => d.min);
+    const maxs = sensorData.data.map(d => d.max);
+    
+    return {
+      avg: values.reduce((a, b) => a + b, 0) / values.length,
+      min: Math.min(...mins),
+      max: Math.max(...maxs),
+    };
+  };
+
+  const formatChartData = (sensorType) => {
+    const sensorData = getSensorDataByType(sensorType);
+    if (!sensorData?.data || !Array.isArray(sensorData.data)) return [];
+
+    return sensorData.data.map((item) => ({
+      date: item.timestamp?.split('T')[0],
+      avg: item.avg,
+      min: item.min,
+      max: item.max,
+      count: item.count,
     }));
   };
 
@@ -209,11 +230,11 @@ const Analytics = () => {
                     Average Temperature
                   </Typography>
                   <Typography variant="h4">
-                    {reportData.temperature?.avg?.toFixed(1) || 'N/A'}°C
+                    {calculateAverages(getSensorDataByType('temperature')).avg.toFixed(1)}°C
                   </Typography>
                   <Typography variant="body2" color="textSecondary">
-                    Min: {reportData.temperature?.min?.toFixed(1) || 'N/A'}°C •
-                    Max: {reportData.temperature?.max?.toFixed(1) || 'N/A'}°C
+                    Min: {calculateAverages(getSensorDataByType('temperature')).min.toFixed(1)}°C •
+                    Max: {calculateAverages(getSensorDataByType('temperature')).max.toFixed(1)}°C
                   </Typography>
                 </CardContent>
               </Card>
@@ -225,11 +246,11 @@ const Analytics = () => {
                     Average Humidity
                   </Typography>
                   <Typography variant="h4">
-                    {reportData.humidity?.avg?.toFixed(1) || 'N/A'}%
+                    {calculateAverages(getSensorDataByType('humidity')).avg.toFixed(1)}%
                   </Typography>
                   <Typography variant="body2" color="textSecondary">
-                    Min: {reportData.humidity?.min?.toFixed(1) || 'N/A'}% •
-                    Max: {reportData.humidity?.max?.toFixed(1) || 'N/A'}%
+                    Min: {calculateAverages(getSensorDataByType('humidity')).min.toFixed(1)}% •
+                    Max: {calculateAverages(getSensorDataByType('humidity')).max.toFixed(1)}%
                   </Typography>
                 </CardContent>
               </Card>
@@ -241,7 +262,7 @@ const Analytics = () => {
                     Device
                   </Typography>
                   <Typography variant="h6">
-                    {reportData.device_name || reportData.device_id || 'Unknown'}
+                    {reportData.device_uid || reportData.device_id || 'Unknown'}
                   </Typography>
                   <Typography variant="body2" color="textSecondary">
                     Period: {filters.startDate.toLocaleDateString()} - {filters.endDate.toLocaleDateString()}
@@ -259,27 +280,27 @@ const Analytics = () => {
                     {filters.reportType}
                   </Typography>
                   <Typography variant="body2" color="textSecondary">
-                    Data points: {reportData.daily_data?.length || 0}
+                    Data points: {getSensorDataByType('temperature')?.data?.length || 0}
                   </Typography>
                 </CardContent>
               </Card>
             </Grid>
           </Grid>
 
-          {reportData.daily_data && reportData.daily_data.length > 0 && (
+          {reportData.sensor_reports && reportData.sensor_reports.length > 0 && (
             <Grid container spacing={3}>
               <Grid item xs={12}>
                 <Paper sx={{ p: 3 }} elevation={2}>
                   <Typography variant="h6" gutterBottom>Temperature Trend</Typography>
                   <ResponsiveContainer width="100%" height={300}>
-                    <LineChart data={formatChartData(reportData.daily_data)}>
+                    <LineChart data={formatChartData('temperature')}>
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="date" />
                       <YAxis unit="°C" />
                       <Tooltip />
                       <Line
                         type="monotone"
-                        dataKey="temperature"
+                        dataKey="avg"
                         stroke="#2E7D32"
                         strokeWidth={2}
                         dot={false}
@@ -292,12 +313,12 @@ const Analytics = () => {
                 <Paper sx={{ p: 3 }} elevation={2}>
                   <Typography variant="h6" gutterBottom>Humidity Trend</Typography>
                   <ResponsiveContainer width="100%" height={250}>
-                    <BarChart data={formatChartData(reportData.daily_data)}>
+                    <BarChart data={formatChartData('humidity')}>
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="date" />
                       <YAxis unit="%" />
                       <Tooltip />
-                      <Bar dataKey="humidity" fill="#1976D2" />
+                      <Bar dataKey="avg" fill="#1976D2" />
                     </BarChart>
                   </ResponsiveContainer>
                 </Paper>
@@ -306,14 +327,14 @@ const Analytics = () => {
                 <Paper sx={{ p: 3 }} elevation={2}>
                   <Typography variant="h6" gutterBottom>Soil Moisture Trend</Typography>
                   <ResponsiveContainer width="100%" height={250}>
-                    <LineChart data={formatChartData(reportData.daily_data)}>
+                    <LineChart data={formatChartData('soil_moisture')}>
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="date" />
                       <YAxis unit="%" />
                       <Tooltip />
                       <Line
                         type="monotone"
-                        dataKey="soilMoisture"
+                        dataKey="avg"
                         stroke="#ED6C02"
                         strokeWidth={2}
                         dot={false}

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Container,
@@ -14,7 +14,18 @@ import {
 } from '@mui/material';
 import MapIcon from '@mui/icons-material/Map';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
-import { getDevicesDataLatest } from '../api/devices';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import { getDevicesDataLatest, getDevices } from '../api/devices';
+
+// Fix Leaflet icon issue with webpack
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+});
 
 const MapView = () => {
   const { t } = useTranslation();
@@ -28,14 +39,56 @@ const MapView = () => {
 
   const loadDeviceLocations = async () => {
     setLoading(true);
-    // First get all devices to get their IDs
-    const devicesResult = await getDevicesDataLatest();
-    if (devicesResult.success) {
-      setDeviceData(devicesResult.data.devices || []);
-    } else {
-      setError(devicesResult.error || 'Failed to load device locations');
+    setError('');
+    try {
+      // First get all devices to get their IDs
+      const devicesResult = await getDevices();
+      if (!devicesResult.success) {
+        setError(devicesResult.error || 'Failed to load devices');
+        setLoading(false);
+        return;
+      }
+
+      const devices = devicesResult.data.devices || [];
+      if (devices.length === 0) {
+        setDeviceData([]);
+        setLoading(false);
+        return;
+      }
+
+      // Extract device IDs
+      const deviceIds = devices.map(d => d.id);
+
+      // Get latest readings for all devices
+      const readingsResult = await getDevicesDataLatest(deviceIds);
+      if (readingsResult.success) {
+        // Merge device info with latest readings
+        const readingsData = readingsResult.data.devices || readingsResult.data || [];
+        const enrichedData = devices.map(device => {
+          let latestData = null;
+          
+          // Handle different response structures
+          if (Array.isArray(readingsData)) {
+            latestData = readingsData.find(d => d.device_id === device.device_id);
+          } else if (typeof readingsData === 'object' && readingsData[device.device_id]) {
+            latestData = readingsData[device.device_id];
+          }
+          
+          return {
+            ...device,
+            ...(latestData || {}),
+          };
+        });
+        setDeviceData(enrichedData);
+      } else {
+        setError(readingsResult.error || 'Failed to load device readings');
+      }
+    } catch (err) {
+      setError('An error occurred while loading device locations');
+      console.error(err);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   return (
@@ -69,28 +122,89 @@ const MapView = () => {
         </Box>
       ) : (
         <>
-          {/* Placeholder for actual map - would integrate Leaflet or Google Maps */}
+          {/* Interactive Leaflet Map */}
           <Paper
             sx={{
-              height: 400,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
+              height: 500,
               mb: 3,
-              backgroundColor: '#f5f5f5',
-              border: '2px dashed #ccc',
+              position: 'relative',
+              overflow: 'hidden',
             }}
             elevation={2}
           >
-            <Box sx={{ textAlign: 'center' }}>
-              <MapIcon sx={{ fontSize: 64, color: '#ccc', mb: 2 }} />
-              <Typography variant="h6" color="textSecondary">
-                {t('map.deviceLocations')}
-              </Typography>
-              <Typography variant="body2" color="textSecondary">
-                {t('map.integrationPlanned')}
-              </Typography>
-            </Box>
+            {deviceData.length === 0 ? (
+              <Box
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  height: '100%',
+                  backgroundColor: '#f5f5f5',
+                }}
+              >
+                <Box sx={{ textAlign: 'center' }}>
+                  <MapIcon sx={{ fontSize: 64, color: '#ccc', mb: 2 }} />
+                  <Typography variant="h6" color="textSecondary">
+                    {t('map.noDevicesWithLocation')}
+                  </Typography>
+                </Box>
+              </Box>
+            ) : (
+              <MapContainer
+                center={[
+                  deviceData[0]?.latitude || 0,
+                  deviceData[0]?.longitude || 0,
+                ]}
+                zoom={13}
+                style={{ height: '100%', width: '100%' }}
+              >
+                <TileLayer
+                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                />
+                {deviceData.map((device) => (
+                  device.latitude && device.longitude && (
+                    <Marker
+                      key={device.device_id}
+                      position={[device.latitude, device.longitude]}
+                    >
+                      <Popup>
+                        <Box sx={{ minWidth: 200 }}>
+                          <Typography variant="subtitle2" fontWeight={600}>
+                            {device.name || device.device_id}
+                          </Typography>
+                          <Typography variant="body2" color="textSecondary" sx={{ mt: 0.5 }}>
+                            📍 {device.latitude.toFixed(4)}, {device.longitude.toFixed(4)}
+                          </Typography>
+                          {device.readings && (
+                            <Box sx={{ mt: 1 }}>
+                              <Typography variant="caption" fontWeight={600} display="block">
+                                {t('map.liveReadings')}
+                              </Typography>
+                              {Object.entries(device.readings).map(([sensor, value]) => (
+                                <Typography key={sensor} variant="caption">
+                                  {t(`alerts.${sensor}`)}: {value}
+                                  {sensor === 'temperature'
+                                    ? '°C'
+                                    : sensor === 'humidity'
+                                      ? '%'
+                                      : ''}
+                                </Typography>
+                              ))}
+                            </Box>
+                          )}
+                          <Typography variant="caption" color="textSecondary" sx={{ mt: 1, display: 'block' }}>
+                            {device.last_update
+                              ? new Date(device.last_update).toLocaleString()
+                              : 'Never'}
+                          </Typography>
+                        </Box>
+                      </Popup>
+                    </Marker>
+                  )
+                ))}
+              </MapContainer>
+            )}
           </Paper>
 
           <Typography variant="h6" gutterBottom sx={{ mt: 3 }}>
