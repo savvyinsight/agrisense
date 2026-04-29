@@ -11,10 +11,10 @@ import {
   ListItemText,
   ListItemSecondaryAction,
   Divider,
-  Badge,
   Collapse,
   Alert,
   Button,
+  Badge,
 } from '@mui/material';
 import {
   Notifications as NotificationsIcon,
@@ -25,11 +25,18 @@ import {
   Info as InfoIcon,
 } from '@mui/icons-material';
 import { getActiveAlerts, acknowledgeAlert } from '../api/devices';
+import type { Alert as AlertType } from '../types/api';
 
-const AlertPanel = ({ open, onClose, liveAlert }) => {
-  const [alerts, setAlerts] = useState([]);
+interface AlertPanelProps {
+  open: boolean;
+  onClose: () => void;
+  liveAlert?: AlertType | null;
+}
+
+const AlertPanel: React.FC<AlertPanelProps> = ({ open, onClose, liveAlert }) => {
+  const [alerts, setAlerts] = useState<AlertType[]>([]);
   const [loading, setLoading] = useState(false);
-  const [expandedId, setExpandedId] = useState(null);
+  const [expandedId, setExpandedId] = useState<number | null>(null);
 
   useEffect(() => {
     if (open) {
@@ -39,28 +46,28 @@ const AlertPanel = ({ open, onClose, liveAlert }) => {
 
   useEffect(() => {
     if (liveAlert) {
-      fetchAlerts(); // Refresh when new alert arrives
+      fetchAlerts();
     }
   }, [liveAlert]);
 
   const fetchAlerts = async () => {
     setLoading(true);
     const result = await getActiveAlerts();
-    if (result.success) {
-      const alertsList = result.data.alerts || result.data || [];
+    if (result.success && result.data) {
+      const alertsList = result.data.alerts || [];
       setAlerts(alertsList);
     }
     setLoading(false);
   };
 
-  const handleAcknowledge = async (alertId) => {
+  const handleAcknowledge = async (alertId: number | string) => {
     const result = await acknowledgeAlert(alertId);
     if (result.success) {
-      setAlerts(alerts.filter(a => a.id !== alertId));
+      setAlerts((prev) => prev.filter((a) => a.id !== alertId));
     }
   };
 
-  const getSeverityIcon = (severity) => {
+  const getSeverityIcon = (severity: string) => {
     switch (severity) {
       case 'critical':
         return <ErrorIcon color="error" />;
@@ -71,11 +78,14 @@ const AlertPanel = ({ open, onClose, liveAlert }) => {
     }
   };
 
-  const getSeverityColor = (severity) => {
+  const getSeverityColor = (severity: string) => {
     switch (severity) {
-      case 'critical': return 'error';
-      case 'warning': return 'warning';
-      default: return 'info';
+      case 'critical':
+        return 'error';
+      case 'warning':
+        return 'warning';
+      default:
+        return 'info';
     }
   };
 
@@ -88,9 +98,7 @@ const AlertPanel = ({ open, onClose, liveAlert }) => {
               <Badge badgeContent={alerts.length} color="error">
                 <NotificationsIcon />
               </Badge>
-              <Typography variant="h6">
-                Active Alerts
-              </Typography>
+              <Typography variant="h6">Active Alerts</Typography>
             </Box>
             <IconButton size="small" onClick={onClose}>
               <CloseIcon />
@@ -112,28 +120,23 @@ const AlertPanel = ({ open, onClose, liveAlert }) => {
                         primary={
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                             <Typography variant="body1">
-                              {alert.message || `${alert.rule_name || 'Alert'} triggered`}
+                              {alert.message || `${(alert as any).rule_name || 'Alert'} triggered`}
                             </Typography>
                             <Chip
                               label={alert.severity}
                               size="small"
-                              color={getSeverityColor(alert.severity)}
+                              color={getSeverityColor(alert.severity) as 'default' | 'error' | 'warning' | 'info'}
                             />
                           </Box>
                         }
                         secondary={
                           <Typography variant="caption" color="text.secondary">
-                            Device: {alert.device_name || alert.device_id} • 
-                            {new Date(alert.triggered_at).toLocaleString()}
+                            Device: {(alert as any).device_name || alert.device_id} • {new Date(alert.triggered_at).toLocaleString()}
                           </Typography>
                         }
                       />
                       <ListItemSecondaryAction>
-                        <Button
-                          size="small"
-                          variant="outlined"
-                          onClick={() => handleAcknowledge(alert.id)}
-                        >
+                        <Button size="small" variant="outlined" onClick={() => handleAcknowledge(alert.id)}>
                           Acknowledge
                         </Button>
                       </ListItemSecondaryAction>

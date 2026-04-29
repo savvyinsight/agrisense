@@ -12,29 +12,34 @@ import {
   PowerOff as OfflineIcon,
   Power as OnlineIcon,
 } from '@mui/icons-material';
+import type { Device } from '../../types/api';
 
-const DeviceCard = ({ device, liveTemp,onClick }) => {
-  const statusColors = {
+interface DeviceCardProps {
+  device: Device;
+  liveTemp?: number | null;
+  onClick?: () => void;
+}
+
+const DeviceCard: React.FC<DeviceCardProps> = ({ device, liveTemp, onClick }) => {
+  const statusColors: Record<string, 'default' | 'success' | 'error' | 'warning' | 'info'> = {
     online: 'success',
     offline: 'error',
   };
 
-  // Use liveTemp if available, otherwise use stored latestTemp
   const displayTemp = liveTemp !== undefined ? liveTemp : device.latestTemp;
 
   return (
-    <Card 
-    sx={{ 
-        height: '100%', 
-        display: 'flex', 
+    <Card
+      sx={{
+        height: '100%',
+        display: 'flex',
         flexDirection: 'column',
         cursor: onClick ? 'pointer' : 'default',
-        transition:'transform 0.2s',
-        '&:hover': onClick ? { transform: 'scale(1.02)', } : {},
+        transition: 'transform 0.2s',
+        '&:hover': onClick ? { transform: 'scale(1.02)' } : {},
       }}
       onClick={onClick}
     >
-      
       <CardContent>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
           <Typography variant="h6" component="div" noWrap>
@@ -51,7 +56,7 @@ const DeviceCard = ({ device, liveTemp,onClick }) => {
         <Typography color="text.secondary" variant="body2">
           {device.device_id}
         </Typography>
-        
+
         {device.location && (
           <Typography color="text.secondary" variant="body2">
             📍 {device.location}
@@ -63,7 +68,7 @@ const DeviceCard = ({ device, liveTemp,onClick }) => {
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <SensorIcon color="primary" fontSize="small" />
           <Typography variant="body2">
-            Temperature: {displayTemp ? `${displayTemp}°C` : 'N/A'}
+            Temperature: {displayTemp !== null && displayTemp !== undefined ? `${displayTemp}°C` : 'N/A'}
           </Typography>
           {liveTemp !== undefined && (
             <Chip label="Live" size="small" color="primary" variant="outlined" />

@@ -14,7 +14,12 @@ const sensors = [
   { id: 'light_intensity', label: 'Light', icon: <LightIcon />, unit: 'lux' },
 ];
 
-const SensorSelector = ({ selected, onSelect }) => {
+interface SensorSelectorProps {
+  selected: string;
+  onSelect: (sensorType: string) => void;
+}
+
+const SensorSelector: React.FC<SensorSelectorProps> = ({ selected, onSelect }) => {
   return (
     <Box sx={{ mb: 2 }}>
       <ToggleButtonGroup

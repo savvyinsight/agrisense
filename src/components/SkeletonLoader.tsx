@@ -1,7 +1,7 @@
 import React from 'react';
-import { Skeleton, Card, CardContent, Box, Grid } from '@mui/material';
+import { Skeleton, Card, CardContent } from '@mui/material';
 
-const DeviceCardSkeleton = () => (
+const DeviceCardSkeleton: React.FC = () => (
   <Card sx={{ height: '100%' }}>
     <CardContent>
       <Skeleton variant="text" width="70%" height={32} />
@@ -12,7 +12,7 @@ const DeviceCardSkeleton = () => (
   </Card>
 );
 
-const ChartSkeleton = () => (
+const ChartSkeleton: React.FC = () => (
   <Card sx={{ mt: 4 }}>
     <CardContent>
       <Skeleton variant="text" width="50%" height={32} />
@@ -21,7 +21,7 @@ const ChartSkeleton = () => (
   </Card>
 );
 
-const AlertSkeleton = () => (
+const AlertSkeleton: React.FC = () => (
   <Card sx={{ mb: 3 }}>
     <CardContent>
       <Skeleton variant="text" width="30%" height={32} />

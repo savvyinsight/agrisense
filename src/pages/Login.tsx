@@ -14,34 +14,41 @@ import {
 import { login, register } from '../api/auth';
 import { useAuth } from '../store/AuthContext';
 
-const Login = () => {
+interface LoginFormData {
+  username: string;
+  email: string;
+  password: string;
+}
+
+const Login: React.FC = () => {
   const navigate = useNavigate();
   const { setUser } = useAuth();
-  const [tab, setTab] = useState(0);
-  const [formData, setFormData] = useState({
+  const [tab, setTab] = useState<number>(0);
+  const [formData, setFormData] = useState<LoginFormData>({
     username: '',
     email: '',
     password: '',
   });
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string>('');
+  const [loading, setLoading] = useState<boolean>(false);
 
-  const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError('');
     setLoading(true);
 
-    let result;
+    let result: any;
     if (tab === 0) {
       result = await login(formData.email, formData.password);
-      if (result.success) {
+      if (result.success && result.data) {
         setUser(result.data.user);
         navigate('/dashboard');
       }
@@ -58,7 +65,6 @@ const Login = () => {
     }
     setLoading(false);
   };
-
   return (
     <Container 
       component="main" 

@@ -22,21 +22,31 @@ import {
 import { getHistoricalData } from '../api/devices';
 import SensorSelector from './SensorSelector';
 
-const SensorChart = ({ deviceId, deviceName }) => {
+interface SensorChartProps {
+  deviceId: string;
+  deviceName: string;
+}
+
+interface ChartDataPoint {
+  time: string;
+  value: number;
+}
+
+const SensorChart: React.FC<SensorChartProps> = ({ deviceId, deviceName }) => {
   const [timeRange, setTimeRange] = useState('24h');
   const [sensorType, setSensorType] = useState('temperature');
-  const [data, setData] = useState([]);
+  const [data, setData] = useState<ChartDataPoint[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const sensorUnits = {
+  const sensorUnits: Record<string, string> = {
     temperature: '°C',
     humidity: '%',
     soil_moisture: '%',
     light_intensity: 'lux',
   };
 
-  const sensorLabels = {
+  const sensorLabels: Record<string, string> = {
     temperature: 'Temperature',
     humidity: 'Humidity',
     soil_moisture: 'Soil Moisture',
@@ -45,16 +55,17 @@ const SensorChart = ({ deviceId, deviceName }) => {
 
   useEffect(() => {
     fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [deviceId, sensorType, timeRange]);
 
   const fetchData = async () => {
     if (!deviceId) return;
-    
+
     setLoading(true);
-    
+    setError('');
+
     const end = new Date();
-    let start = new Date();
-    
+    const start = new Date(end);
     switch (timeRange) {
       case '24h':
         start.setHours(end.getHours() - 24);
@@ -68,17 +79,17 @@ const SensorChart = ({ deviceId, deviceName }) => {
       default:
         start.setHours(end.getHours() - 24);
     }
-    
+
     const result = await getHistoricalData(
       deviceId,
       sensorType,
       start.toISOString(),
       end.toISOString()
     );
-    
+
     if (result.success && result.data) {
       const dataArray = Array.isArray(result.data) ? result.data : [];
-      const formatted = dataArray.map(item => ({
+      const formatted = dataArray.map((item) => ({
         time: new Date(item.timestamp).toLocaleString(),
         value: item.value,
       }));
@@ -105,7 +116,7 @@ const SensorChart = ({ deviceId, deviceName }) => {
           <Typography variant="h6">
             {sensorLabels[sensorType]} History - {deviceName}
           </Typography>
-          <Box sx={{ display: 'flex', gap: 2 }}>
+          <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
             <SensorSelector selected={sensorType} onSelect={setSensorType} />
             <FormControl size="small" sx={{ minWidth: 120 }}>
               <InputLabel>Time Range</InputLabel>
@@ -122,9 +133,7 @@ const SensorChart = ({ deviceId, deviceName }) => {
           </Box>
         </Box>
 
-        {error && (
-          <Typography color="error">{error}</Typography>
-        )}
+        {error && <Typography color="error">{error}</Typography>}
 
         {data.length > 0 ? (
           <ResponsiveContainer width="100%" height={300}>
@@ -133,13 +142,7 @@ const SensorChart = ({ deviceId, deviceName }) => {
               <XAxis dataKey="time" />
               <YAxis unit={sensorUnits[sensorType]} />
               <Tooltip />
-              <Line
-                type="monotone"
-                dataKey="value"
-                stroke="#2E7D32"
-                strokeWidth={2}
-                dot={false}
-              />
+              <Line type="monotone" dataKey="value" stroke="#2E7D32" strokeWidth={2} dot={false} />
             </LineChart>
           </ResponsiveContainer>
         ) : (

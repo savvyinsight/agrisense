@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import type { Alert as AlertType } from '../types/api';
 
 import {
   Box,
@@ -42,12 +43,16 @@ import { getActiveAlerts } from '../api/devices';
 
 const drawerWidth = 280;
 
-const Layout = ({ children }) => {
+interface LayoutProps {
+  children: React.ReactNode;
+}
+
+const Layout: React.FC<LayoutProps> = ({ children }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [anchorEl, setAnchorEl] = useState(null);
-  const [alerts, setAlerts] = useState([]);
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [alerts, setAlerts] = useState<AlertType[]>([]);
   const navigate = useNavigate();
   const location = useLocation();
   const { user, isAdmin, setUser } = useAuth();
@@ -63,9 +68,8 @@ const Layout = ({ children }) => {
     { text: t('nav.map'), icon: <MapIcon />, path: '/map' },
   ];
 
-  const filteredNavigationItems = navigationItems.filter(item => {
+  const filteredNavigationItems = navigationItems.filter((item) => {
     if (isAdmin()) return true;
-    // Viewers can only see Dashboard, Analytics, and Map
     return ['/dashboard', '/analytics', '/map'].includes(item.path);
   });
 
@@ -73,7 +77,7 @@ const Layout = ({ children }) => {
     setMobileOpen(!mobileOpen);
   };
 
-  const handleProfileMenuOpen = (event) => {
+  const handleProfileMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
   };
 
@@ -81,31 +85,17 @@ const Layout = ({ children }) => {
     setAnchorEl(null);
   };
 
-  const handleAlertsClick = () => {
+  const handleAlertsClick = async () => {
+    try {
+      const result = await getActiveAlerts();
+      if (result.success) {
+        setAlerts(result.data?.alerts || []);
+      }
+    } catch (error) {
+      console.error('Failed to load alerts:', error);
+    }
     navigate('/alerts');
   };
-
-  const handleLanguageChange = (lng) => {
-    i18n.changeLanguage(lng);
-  };
-
-  // Load active alerts on component mount
-  useEffect(() => {
-    const loadAlerts = async () => {
-      try {
-        const result = await getActiveAlerts();
-        if (result.success) {
-          setAlerts(result.data || []);
-        }
-      } catch (error) {
-        console.error('Failed to load alerts:', error);
-      }
-    };
-
-    if (user) {
-      loadAlerts();
-    }
-  }, [user]);
 
   const handleLogout = () => {
     logout();
@@ -113,6 +103,27 @@ const Layout = ({ children }) => {
     navigate('/login');
     handleProfileMenuClose();
   };
+
+  const handleLanguageChange = (language: string) => {
+    i18n.changeLanguage(language);
+  };
+
+  useEffect(() => {
+    const loadAlerts = async () => {
+      try {
+        const result = await getActiveAlerts();
+        if (result.success) {
+          setAlerts(result.data?.alerts || []);
+        }
+      } catch (error) {
+        console.error('Failed to load alerts:', error);
+      }
+    };
+
+    if (user) {
+      void loadAlerts();
+    }
+  }, [user]);
 
   const drawer = (
     <Box>
@@ -171,7 +182,7 @@ const Layout = ({ children }) => {
             <MenuIcon />
           </IconButton>
           <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
-            {navigationItems.find(item => item.path === location.pathname)?.text || 'Dashboard'}
+            {navigationItems.find((item) => item.path === location.pathname)?.text || 'Dashboard'}
           </Typography>
 
           <IconButton color="inherit" size="large" onClick={handleAlertsClick}>
@@ -214,7 +225,7 @@ const Layout = ({ children }) => {
           open={mobileOpen}
           onClose={handleDrawerToggle}
           ModalProps={{
-            keepMounted: true, // Better open performance on mobile.
+            keepMounted: true,
           }}
           sx={{
             display: { xs: 'block', md: 'none' },

@@ -21,25 +21,38 @@ import {
 } from 'recharts';
 import { getHistoricalData } from '../api/devices';
 
-const TemperatureChart = ({ deviceId, deviceName }) => {
+interface TemperatureChartProps {
+  deviceId: string;
+  deviceName: string;
+}
+
+interface TemperatureDataPoint {
+  time: string;
+  temperature: number;
+}
+
+const TemperatureChart: React.FC<TemperatureChartProps> = ({ deviceId, deviceName }) => {
   const [timeRange, setTimeRange] = useState('24h');
-  const [data, setData] = useState([]);
+  const [data, setData] = useState<TemperatureDataPoint[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    fetchData();
+    if (deviceId) {
+      void fetchData();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [deviceId, timeRange]);
 
   const fetchData = async () => {
     if (!deviceId) return;
-    
+
     setLoading(true);
-    
-    // Calculate time range
+    setError('');
+
     const end = new Date();
-    let start = new Date();
-    
+    const start = new Date(end);
+
     switch (timeRange) {
       case '24h':
         start.setHours(end.getHours() - 24);
@@ -53,7 +66,7 @@ const TemperatureChart = ({ deviceId, deviceName }) => {
       default:
         start.setHours(end.getHours() - 24);
     }
-    
+
     const result = await getHistoricalData(
       deviceId,
       'temperature',
@@ -61,26 +74,18 @@ const TemperatureChart = ({ deviceId, deviceName }) => {
       end.toISOString()
     );
 
-    console.log('Full result:', result);
-    console.log('result.data:', result.data);
-    
     if (result.success && result.data) {
-        // Check if result.data is an array
-        const dataArray = Array.isArray(result.data) ? result.data : [];
-
-        // console.log('First item structure',dataArray[0]);//log first item
-
-        // Format for chart
-      const formatted = dataArray.map(item => ({        
+      const dataArray = Array.isArray(result.data) ? result.data : [];
+      const formatted = dataArray.map((item) => ({
         time: new Date(item.timestamp).toLocaleString(),
         temperature: item.value,
       }));
-      // console.log('Formatted data:', formatted.slice(0, 3));
       setData(formatted);
     } else {
       setError('Failed to load chart data');
-      setData([])
+      setData([]);
     }
+
     setLoading(false);
   };
 
@@ -96,9 +101,7 @@ const TemperatureChart = ({ deviceId, deviceName }) => {
     <Card>
       <CardContent>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-          <Typography variant="h6">
-            Temperature History - {deviceName}
-          </Typography>
+          <Typography variant="h6">Temperature History - {deviceName}</Typography>
           <FormControl size="small" sx={{ minWidth: 120 }}>
             <InputLabel>Time Range</InputLabel>
             <Select
@@ -113,9 +116,7 @@ const TemperatureChart = ({ deviceId, deviceName }) => {
           </FormControl>
         </Box>
 
-        {error && (
-          <Typography color="error">{error}</Typography>
-        )}
+        {error && <Typography color="error">{error}</Typography>}
 
         {data.length > 0 ? (
           <ResponsiveContainer width="100%" height={300}>
@@ -124,13 +125,7 @@ const TemperatureChart = ({ deviceId, deviceName }) => {
               <XAxis dataKey="time" />
               <YAxis unit="°C" />
               <Tooltip />
-              <Line
-                type="monotone"
-                dataKey="temperature"
-                stroke="#2E7D32"
-                strokeWidth={2}
-                dot={false}
-              />
+              <Line type="monotone" dataKey="temperature" stroke="#2E7D32" strokeWidth={2} dot={false} />
             </LineChart>
           </ResponsiveContainer>
         ) : (

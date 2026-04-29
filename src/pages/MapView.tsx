@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Container,
@@ -18,20 +18,26 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import { getDevicesDataLatest, getDevices } from '../api/devices';
+import type { Device } from '../types/api';
 
 // Fix Leaflet icon issue with webpack
-delete L.Icon.Default.prototype._getIconUrl;
+delete (L.Icon.Default.prototype as any)._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
   iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
 });
 
-const MapView = () => {
+interface MapDevice extends Device {
+  readings?: Record<string, number>;
+  last_update?: string;
+}
+
+const MapView: React.FC = () => {
   const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [deviceData, setDeviceData] = useState([]);
+  const [deviceData, setDeviceData] = useState<MapDevice[]>([]);
 
   useEffect(() => {
     loadDeviceLocations();
@@ -40,10 +46,10 @@ const MapView = () => {
   const loadDeviceLocations = async () => {
     setLoading(true);
     setError('');
+
     try {
-      // First get all devices to get their IDs
       const devicesResult = await getDevices();
-      if (!devicesResult.success) {
+      if (!devicesResult.success || !devicesResult.data) {
         setError(devicesResult.error || 'Failed to load devices');
         setLoading(false);
         return;
@@ -56,28 +62,24 @@ const MapView = () => {
         return;
       }
 
-      // Extract device IDs
-      const deviceIds = devices.map(d => d.id);
-
-      // Get latest readings for all devices
+      const deviceIds = devices.map((d) => d.id);
       const readingsResult = await getDevicesDataLatest(deviceIds);
-      if (readingsResult.success) {
-        // Merge device info with latest readings
+
+      if (readingsResult.success && readingsResult.data) {
         const readingsData = readingsResult.data.devices || readingsResult.data || [];
-        const enrichedData = devices.map(device => {
-          let latestData = null;
-          
-          // Handle different response structures
+        const enrichedData = devices.map((device) => {
+          let latestData: any = null;
+
           if (Array.isArray(readingsData)) {
-            latestData = readingsData.find(d => d.device_id === device.device_id);
+            latestData = readingsData.find((d: any) => d.device_id === device.device_id);
           } else if (typeof readingsData === 'object' && readingsData[device.device_id]) {
             latestData = readingsData[device.device_id];
           }
-          
+
           return {
             ...device,
             ...(latestData || {}),
-          };
+          } as MapDevice;
         });
         setDeviceData(enrichedData);
       } else {
@@ -93,15 +95,11 @@ const MapView = () => {
 
   return (
     <Container maxWidth="lg">
-      <Box
-        sx={{
-          display: 'flex',
-          alignItems: 'center',
-          mb: 3,
-        }}
-      >
+      <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
         <MapIcon sx={{ mr: 2, fontSize: 40 }} />
-        <Typography variant="h4" fontWeight={700}>{t('map.title')}</Typography>
+        <Typography variant="h4" fontWeight={700}>
+          {t('map.title')}
+        </Typography>
       </Box>
 
       <Paper sx={{ p: 2, mb: 3 }} elevation={2}>
@@ -122,26 +120,9 @@ const MapView = () => {
         </Box>
       ) : (
         <>
-          {/* Interactive Leaflet Map */}
-          <Paper
-            sx={{
-              height: 500,
-              mb: 3,
-              position: 'relative',
-              overflow: 'hidden',
-            }}
-            elevation={2}
-          >
+          <Paper sx={{ height: 500, mb: 3, position: 'relative', overflow: 'hidden' }} elevation={2}>
             {deviceData.length === 0 ? (
-              <Box
-                sx={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  height: '100%',
-                  backgroundColor: '#f5f5f5',
-                }}
-              >
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', backgroundColor: '#f5f5f5' }}>
                 <Box sx={{ textAlign: 'center' }}>
                   <MapIcon sx={{ fontSize: 64, color: '#ccc', mb: 2 }} />
                   <Typography variant="h6" color="textSecondary">
@@ -150,24 +131,14 @@ const MapView = () => {
                 </Box>
               </Box>
             ) : (
-              <MapContainer
-                center={[
-                  deviceData[0]?.latitude || 0,
-                  deviceData[0]?.longitude || 0,
-                ]}
-                zoom={13}
-                style={{ height: '100%', width: '100%' }}
-              >
+              <MapContainer center={[deviceData[0]?.latitude || 0, deviceData[0]?.longitude || 0]} zoom={13} style={{ height: '100%', width: '100%' }}>
                 <TileLayer
                   url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                   attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
                 />
-                {deviceData.map((device) => (
-                  device.latitude && device.longitude && (
-                    <Marker
-                      key={device.device_id}
-                      position={[device.latitude, device.longitude]}
-                    >
+                {deviceData.map((device) =>
+                  device.latitude && device.longitude ? (
+                    <Marker key={device.device_id} position={[device.latitude, device.longitude]}>
                       <Popup>
                         <Box sx={{ minWidth: 200 }}>
                           <Typography variant="subtitle2" fontWeight={600}>
@@ -184,25 +155,19 @@ const MapView = () => {
                               {Object.entries(device.readings).map(([sensor, value]) => (
                                 <Typography key={sensor} variant="caption">
                                   {t(`alerts.${sensor}`)}: {value}
-                                  {sensor === 'temperature'
-                                    ? '°C'
-                                    : sensor === 'humidity'
-                                      ? '%'
-                                      : ''}
+                                  {sensor === 'temperature' ? '°C' : sensor === 'humidity' ? '%' : ''}
                                 </Typography>
                               ))}
                             </Box>
                           )}
                           <Typography variant="caption" color="textSecondary" sx={{ mt: 1, display: 'block' }}>
-                            {device.last_update
-                              ? new Date(device.last_update).toLocaleString()
-                              : 'Never'}
+                            {device.last_update ? new Date(device.last_update).toLocaleString() : 'Never'}
                           </Typography>
                         </Box>
                       </Popup>
                     </Marker>
-                  )
-                ))}
+                  ) : null
+                )}
               </MapContainer>
             )}
           </Paper>
@@ -212,9 +177,7 @@ const MapView = () => {
           </Typography>
 
           {deviceData.length === 0 ? (
-            <Alert severity="info">
-              {t('map.noDevicesWithLocation')}
-            </Alert>
+            <Alert severity="info">{t('map.noDevicesWithLocation')}</Alert>
           ) : (
             <Grid container spacing={3}>
               {deviceData.map((device) => (

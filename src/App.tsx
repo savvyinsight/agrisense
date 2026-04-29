@@ -13,6 +13,10 @@ import AutomationRules from './pages/AutomationRules';
 import Analytics from './pages/Analytics';
 import MapView from './pages/MapView';
 
+type RouteWrapperProps = {
+  children: React.ReactNode;
+};
+
 const theme = createTheme({
   palette: {
     primary: {
@@ -33,25 +37,25 @@ const theme = createTheme({
   },
 });
 
-const PrivateRoute = ({ children }) => {
+const PrivateRoute: React.FC<RouteWrapperProps> = ({ children }) => {
   const { user, loading } = useAuth();
 
   if (loading) return <div>Loading...</div>;
 
-  return user ? children : <Navigate to="/login" />;
+  return user ? <>{children}</> : <Navigate to="/login" replace />;
 };
 
-const AdminRoute = ({ children }) => {
+const AdminRoute: React.FC<RouteWrapperProps> = ({ children }) => {
   const { user, loading, isAdmin } = useAuth();
 
   if (loading) return <div>Loading...</div>;
 
-  if (!user) return <Navigate to="/login" />;
+  if (!user) return <Navigate to="/login" replace />;
 
-  return isAdmin() ? children : <Navigate to="/dashboard" />;
+  return isAdmin() ? <>{children}</> : <Navigate to="/dashboard" replace />;
 };
 
-const ComingSoon = ({ title }) => (
+const ComingSoon: React.FC<{ title: string }> = ({ title }) => (
   <div style={{ textAlign: 'center', padding: '50px' }}>
     <h2>{title}</h2>
     <p>This feature is coming soon!</p>
@@ -91,7 +95,7 @@ function App() {
                       } />
                       <Route path="analytics" element={<Analytics />} />
                       <Route path="map" element={<MapView />} />
-                      <Route path="" element={<Navigate to="dashboard" />} />
+                      <Route path="" element={<Navigate to="dashboard" replace />} />
                     </Routes>
                   </Layout>
                 </PrivateRoute>

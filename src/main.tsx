@@ -5,7 +5,7 @@ import './index.css';
 import './i18n';
 import ErrorBoundary from './components/ErrorBoundary';
 
-ReactDOM.createRoot(document.getElementById('root')).render(
+ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
   <ErrorBoundary>
     <App />
   </ErrorBoundary>
