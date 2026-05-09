@@ -1,4 +1,4 @@
-package domain
+package analytics
 
 import "time"
 

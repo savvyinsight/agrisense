@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/savvyinsight/agrisense/internal/device"
-	"github.com/savvyinsight/agrisense/internal/domain"
 	"github.com/savvyinsight/agrisense/internal/sensor"
 )
 
@@ -34,7 +33,7 @@ func NewService(
 	}
 }
 
-func (s *Service) GenerateReport(deviceID int, start, end time.Time, reportType string) (*domain.AnalyticsReport, error) {
+func (s *Service) GenerateReport(deviceID int, start, end time.Time, reportType string) (*AnalyticsReport, error) {
 	if end.Before(start) {
 		return nil, fmt.Errorf("end time must be after start time")
 	}
@@ -54,7 +53,7 @@ func (s *Service) GenerateReport(deviceID int, start, end time.Time, reportType 
 		reportType = "daily"
 	}
 
-	result := &domain.AnalyticsReport{
+	result := &AnalyticsReport{
 		DeviceID:   deviceID,
 		DeviceUID:  device.DeviceID,
 		Start:      start,
@@ -73,7 +72,7 @@ func (s *Service) GenerateReport(deviceID int, start, end time.Time, reportType 
 			continue
 		}
 
-		result.SensorReports = append(result.SensorReports, domain.SensorAnalyticsReport{
+		result.SensorReports = append(result.SensorReports, SensorAnalyticsReport{
 			SensorType: sensorType.Name,
 			Unit:       sensorType.Unit,
 			Data:       aggregated,
@@ -83,7 +82,7 @@ func (s *Service) GenerateReport(deviceID int, start, end time.Time, reportType 
 	return result, nil
 }
 
-func (s *Service) aggregateSensorData(data []sensor.SensorData, reportType string) []domain.SensorAnalyticsData {
+func (s *Service) aggregateSensorData(data []sensor.SensorData, reportType string) []SensorAnalyticsData {
 	if len(data) == 0 {
 		return nil
 	}
@@ -119,7 +118,7 @@ func (s *Service) aggregateSensorData(data []sensor.SensorData, reportType strin
 	// sort by time
 	sort.Slice(keys, func(i, j int) bool { return keys[i].Before(keys[j]) })
 
-	aggregated := make([]domain.SensorAnalyticsData, 0, len(keys))
+	aggregated := make([]SensorAnalyticsData, 0, len(keys))
 	for _, bucket := range keys {
 		points := group[bucket]
 		if len(points) == 0 {
@@ -139,7 +138,7 @@ func (s *Service) aggregateSensorData(data []sensor.SensorData, reportType strin
 			sum += p.Value
 		}
 
-		aggregated = append(aggregated, domain.SensorAnalyticsData{
+		aggregated = append(aggregated, SensorAnalyticsData{
 			Timestamp: bucket,
 			Avg:       sum / float64(len(points)),
 			Min:       minV,

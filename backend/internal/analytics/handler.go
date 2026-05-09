@@ -1,4 +1,4 @@
-package rest
+package analytics
 
 import (
 	"net/http"
@@ -6,14 +6,13 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/savvyinsight/agrisense/internal/service/analytics"
 )
 
 type AnalyticsHandler struct {
-	analyticsService *analytics.Service
+	analyticsService *Service
 }
 
-func NewAnalyticsHandler(analyticsService *analytics.Service) *AnalyticsHandler {
+func NewAnalyticsHandler(analyticsService *Service) *AnalyticsHandler {
 	return &AnalyticsHandler{analyticsService: analyticsService}
 }
 

@@ -9,6 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/savvyinsight/agrisense/internal/alert"
+	"github.com/savvyinsight/agrisense/internal/analytics"
 	"github.com/savvyinsight/agrisense/internal/automation"
 	"github.com/savvyinsight/agrisense/internal/config"
 	"github.com/savvyinsight/agrisense/internal/control"
@@ -21,7 +22,6 @@ import (
 	"github.com/savvyinsight/agrisense/internal/repository/redis"
 	"github.com/savvyinsight/agrisense/internal/ruleengine"
 	"github.com/savvyinsight/agrisense/internal/sensor"
-	"github.com/savvyinsight/agrisense/internal/service/analytics"
 	"github.com/savvyinsight/agrisense/internal/service/data"
 	"github.com/savvyinsight/agrisense/internal/user"
 )
@@ -154,7 +154,7 @@ func main() {
 	alertHandler := alert.NewAlertHandler(alertService)
 	controlHandler := control.NewControlHandler(controlService)
 	automationHandler := automation.NewAutomationHandler(automationService)
-	analyticsHandler := rest.NewAnalyticsHandler(analyticsService)
+	analyticsHandler := analytics.NewAnalyticsHandler(analyticsService)
 
 	// Setup Gin router
 	r := gin.Default()
