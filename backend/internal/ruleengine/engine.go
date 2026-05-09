@@ -5,26 +5,26 @@ import (
 	"sync"
 	"time"
 
+	"github.com/savvyinsight/agrisense/internal/alert"
 	"github.com/savvyinsight/agrisense/internal/device"
-	"github.com/savvyinsight/agrisense/internal/domain"
 	"github.com/savvyinsight/agrisense/internal/sensor"
 )
 
 type Engine struct {
-	rules      map[int]*domain.AlertRule
+	rules      map[int]*alert.AlertRule
 	rulesMutex sync.RWMutex
 	evaluator  *Evaluator
-	alertSvc   domain.AlertRepository
-	ruleRepo   domain.AlertRuleRepository
+	alertSvc   alert.AlertRepository
+	ruleRepo   alert.AlertRuleRepository
 	deviceRepo device.DeviceRepository
 	stopChan   chan struct{}
 }
 
-func NewEngine(ruleRepo domain.AlertRuleRepository,
-	alertSvc domain.AlertRepository,
+func NewEngine(ruleRepo alert.AlertRuleRepository,
+	alertSvc alert.AlertRepository,
 	deviceRepo device.DeviceRepository) *Engine {
 	return &Engine{
-		rules:      make(map[int]*domain.AlertRule),
+		rules:      make(map[int]*alert.AlertRule),
 		evaluator:  NewEvaluator(),
 		ruleRepo:   ruleRepo,
 		alertSvc:   alertSvc,
@@ -60,7 +60,7 @@ func (e *Engine) loadRules() error {
 	e.rulesMutex.Lock()
 	defer e.rulesMutex.Unlock()
 
-	e.rules = make(map[int]*domain.AlertRule)
+	e.rules = make(map[int]*alert.AlertRule)
 	for _, rule := range rules {
 		e.rules[rule.ID] = &rule
 	}
@@ -133,7 +133,7 @@ func (e *Engine) getSensorTypeID(sensorType string) int {
 	}
 }
 
-func (e *Engine) triggerAlert(rule *domain.AlertRule, data *sensor.SensorData) {
+func (e *Engine) triggerAlert(rule *alert.AlertRule, data *sensor.SensorData) {
 	// Get device ID from database using the string device_id
 	device, err := e.deviceRepo.GetByDeviceID(data.DeviceID)
 	if err != nil {
@@ -141,13 +141,13 @@ func (e *Engine) triggerAlert(rule *domain.AlertRule, data *sensor.SensorData) {
 		return
 	}
 
-	alert := &domain.Alert{
+	alert := &alert.Alert{
 		RuleID:      rule.ID,
 		DeviceID:    device.ID, // Use the retrieved device ID
 		SensorValue: data.Value,
 		Message:     e.evaluator.FormatMessage(rule, data),
 		Severity:    rule.Severity,
-		Status:      domain.AlertStatusTriggered,
+		Status:      alert.AlertStatusTriggered,
 		TriggeredAt: time.Now(),
 		Metadata: map[string]interface{}{
 			"sensor_type": data.SensorType,

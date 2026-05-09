@@ -1,17 +1,15 @@
-package postgres
+package alert
 
 import (
 	"database/sql"
 	"time"
-
-	"github.com/savvyinsight/agrisense/internal/domain"
 )
 
-type AlertRuleRepository struct {
+type PostgresAlertRuleRepository struct {
 	DB *sql.DB
 }
 
-func (r *AlertRuleRepository) Create(rule *domain.AlertRule) error {
+func (r *PostgresAlertRuleRepository) Create(rule *AlertRule) error {
 	query := `
         INSERT INTO alert_rules (
             name, device_id, sensor_type_id, condition, threshold_value, 
@@ -40,12 +38,12 @@ func (r *AlertRuleRepository) Create(rule *domain.AlertRule) error {
 	return err
 }
 
-func (r *AlertRuleRepository) GetByID(id int) (*domain.AlertRule, error) {
+func (r *PostgresAlertRuleRepository) GetByID(id int) (*AlertRule, error) {
 	query := `SELECT id, name, device_id, sensor_type_id, condition, threshold_value, 
                      threshold_max, duration_seconds, severity, enabled, user_id, created_at, updated_at
               FROM alert_rules WHERE id = $1`
 
-	var rule domain.AlertRule
+	var rule AlertRule
 	err := r.DB.QueryRow(query, id).Scan(
 		&rule.ID,
 		&rule.Name,
@@ -68,7 +66,7 @@ func (r *AlertRuleRepository) GetByID(id int) (*domain.AlertRule, error) {
 	return &rule, nil
 }
 
-func (r *AlertRuleRepository) GetByDeviceID(deviceID int) ([]domain.AlertRule, error) {
+func (r *PostgresAlertRuleRepository) GetByDeviceID(deviceID int) ([]AlertRule, error) {
 	query := `SELECT id, name, device_id, sensor_type_id, condition, threshold_value, 
                      threshold_max, duration_seconds, severity, enabled, user_id, created_at, updated_at
               FROM alert_rules WHERE device_id = $1 OR device_id IS NULL`
@@ -79,9 +77,9 @@ func (r *AlertRuleRepository) GetByDeviceID(deviceID int) ([]domain.AlertRule, e
 	}
 	defer rows.Close()
 
-	var rules []domain.AlertRule
+	var rules []AlertRule
 	for rows.Next() {
-		var rule domain.AlertRule
+		var rule AlertRule
 		err := rows.Scan(
 			&rule.ID,
 			&rule.Name,
@@ -106,7 +104,7 @@ func (r *AlertRuleRepository) GetByDeviceID(deviceID int) ([]domain.AlertRule, e
 	return rules, nil
 }
 
-func (r *AlertRuleRepository) GetEnabledRules() ([]domain.AlertRule, error) {
+func (r *PostgresAlertRuleRepository) GetEnabledRules() ([]AlertRule, error) {
 	query := `SELECT id, name, device_id, sensor_type_id, condition, threshold_value, 
                      threshold_max, duration_seconds, severity, enabled, user_id, created_at, updated_at
               FROM alert_rules WHERE enabled = true`
@@ -117,9 +115,9 @@ func (r *AlertRuleRepository) GetEnabledRules() ([]domain.AlertRule, error) {
 	}
 	defer rows.Close()
 
-	var rules []domain.AlertRule
+	var rules []AlertRule
 	for rows.Next() {
-		var rule domain.AlertRule
+		var rule AlertRule
 		err := rows.Scan(
 			&rule.ID,
 			&rule.Name,
@@ -144,7 +142,7 @@ func (r *AlertRuleRepository) GetEnabledRules() ([]domain.AlertRule, error) {
 	return rules, nil
 }
 
-func (r *AlertRuleRepository) Update(rule *domain.AlertRule) error {
+func (r *PostgresAlertRuleRepository) Update(rule *AlertRule) error {
 	query := `
         UPDATE alert_rules 
         SET name = $1, device_id = $2, sensor_type_id = $3, condition = $4, 
@@ -171,7 +169,7 @@ func (r *AlertRuleRepository) Update(rule *domain.AlertRule) error {
 	return err
 }
 
-func (r *AlertRuleRepository) Delete(id int) error {
+func (r *PostgresAlertRuleRepository) Delete(id int) error {
 	query := `DELETE FROM alert_rules WHERE id = $1`
 	result, err := r.DB.Exec(query, id)
 	if err != nil {
@@ -190,7 +188,7 @@ func (r *AlertRuleRepository) Delete(id int) error {
 	return nil
 }
 
-func (r *AlertRuleRepository) List(userID int) ([]domain.AlertRule, error) {
+func (r *PostgresAlertRuleRepository) List(userID int) ([]AlertRule, error) {
 	query := `SELECT id, name, device_id, sensor_type_id, condition, threshold_value, 
                      threshold_max, duration_seconds, severity, enabled, user_id, created_at, updated_at
               FROM alert_rules WHERE user_id = $1 ORDER BY id`
@@ -201,9 +199,9 @@ func (r *AlertRuleRepository) List(userID int) ([]domain.AlertRule, error) {
 	}
 	defer rows.Close()
 
-	var rules []domain.AlertRule
+	var rules []AlertRule
 	for rows.Next() {
-		var rule domain.AlertRule
+		var rule AlertRule
 		err := rows.Scan(
 			&rule.ID,
 			&rule.Name,

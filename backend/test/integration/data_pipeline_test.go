@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/savvyinsight/agrisense/internal/alert"
 	"github.com/savvyinsight/agrisense/internal/config"
 	"github.com/savvyinsight/agrisense/internal/device"
 	"github.com/savvyinsight/agrisense/internal/repository/postgres"
@@ -68,8 +69,8 @@ func TestDataPipeline(t *testing.T) {
 
 	// Create rule engine
 	ruleEngine := ruleengine.NewEngine(
-		&postgres.AlertRuleRepository{DB: pgDB},
-		&postgres.AlertRepository{DB: pgDB},
+		&alert.PostgresAlertRuleRepository{DB: pgDB},
+		&alert.PostgresAlertRepository{DB: pgDB},
 		&device.PostgresDeviceRepository{DB: pgDB},
 	)
 	ruleEngine.Start()

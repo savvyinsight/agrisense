@@ -2,18 +2,17 @@ package alert
 
 import (
 	"github.com/savvyinsight/agrisense/internal/device"
-	"github.com/savvyinsight/agrisense/internal/domain"
 )
 
 type Service struct {
-	alertRepo  domain.AlertRepository
-	ruleRepo   domain.AlertRuleRepository
+	alertRepo  AlertRepository
+	ruleRepo   AlertRuleRepository
 	deviceRepo device.DeviceRepository
 }
 
 func NewService(
-	alertRepo domain.AlertRepository,
-	ruleRepo domain.AlertRuleRepository,
+	alertRepo AlertRepository,
+	ruleRepo AlertRuleRepository,
 	deviceRepo device.DeviceRepository,
 ) *Service {
 	return &Service{
@@ -23,11 +22,11 @@ func NewService(
 	}
 }
 
-func (s *Service) CreateRule(rule *domain.AlertRule) error {
+func (s *Service) CreateRule(rule *AlertRule) error {
 	return s.ruleRepo.Create(rule)
 }
 
-func (s *Service) UpdateRule(rule *domain.AlertRule) error {
+func (s *Service) UpdateRule(rule *AlertRule) error {
 	return s.ruleRepo.Update(rule)
 }
 
@@ -35,24 +34,24 @@ func (s *Service) DeleteRule(id int) error {
 	return s.ruleRepo.Delete(id)
 }
 
-func (s *Service) GetRule(id int) (*domain.AlertRule, error) {
+func (s *Service) GetRule(id int) (*AlertRule, error) {
 	return s.ruleRepo.GetByID(id)
 }
 
-func (s *Service) ListRules(userID int) ([]domain.AlertRule, error) {
+func (s *Service) ListRules(userID int) ([]AlertRule, error) {
 	return s.ruleRepo.List(userID)
 }
 
-func (s *Service) GetActiveAlerts() ([]domain.Alert, error) {
+func (s *Service) GetActiveAlerts() ([]Alert, error) {
 	return s.alertRepo.GetActive()
 }
 
-func (s *Service) GetActiveAlertsPaginated(page, limit int) ([]domain.Alert, int64, error) {
+func (s *Service) GetActiveAlertsPaginated(page, limit int) ([]Alert, int64, error) {
 	offset := (page - 1) * limit
 	return s.alertRepo.GetActivePaginated(limit, offset)
 }
 
-func (s *Service) GetAlertsByDevice(deviceID int) ([]domain.Alert, error) {
+func (s *Service) GetAlertsByDevice(deviceID int) ([]Alert, error) {
 	return s.alertRepo.GetByDeviceID(deviceID)
 }
 
@@ -64,7 +63,7 @@ func (s *Service) ResolveAlert(alertID int) error {
 	return s.alertRepo.Resolve(alertID)
 }
 
-func (s *Service) GetAlertHistory(page, limit int) ([]domain.Alert, int64, error) {
+func (s *Service) GetAlertHistory(page, limit int) ([]Alert, int64, error) {
 	offset := (page - 1) * limit
 	return s.alertRepo.List(limit, offset)
 }

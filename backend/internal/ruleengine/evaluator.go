@@ -3,7 +3,7 @@ package ruleengine
 import (
 	"fmt"
 
-	"github.com/savvyinsight/agrisense/internal/domain"
+	"github.com/savvyinsight/agrisense/internal/alert"
 	"github.com/savvyinsight/agrisense/internal/sensor"
 )
 
@@ -15,30 +15,30 @@ func NewEvaluator() *Evaluator {
 	return &Evaluator{}
 }
 
-func (e *Evaluator) Evaluate(rule *domain.AlertRule, data *sensor.SensorData) bool {
+func (e *Evaluator) Evaluate(rule *alert.AlertRule, data *sensor.SensorData) bool {
 	// Simple threshold evaluation (no duration yet)
 	switch rule.Condition {
-	case domain.ConditionGT:
+	case alert.ConditionGT:
 		if data.Value > *rule.ThresholdValue {
 			return true
 		}
-	case domain.ConditionLT:
+	case alert.ConditionLT:
 		if data.Value < *rule.ThresholdValue {
 			return true
 		}
-	case domain.ConditionEQ:
+	case alert.ConditionEQ:
 		if data.Value == *rule.ThresholdValue {
 			return true
 		}
-	case domain.ConditionGTE:
+	case alert.ConditionGTE:
 		if data.Value >= *rule.ThresholdValue {
 			return true
 		}
-	case domain.ConditionLTE:
+	case alert.ConditionLTE:
 		if data.Value <= *rule.ThresholdValue {
 			return true
 		}
-	case domain.ConditionBetween:
+	case alert.ConditionBetween:
 		if rule.ThresholdValue != nil && rule.ThresholdMax != nil {
 			if data.Value >= *rule.ThresholdValue && data.Value <= *rule.ThresholdMax {
 				return true
@@ -49,15 +49,15 @@ func (e *Evaluator) Evaluate(rule *domain.AlertRule, data *sensor.SensorData) bo
 	return false
 }
 
-func (e *Evaluator) FormatMessage(rule *domain.AlertRule, data *sensor.SensorData) string {
+func (e *Evaluator) FormatMessage(rule *alert.AlertRule, data *sensor.SensorData) string {
 	switch rule.Condition {
-	case domain.ConditionGT:
+	case alert.ConditionGT:
 		return fmt.Sprintf("%s exceeded %.1f (current: %.1f)",
 			data.SensorType, *rule.ThresholdValue, data.Value)
-	case domain.ConditionLT:
+	case alert.ConditionLT:
 		return fmt.Sprintf("%s below %.1f (current: %.1f)",
 			data.SensorType, *rule.ThresholdValue, data.Value)
-	case domain.ConditionBetween:
+	case alert.ConditionBetween:
 		return fmt.Sprintf("%s out of range [%.1f-%.1f] (current: %.1f)",
 			data.SensorType, *rule.ThresholdValue, *rule.ThresholdMax, data.Value)
 	default:

@@ -1,19 +1,17 @@
-package rest
+package alert
 
 import (
 	"net/http"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"github.com/savvyinsight/agrisense/internal/domain"
-	"github.com/savvyinsight/agrisense/internal/service/alert"
 )
 
 type AlertHandler struct {
-	alertService *alert.Service
+	alertService *Service
 }
 
-func NewAlertHandler(alertService *alert.Service) *AlertHandler {
+func NewAlertHandler(alertService *Service) *AlertHandler {
 	return &AlertHandler{
 		alertService: alertService,
 	}
@@ -22,7 +20,7 @@ func NewAlertHandler(alertService *alert.Service) *AlertHandler {
 // Rule endpoints
 
 func (h *AlertHandler) CreateRule(c *gin.Context) {
-	var rule domain.AlertRule
+	var rule AlertRule
 	if err := c.ShouldBindJSON(&rule); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -74,7 +72,7 @@ func (h *AlertHandler) UpdateRule(c *gin.Context) {
 		return
 	}
 
-	var rule domain.AlertRule
+	var rule AlertRule
 	if err := c.ShouldBindJSON(&rule); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return

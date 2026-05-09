@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/savvyinsight/agrisense/internal/alert"
 	"github.com/savvyinsight/agrisense/internal/device"
 	"github.com/savvyinsight/agrisense/internal/domain"
 	"github.com/savvyinsight/agrisense/internal/sensor"
@@ -403,17 +404,17 @@ func TestAlertRuleRepository(t *testing.T) {
 	}
 	deviceRepo.Create(device)
 
-	repo := &AlertRuleRepository{DB: db}
+	repo := &alert.PostgresAlertRuleRepository{DB: db}
 
 	// Create
-	rule := &domain.AlertRule{
+	rule := &alert.AlertRule{
 		Name:            "Test Alert",
 		DeviceID:        &device.ID,
 		SensorTypeID:    1, // temperature
-		Condition:       domain.ConditionGT,
+		Condition:       alert.ConditionGT,
 		ThresholdValue:  ptrFloat64(30.0),
 		DurationSeconds: 60,
-		Severity:        domain.SeverityWarning,
+		Severity:        alert.SeverityWarning,
 		Enabled:         true,
 		UserID:          user.ID,
 	}
@@ -513,29 +514,29 @@ func TestAlertRepository(t *testing.T) {
 	}
 	deviceRepo.Create(device)
 
-	ruleRepo := &AlertRuleRepository{DB: db}
-	rule := &domain.AlertRule{
+	ruleRepo := &alert.PostgresAlertRuleRepository{DB: db}
+	rule := &alert.AlertRule{
 		Name:           "History Rule",
 		DeviceID:       &device.ID,
 		SensorTypeID:   1,
-		Condition:      domain.ConditionGT,
+		Condition:      alert.ConditionGT,
 		ThresholdValue: ptrFloat64(30.0),
-		Severity:       domain.SeverityWarning,
+		Severity:       alert.SeverityWarning,
 		Enabled:        true,
 		UserID:         user.ID,
 	}
 	ruleRepo.Create(rule)
 
-	repo := &AlertRepository{DB: db}
+	repo := &alert.PostgresAlertRepository{DB: db}
 
 	// Create
-	alert := &domain.Alert{
+	alert := &alert.Alert{
 		RuleID:      rule.ID,
 		DeviceID:    device.ID,
 		SensorValue: 35.5,
 		Message:     "Temperature too high",
-		Severity:    domain.SeverityWarning,
-		Status:      domain.AlertStatusTriggered,
+		Severity:    alert.SeverityWarning,
+		Status:      alert.AlertStatusTriggered,
 		TriggeredAt: time.Now(),
 		Metadata:    map[string]interface{}{"test": true},
 	}

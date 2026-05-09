@@ -8,6 +8,7 @@ import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/savvyinsight/agrisense/internal/alert"
 	"github.com/savvyinsight/agrisense/internal/config"
 	"github.com/savvyinsight/agrisense/internal/device"
 	"github.com/savvyinsight/agrisense/internal/handler/rest"
@@ -18,7 +19,6 @@ import (
 	"github.com/savvyinsight/agrisense/internal/repository/redis"
 	"github.com/savvyinsight/agrisense/internal/ruleengine"
 	"github.com/savvyinsight/agrisense/internal/sensor"
-	"github.com/savvyinsight/agrisense/internal/service/alert"
 	"github.com/savvyinsight/agrisense/internal/service/analytics"
 	"github.com/savvyinsight/agrisense/internal/service/auth"
 	"github.com/savvyinsight/agrisense/internal/service/automation"
@@ -96,8 +96,8 @@ func main() {
 	authService := auth.NewService(userRepo, cfg.JWTSecret, 24*time.Hour)
 	wsHander := websocket.NewHander(authService)
 	ruleEngine := ruleengine.NewEngine(
-		&postgres.AlertRuleRepository{DB: pgDB},
-		&postgres.AlertRepository{DB: pgDB},
+		&alert.PostgresAlertRuleRepository{DB: pgDB},
+		&alert.PostgresAlertRepository{DB: pgDB},
 		deviceRepo,
 	)
 	ruleEngine.Start()
@@ -123,8 +123,8 @@ func main() {
 
 	// 5. Create alert service
 	alertService := alert.NewService(
-		&postgres.AlertRepository{DB: pgDB},
-		&postgres.AlertRuleRepository{DB: pgDB},
+		&alert.PostgresAlertRepository{DB: pgDB},
+		&alert.PostgresAlertRuleRepository{DB: pgDB},
 		deviceRepo,
 	)
 
@@ -151,7 +151,7 @@ func main() {
 	authHandler := rest.NewAuthHandler(authService)
 	deviceHandler := device.NewDeviceHandler(deviceRepo)
 	dataHandler := rest.NewDataHandler(dataService)
-	alertHandler := rest.NewAlertHandler(alertService)
+	alertHandler := alert.NewAlertHandler(alertService)
 	controlHandler := rest.NewControlHandler(controlService)
 	automationHandler := rest.NewAutomationHandler(automationService)
 	analyticsHandler := rest.NewAnalyticsHandler(analyticsService)

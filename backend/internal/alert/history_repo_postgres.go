@@ -1,19 +1,17 @@
-package postgres
+package alert
 
 import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
 	"time"
-
-	"github.com/savvyinsight/agrisense/internal/domain"
 )
 
-type AlertRepository struct {
+type PostgresAlertRepository struct {
 	DB *sql.DB
 }
 
-func (r *AlertRepository) Create(alert *domain.Alert) error {
+func (r *PostgresAlertRepository) Create(alert *Alert) error {
 	query := `
         INSERT INTO alerts (
             rule_id, device_id, sensor_value, message, severity, 
@@ -46,7 +44,7 @@ func (r *AlertRepository) Create(alert *domain.Alert) error {
 	return err
 }
 
-func (r *AlertRepository) GetActive() ([]domain.Alert, error) {
+func (r *PostgresAlertRepository) GetActive() ([]Alert, error) {
 	query := `
         SELECT id, rule_id, device_id, sensor_value, message, severity, 
                status, triggered_at, acknowledged_at, resolved_at, metadata
@@ -61,9 +59,9 @@ func (r *AlertRepository) GetActive() ([]domain.Alert, error) {
 	}
 	defer rows.Close()
 
-	var alerts []domain.Alert
+	var alerts []Alert
 	for rows.Next() {
-		var alert domain.Alert
+		var alert Alert
 		var metadataJSON []byte
 		// ... scan into metadataJSON ...
 		err := rows.Scan(
@@ -96,7 +94,7 @@ func (r *AlertRepository) GetActive() ([]domain.Alert, error) {
 	return alerts, nil
 }
 
-func (r *AlertRepository) GetActivePaginated(limit, offset int) ([]domain.Alert, int64, error) {
+func (r *PostgresAlertRepository) GetActivePaginated(limit, offset int) ([]Alert, int64, error) {
 	query := `
         SELECT id, rule_id, device_id, sensor_value, message, severity, 
                status, triggered_at, acknowledged_at, resolved_at, metadata
@@ -112,9 +110,9 @@ func (r *AlertRepository) GetActivePaginated(limit, offset int) ([]domain.Alert,
 	}
 	defer rows.Close()
 
-	var alerts []domain.Alert
+	var alerts []Alert
 	for rows.Next() {
-		var alert domain.Alert
+		var alert Alert
 		var metadataJSON []byte
 		// ... scan into metadataJSON ...
 		err := rows.Scan(
@@ -153,7 +151,7 @@ func (r *AlertRepository) GetActivePaginated(limit, offset int) ([]domain.Alert,
 	return alerts, total, nil
 }
 
-func (r *AlertRepository) GetByDeviceID(deviceID int) ([]domain.Alert, error) {
+func (r *PostgresAlertRepository) GetByDeviceID(deviceID int) ([]Alert, error) {
 	query := `
         SELECT id, rule_id, device_id, sensor_value, message, severity, 
                status, triggered_at, acknowledged_at, resolved_at, metadata
@@ -168,9 +166,9 @@ func (r *AlertRepository) GetByDeviceID(deviceID int) ([]domain.Alert, error) {
 	}
 	defer rows.Close()
 
-	var alerts []domain.Alert
+	var alerts []Alert
 	for rows.Next() {
-		var alert domain.Alert
+		var alert Alert
 		var metadataJSON []byte
 		// ... scan into metadataJSON ...
 		err := rows.Scan(
@@ -203,7 +201,7 @@ func (r *AlertRepository) GetByDeviceID(deviceID int) ([]domain.Alert, error) {
 	return alerts, nil
 }
 
-func (r *AlertRepository) GetByRuleID(ruleID int) ([]domain.Alert, error) {
+func (r *PostgresAlertRepository) GetByRuleID(ruleID int) ([]Alert, error) {
 	query := `
         SELECT id, rule_id, device_id, sensor_value, message, severity, 
                status, triggered_at, acknowledged_at, resolved_at, metadata
@@ -218,9 +216,9 @@ func (r *AlertRepository) GetByRuleID(ruleID int) ([]domain.Alert, error) {
 	}
 	defer rows.Close()
 
-	var alerts []domain.Alert
+	var alerts []Alert
 	for rows.Next() {
-		var alert domain.Alert
+		var alert Alert
 		var metadataJSON []byte
 		// ... scan into metadataJSON ...
 		err := rows.Scan(
@@ -253,19 +251,19 @@ func (r *AlertRepository) GetByRuleID(ruleID int) ([]domain.Alert, error) {
 	return alerts, nil
 }
 
-func (r *AlertRepository) Acknowledge(id int) error {
+func (r *PostgresAlertRepository) Acknowledge(id int) error {
 	query := `UPDATE alerts SET status = $1, acknowledged_at = $2 WHERE id = $3`
-	_, err := r.DB.Exec(query, domain.AlertStatusAcknowledged, time.Now(), id)
+	_, err := r.DB.Exec(query, AlertStatusAcknowledged, time.Now(), id)
 	return err
 }
 
-func (r *AlertRepository) Resolve(id int) error {
+func (r *PostgresAlertRepository) Resolve(id int) error {
 	query := `UPDATE alerts SET status = $1, resolved_at = $2 WHERE id = $3`
-	_, err := r.DB.Exec(query, domain.AlertStatusResolved, time.Now(), id)
+	_, err := r.DB.Exec(query, AlertStatusResolved, time.Now(), id)
 	return err
 }
 
-func (r *AlertRepository) List(limit, offset int) ([]domain.Alert, int64, error) {
+func (r *PostgresAlertRepository) List(limit, offset int) ([]Alert, int64, error) {
 	query := `
         SELECT id, rule_id, device_id, sensor_value, message, severity, 
                status, triggered_at, acknowledged_at, resolved_at, metadata
@@ -280,9 +278,9 @@ func (r *AlertRepository) List(limit, offset int) ([]domain.Alert, int64, error)
 	}
 	defer rows.Close()
 
-	var alerts []domain.Alert
+	var alerts []Alert
 	for rows.Next() {
-		var alert domain.Alert
+		var alert Alert
 		var metadataJSON []byte
 		// ... scan into metadataJSON ...
 		err := rows.Scan(
