@@ -13,8 +13,8 @@ import (
 	"github.com/savvyinsight/agrisense/internal/automation"
 	"github.com/savvyinsight/agrisense/internal/config"
 	"github.com/savvyinsight/agrisense/internal/control"
+	"github.com/savvyinsight/agrisense/internal/data"
 	"github.com/savvyinsight/agrisense/internal/device"
-	"github.com/savvyinsight/agrisense/internal/handler/rest"
 	"github.com/savvyinsight/agrisense/internal/handler/websocket"
 	"github.com/savvyinsight/agrisense/internal/middleware"
 	"github.com/savvyinsight/agrisense/internal/mqtt"
@@ -22,7 +22,6 @@ import (
 	"github.com/savvyinsight/agrisense/internal/repository/redis"
 	"github.com/savvyinsight/agrisense/internal/ruleengine"
 	"github.com/savvyinsight/agrisense/internal/sensor"
-	"github.com/savvyinsight/agrisense/internal/service/data"
 	"github.com/savvyinsight/agrisense/internal/user"
 )
 
@@ -150,7 +149,7 @@ func main() {
 	// Create handlers
 	authHandler := user.NewAuthHandler(authService)
 	deviceHandler := device.NewDeviceHandler(deviceRepo)
-	dataHandler := rest.NewDataHandler(dataService)
+	dataHandler := data.NewDataHandler(dataService)
 	alertHandler := alert.NewAlertHandler(alertService)
 	controlHandler := control.NewControlHandler(controlService)
 	automationHandler := automation.NewAutomationHandler(automationService)

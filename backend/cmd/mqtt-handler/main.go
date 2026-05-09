@@ -9,6 +9,7 @@ import (
 	"github.com/savvyinsight/agrisense/internal/alert"
 	"github.com/savvyinsight/agrisense/internal/config"
 	"github.com/savvyinsight/agrisense/internal/control"
+	"github.com/savvyinsight/agrisense/internal/data"
 	"github.com/savvyinsight/agrisense/internal/device"
 	"github.com/savvyinsight/agrisense/internal/mqtt"
 	"github.com/savvyinsight/agrisense/internal/mqtt/handlers"
@@ -16,7 +17,6 @@ import (
 	"github.com/savvyinsight/agrisense/internal/repository/redis"
 	"github.com/savvyinsight/agrisense/internal/ruleengine"
 	"github.com/savvyinsight/agrisense/internal/sensor"
-	"github.com/savvyinsight/agrisense/internal/service/data"
 )
 
 func main() {
