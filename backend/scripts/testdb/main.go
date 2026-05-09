@@ -4,7 +4,7 @@ import (
 	"log"
 
 	"github.com/savvyinsight/agrisense/internal/config"
-	"github.com/savvyinsight/agrisense/internal/repository/postgres"
+	"github.com/savvyinsight/agrisense/internal/infra/postgres"
 )
 
 func main() {

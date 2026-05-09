@@ -9,8 +9,8 @@ import (
 	"github.com/savvyinsight/agrisense/internal/config"
 	"github.com/savvyinsight/agrisense/internal/data"
 	"github.com/savvyinsight/agrisense/internal/device"
-	"github.com/savvyinsight/agrisense/internal/repository/postgres"
-	"github.com/savvyinsight/agrisense/internal/repository/redis"
+	"github.com/savvyinsight/agrisense/internal/infra/postgres"
+	"github.com/savvyinsight/agrisense/internal/infra/redis"
 	"github.com/savvyinsight/agrisense/internal/ruleengine"
 	"github.com/savvyinsight/agrisense/internal/sensor"
 )
