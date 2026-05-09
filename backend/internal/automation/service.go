@@ -12,7 +12,7 @@ import (
 )
 
 type Service struct {
-	automationRepo domain.AutomationRuleRepository
+	automationRepo PostgresAutomationRuleRepository
 	deviceRepo     device.DeviceRepository
 	commandService CommandExecutor
 	scheduler      *Scheduler
@@ -23,12 +23,12 @@ type CommandExecutor interface {
 }
 
 type Scheduler struct {
-	rules    map[int]*domain.AutomationRule
+	rules    map[int]*AutomationRule
 	stopChan chan struct{}
 }
 
 func NewService(
-	automationRepo domain.AutomationRuleRepository,
+	automationRepo PostgresAutomationRuleRepository,
 	deviceRepo device.DeviceRepository,
 	commandExecutor CommandExecutor,
 ) *Service {
@@ -36,7 +36,7 @@ func NewService(
 		automationRepo: automationRepo,
 		deviceRepo:     deviceRepo,
 		commandService: commandExecutor,
-		scheduler:      &Scheduler{rules: make(map[int]*domain.AutomationRule), stopChan: make(chan struct{})},
+		scheduler:      &Scheduler{rules: make(map[int]*AutomationRule), stopChan: make(chan struct{})},
 	}
 }
 
@@ -64,7 +64,7 @@ func (s *Service) loadRules() error {
 		return err
 	}
 
-	s.scheduler.rules = make(map[int]*domain.AutomationRule)
+	s.scheduler.rules = make(map[int]*AutomationRule)
 	for _, rule := range rules {
 		s.scheduler.rules[rule.ID] = &rule
 	}
@@ -73,7 +73,7 @@ func (s *Service) loadRules() error {
 	return nil
 }
 
-func (s *Service) CreateRule(rule *domain.AutomationRule) error {
+func (s *Service) CreateRule(rule *AutomationRule) error {
 	// Validate the rule
 	if err := s.validateRule(rule); err != nil {
 		return err
@@ -94,15 +94,15 @@ func (s *Service) CreateRule(rule *domain.AutomationRule) error {
 	return nil
 }
 
-func (s *Service) GetRulesByUser(userID int) ([]domain.AutomationRule, error) {
+func (s *Service) GetRulesByUser(userID int) ([]AutomationRule, error) {
 	return s.automationRepo.GetByUserID(userID)
 }
 
-func (s *Service) GetRuleByID(id int) (*domain.AutomationRule, error) {
+func (s *Service) GetRuleByID(id int) (*AutomationRule, error) {
 	return s.automationRepo.GetByID(id)
 }
 
-func (s *Service) UpdateRule(rule *domain.AutomationRule) error {
+func (s *Service) UpdateRule(rule *AutomationRule) error {
 	// Validate the rule
 	if err := s.validateRule(rule); err != nil {
 		return err
@@ -135,7 +135,7 @@ func (s *Service) EvaluateSensorRule(data *sensor.SensorData) {
 	// Find automation rules that might be triggered by this sensor data
 	// For now, we'll check all enabled rules (can be optimized later)
 	for _, rule := range s.scheduler.rules {
-		if rule.TriggerType != domain.TriggerTypeSensor {
+		if rule.TriggerType != TriggerTypeSensor {
 			continue
 		}
 
@@ -158,24 +158,24 @@ func (s *Service) EvaluateSensorRule(data *sensor.SensorData) {
 	}
 }
 
-func (s *Service) evaluateCondition(condition domain.AutomationCondition, actualValue, thresholdValue float64) bool {
+func (s *Service) evaluateCondition(condition AutomationCondition, actualValue, thresholdValue float64) bool {
 	switch condition {
-	case domain.AutomationConditionGT:
+	case AutomationConditionGT:
 		return actualValue > thresholdValue
-	case domain.AutomationConditionLT:
+	case AutomationConditionLT:
 		return actualValue < thresholdValue
-	case domain.AutomationConditionEQ:
+	case AutomationConditionEQ:
 		return actualValue == thresholdValue
-	case domain.AutomationConditionGTE:
+	case AutomationConditionGTE:
 		return actualValue >= thresholdValue
-	case domain.AutomationConditionLTE:
+	case AutomationConditionLTE:
 		return actualValue <= thresholdValue
 	default:
 		return false
 	}
 }
 
-func (s *Service) executeAutomationRule(rule *domain.AutomationRule, triggerData *sensor.SensorData) {
+func (s *Service) executeAutomationRule(rule *AutomationRule, triggerData *sensor.SensorData) {
 	log.Printf("Executing automation rule: %s (triggered by %s: %.2f)",
 		rule.Name, triggerData.SensorType, triggerData.Value)
 
@@ -196,7 +196,7 @@ func (s *Service) executeAutomationRule(rule *domain.AutomationRule, triggerData
 		rule.ActionCommand, rule.TargetDeviceID, command.ID)
 }
 
-func (s *Service) validateRule(rule *domain.AutomationRule) error {
+func (s *Service) validateRule(rule *AutomationRule) error {
 	if rule.Name == "" {
 		return fmt.Errorf("rule name is required")
 	}
@@ -211,14 +211,14 @@ func (s *Service) validateRule(rule *domain.AutomationRule) error {
 		return fmt.Errorf("target device not found: %w", err)
 	}
 
-	if rule.TriggerType == domain.TriggerTypeSensor {
+	if rule.TriggerType == TriggerTypeSensor {
 		if rule.TriggerSensorTypeID == nil {
 			return fmt.Errorf("trigger sensor type ID is required for sensor triggers")
 		}
 		if rule.TriggerValue == nil {
 			return fmt.Errorf("trigger value is required for sensor triggers")
 		}
-	} else if rule.TriggerType == domain.TriggerTypeSchedule {
+	} else if rule.TriggerType == TriggerTypeSchedule {
 		if rule.ScheduleCron == nil || *rule.ScheduleCron == "" {
 			return fmt.Errorf("schedule cron is required for schedule triggers")
 		}
@@ -273,7 +273,7 @@ func (s *Scheduler) checkScheduledRules() {
 	now := time.Now()
 
 	for _, rule := range s.rules {
-		if rule.TriggerType != domain.TriggerTypeSchedule {
+		if rule.TriggerType != TriggerTypeSchedule {
 			continue
 		}
 

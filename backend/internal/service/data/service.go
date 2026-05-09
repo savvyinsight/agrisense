@@ -6,11 +6,11 @@ import (
 	"log"
 	"time"
 
+	"github.com/savvyinsight/agrisense/internal/automation"
 	"github.com/savvyinsight/agrisense/internal/device"
 	"github.com/savvyinsight/agrisense/internal/repository/redis"
 	"github.com/savvyinsight/agrisense/internal/ruleengine"
 	"github.com/savvyinsight/agrisense/internal/sensor"
-	"github.com/savvyinsight/agrisense/internal/service/automation"
 )
 
 type Service struct {

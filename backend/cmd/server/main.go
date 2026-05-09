@@ -9,6 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/savvyinsight/agrisense/internal/alert"
+	"github.com/savvyinsight/agrisense/internal/automation"
 	"github.com/savvyinsight/agrisense/internal/config"
 	"github.com/savvyinsight/agrisense/internal/device"
 	"github.com/savvyinsight/agrisense/internal/handler/rest"
@@ -20,7 +21,6 @@ import (
 	"github.com/savvyinsight/agrisense/internal/ruleengine"
 	"github.com/savvyinsight/agrisense/internal/sensor"
 	"github.com/savvyinsight/agrisense/internal/service/analytics"
-	"github.com/savvyinsight/agrisense/internal/service/automation"
 	"github.com/savvyinsight/agrisense/internal/service/control"
 	"github.com/savvyinsight/agrisense/internal/service/data"
 	"github.com/savvyinsight/agrisense/internal/user"
@@ -130,7 +130,7 @@ func main() {
 
 	// 6. Create automation service
 	automationService := automation.NewService(
-		&postgres.AutomationRuleRepository{DB: pgDB},
+		automation.PostgresAutomationRuleRepository{DB: pgDB},
 		deviceRepo,
 		controlService, // controlService implements CommandExecutor
 	)
@@ -153,7 +153,7 @@ func main() {
 	dataHandler := rest.NewDataHandler(dataService)
 	alertHandler := alert.NewAlertHandler(alertService)
 	controlHandler := rest.NewControlHandler(controlService)
-	automationHandler := rest.NewAutomationHandler(automationService)
+	automationHandler := automation.NewAutomationHandler(automationService)
 	analyticsHandler := rest.NewAnalyticsHandler(analyticsService)
 
 	// Setup Gin router

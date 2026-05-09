@@ -1,19 +1,17 @@
-package rest
+package automation
 
 import (
 	"net/http"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"github.com/savvyinsight/agrisense/internal/domain"
-	"github.com/savvyinsight/agrisense/internal/service/automation"
 )
 
 type AutomationHandler struct {
-	automationService *automation.Service
+	automationService *Service
 }
 
-func NewAutomationHandler(automationService *automation.Service) *AutomationHandler {
+func NewAutomationHandler(automationService *Service) *AutomationHandler {
 	return &AutomationHandler{
 		automationService: automationService,
 	}
@@ -49,31 +47,31 @@ func (h *AutomationHandler) CreateRule(c *gin.Context) {
 	}
 
 	// Convert string trigger type to domain type
-	var triggerType domain.AutomationTriggerType
+	var triggerType AutomationTriggerType
 	switch req.TriggerType {
 	case "sensor":
-		triggerType = domain.TriggerTypeSensor
+		triggerType = TriggerTypeSensor
 	case "schedule":
-		triggerType = domain.TriggerTypeSchedule
+		triggerType = TriggerTypeSchedule
 	default:
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid trigger type"})
 		return
 	}
 
 	// Convert string condition to domain type
-	var condition domain.AutomationCondition
+	var condition AutomationCondition
 	if req.TriggerCondition != "" {
 		switch req.TriggerCondition {
 		case ">":
-			condition = domain.AutomationConditionGT
+			condition = AutomationConditionGT
 		case "<":
-			condition = domain.AutomationConditionLT
+			condition = AutomationConditionLT
 		case "=":
-			condition = domain.AutomationConditionEQ
+			condition = AutomationConditionEQ
 		case ">=":
-			condition = domain.AutomationConditionGTE
+			condition = AutomationConditionGTE
 		case "<=":
-			condition = domain.AutomationConditionLTE
+			condition = AutomationConditionLTE
 		default:
 			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid trigger condition"})
 			return
@@ -91,7 +89,7 @@ func (h *AutomationHandler) CreateRule(c *gin.Context) {
 		timezone = req.Timezone
 	}
 
-	rule := &domain.AutomationRule{
+	rule := &AutomationRule{
 		Name:                   req.Name,
 		TargetDeviceID:         req.TargetDeviceID,
 		TriggerType:            triggerType,
@@ -190,9 +188,9 @@ func (h *AutomationHandler) UpdateRule(c *gin.Context) {
 	// Convert trigger type
 	switch req.TriggerType {
 	case "sensor":
-		rule.TriggerType = domain.TriggerTypeSensor
+		rule.TriggerType = TriggerTypeSensor
 	case "schedule":
-		rule.TriggerType = domain.TriggerTypeSchedule
+		rule.TriggerType = TriggerTypeSchedule
 	}
 
 	rule.TriggerSensorTypeID = req.TriggerSensorTypeID
@@ -201,15 +199,15 @@ func (h *AutomationHandler) UpdateRule(c *gin.Context) {
 	if req.TriggerCondition != "" {
 		switch req.TriggerCondition {
 		case ">":
-			rule.TriggerCondition = domain.AutomationConditionGT
+			rule.TriggerCondition = AutomationConditionGT
 		case "<":
-			rule.TriggerCondition = domain.AutomationConditionLT
+			rule.TriggerCondition = AutomationConditionLT
 		case "=":
-			rule.TriggerCondition = domain.AutomationConditionEQ
+			rule.TriggerCondition = AutomationConditionEQ
 		case ">=":
-			rule.TriggerCondition = domain.AutomationConditionGTE
+			rule.TriggerCondition = AutomationConditionGTE
 		case "<=":
-			rule.TriggerCondition = domain.AutomationConditionLTE
+			rule.TriggerCondition = AutomationConditionLTE
 		}
 	}
 

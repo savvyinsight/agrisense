@@ -1,19 +1,17 @@
-package postgres
+package automation
 
 import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
 	"time"
-
-	"github.com/savvyinsight/agrisense/internal/domain"
 )
 
-type AutomationRuleRepository struct {
+type PostgresAutomationRuleRepository struct {
 	DB *sql.DB
 }
 
-func (r *AutomationRuleRepository) Create(rule *domain.AutomationRule) error {
+func (r *PostgresAutomationRuleRepository) Create(rule *AutomationRule) error {
 	query := `
 		INSERT INTO automation_rules (
 			name, target_device_id, trigger_type, trigger_sensor_type_id,
@@ -44,7 +42,7 @@ func (r *AutomationRuleRepository) Create(rule *domain.AutomationRule) error {
 	return nil
 }
 
-func (r *AutomationRuleRepository) GetByID(id int) (*domain.AutomationRule, error) {
+func (r *PostgresAutomationRuleRepository) GetByID(id int) (*AutomationRule, error) {
 	query := `
 		SELECT id, name, target_device_id, trigger_type, trigger_sensor_type_id,
 			   trigger_condition, trigger_value, trigger_duration_seconds,
@@ -52,7 +50,7 @@ func (r *AutomationRuleRepository) GetByID(id int) (*domain.AutomationRule, erro
 			   enabled, user_id, created_at, updated_at
 		FROM automation_rules WHERE id = $1`
 
-	var rule domain.AutomationRule
+	var rule AutomationRule
 	var actionParamsJSON []byte
 
 	err := r.DB.QueryRow(query, id).Scan(
@@ -79,7 +77,7 @@ func (r *AutomationRuleRepository) GetByID(id int) (*domain.AutomationRule, erro
 	return &rule, nil
 }
 
-func (r *AutomationRuleRepository) GetByUserID(userID int) ([]domain.AutomationRule, error) {
+func (r *PostgresAutomationRuleRepository) GetByUserID(userID int) ([]AutomationRule, error) {
 	query := `
 		SELECT id, name, target_device_id, trigger_type, trigger_sensor_type_id,
 			   trigger_condition, trigger_value, trigger_duration_seconds,
@@ -93,9 +91,9 @@ func (r *AutomationRuleRepository) GetByUserID(userID int) ([]domain.AutomationR
 	}
 	defer rows.Close()
 
-	var rules []domain.AutomationRule
+	var rules []AutomationRule
 	for rows.Next() {
-		var rule domain.AutomationRule
+		var rule AutomationRule
 		var actionParamsJSON []byte
 
 		err := rows.Scan(
@@ -122,7 +120,7 @@ func (r *AutomationRuleRepository) GetByUserID(userID int) ([]domain.AutomationR
 	return rules, nil
 }
 
-func (r *AutomationRuleRepository) GetEnabledRules() ([]domain.AutomationRule, error) {
+func (r *PostgresAutomationRuleRepository) GetEnabledRules() ([]AutomationRule, error) {
 	query := `
 		SELECT id, name, target_device_id, trigger_type, trigger_sensor_type_id,
 			   trigger_condition, trigger_value, trigger_duration_seconds,
@@ -136,9 +134,9 @@ func (r *AutomationRuleRepository) GetEnabledRules() ([]domain.AutomationRule, e
 	}
 	defer rows.Close()
 
-	var rules []domain.AutomationRule
+	var rules []AutomationRule
 	for rows.Next() {
-		var rule domain.AutomationRule
+		var rule AutomationRule
 		var actionParamsJSON []byte
 
 		err := rows.Scan(
@@ -165,7 +163,7 @@ func (r *AutomationRuleRepository) GetEnabledRules() ([]domain.AutomationRule, e
 	return rules, nil
 }
 
-func (r *AutomationRuleRepository) Update(rule *domain.AutomationRule) error {
+func (r *PostgresAutomationRuleRepository) Update(rule *AutomationRule) error {
 	query := `
 		UPDATE automation_rules SET
 			name = $1, target_device_id = $2, trigger_type = $3, trigger_sensor_type_id = $4,
@@ -194,7 +192,7 @@ func (r *AutomationRuleRepository) Update(rule *domain.AutomationRule) error {
 	return nil
 }
 
-func (r *AutomationRuleRepository) Delete(id int) error {
+func (r *PostgresAutomationRuleRepository) Delete(id int) error {
 	query := `DELETE FROM automation_rules WHERE id = $1`
 
 	result, err := r.DB.Exec(query, id)
@@ -214,7 +212,7 @@ func (r *AutomationRuleRepository) Delete(id int) error {
 	return nil
 }
 
-func (r *AutomationRuleRepository) GetByTargetDeviceID(deviceID int) ([]domain.AutomationRule, error) {
+func (r *PostgresAutomationRuleRepository) GetByTargetDeviceID(deviceID int) ([]AutomationRule, error) {
 	query := `
 		SELECT id, name, target_device_id, trigger_type, trigger_sensor_type_id,
 			   trigger_condition, trigger_value, trigger_duration_seconds,
@@ -228,9 +226,9 @@ func (r *AutomationRuleRepository) GetByTargetDeviceID(deviceID int) ([]domain.A
 	}
 	defer rows.Close()
 
-	var rules []domain.AutomationRule
+	var rules []AutomationRule
 	for rows.Next() {
-		var rule domain.AutomationRule
+		var rule AutomationRule
 		var actionParamsJSON []byte
 
 		err := rows.Scan(
