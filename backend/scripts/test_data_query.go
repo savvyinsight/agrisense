@@ -7,10 +7,10 @@ import (
 
 	"github.com/savvyinsight/agrisense/internal/config"
 	"github.com/savvyinsight/agrisense/internal/device"
-	"github.com/savvyinsight/agrisense/internal/repository/influxdb"
 	"github.com/savvyinsight/agrisense/internal/repository/postgres"
 	"github.com/savvyinsight/agrisense/internal/repository/redis"
 	"github.com/savvyinsight/agrisense/internal/ruleengine"
+	"github.com/savvyinsight/agrisense/internal/sensor"
 	"github.com/savvyinsight/agrisense/internal/service/data"
 )
 
@@ -47,7 +47,7 @@ func main() {
 	defer redisClient.Close()
 
 	// Setup InfluxDB
-	influxRepo, err := influxdb.NewRepository(influxdb.Config{
+	influxRepo, err := sensor.NewRepository(sensor.Config{
 		URL:    cfg.InfluxURL,
 		Token:  cfg.InfluxToken,
 		Org:    cfg.InfluxOrg,
@@ -60,8 +60,8 @@ func main() {
 
 	// Create repositories
 	deviceRepo := &device.PostgresDeviceRepository{DB: pgDB}
-	sensorTypeRepo := &postgres.SensorTypeRepository{DB: pgDB}
-	cacheRepo := redis.NewCacheRepository(redisClient)
+	sensorTypeRepo := &sensor.PostgresSensorTypeRepository{DB: pgDB}
+	// cacheRepo := redis.NewCacheRepository(redisClient)
 
 	// Create rule engine
 	ruleEngine := ruleengine.NewEngine(
@@ -76,7 +76,7 @@ func main() {
 	dataService := data.NewService(
 		sensorTypeRepo,
 		deviceRepo,
-		cacheRepo,
+		// cacheRepo,
 		influxRepo,
 		ruleEngine,
 	)

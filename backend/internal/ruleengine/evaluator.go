@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/savvyinsight/agrisense/internal/domain"
+	"github.com/savvyinsight/agrisense/internal/sensor"
 )
 
 type Evaluator struct {
@@ -14,7 +15,7 @@ func NewEvaluator() *Evaluator {
 	return &Evaluator{}
 }
 
-func (e *Evaluator) Evaluate(rule *domain.AlertRule, data *domain.SensorData) bool {
+func (e *Evaluator) Evaluate(rule *domain.AlertRule, data *sensor.SensorData) bool {
 	// Simple threshold evaluation (no duration yet)
 	switch rule.Condition {
 	case domain.ConditionGT:
@@ -48,7 +49,7 @@ func (e *Evaluator) Evaluate(rule *domain.AlertRule, data *domain.SensorData) bo
 	return false
 }
 
-func (e *Evaluator) FormatMessage(rule *domain.AlertRule, data *domain.SensorData) string {
+func (e *Evaluator) FormatMessage(rule *domain.AlertRule, data *sensor.SensorData) string {
 	switch rule.Condition {
 	case domain.ConditionGT:
 		return fmt.Sprintf("%s exceeded %.1f (current: %.1f)",

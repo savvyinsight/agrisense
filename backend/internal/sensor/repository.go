@@ -1,20 +1,18 @@
-package postgres
+package sensor
 
 import (
 	"database/sql"
 	"fmt"
-
-	"github.com/savvyinsight/agrisense/internal/domain"
 )
 
-type SensorTypeRepository struct {
+type PostgresSensorTypeRepository struct {
 	DB *sql.DB
 }
 
-func (r *SensorTypeRepository) GetSensorTypeByName(name string) (*domain.SensorType, error) {
+func (r *PostgresSensorTypeRepository) GetSensorTypeByName(name string) (*SensorType, error) {
 	query := `SELECT id, name, unit, min_value, max_value, icon FROM sensor_types WHERE name = $1`
 
-	var sensor domain.SensorType
+	var sensor SensorType
 	err := r.DB.QueryRow(query, name).Scan(
 		&sensor.ID,
 		&sensor.Name,
@@ -34,7 +32,7 @@ func (r *SensorTypeRepository) GetSensorTypeByName(name string) (*domain.SensorT
 	return &sensor, nil
 }
 
-func (r *SensorTypeRepository) GetSensorTypes() ([]domain.SensorType, error) {
+func (r *PostgresSensorTypeRepository) GetSensorTypes() ([]SensorType, error) {
 	query := `SELECT id, name, unit, min_value, max_value, icon FROM sensor_types ORDER BY id`
 
 	rows, err := r.DB.Query(query)
@@ -43,9 +41,9 @@ func (r *SensorTypeRepository) GetSensorTypes() ([]domain.SensorType, error) {
 	}
 	defer rows.Close()
 
-	var sensors []domain.SensorType
+	var sensors []SensorType
 	for rows.Next() {
-		var sensor domain.SensorType
+		var sensor SensorType
 		err := rows.Scan(
 			&sensor.ID,
 			&sensor.Name,
@@ -63,10 +61,10 @@ func (r *SensorTypeRepository) GetSensorTypes() ([]domain.SensorType, error) {
 	return sensors, nil
 }
 
-func (r *SensorTypeRepository) GetSensorTypeByID(id int) (*domain.SensorType, error) {
+func (r *PostgresSensorTypeRepository) GetSensorTypeByID(id int) (*SensorType, error) {
 	query := `SELECT id, name, unit, min_value, max_value, icon FROM sensor_types WHERE id = $1`
 
-	var sensor domain.SensorType
+	var sensor SensorType
 	err := r.DB.QueryRow(query, id).Scan(
 		&sensor.ID,
 		&sensor.Name,

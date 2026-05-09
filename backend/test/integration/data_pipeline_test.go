@@ -6,10 +6,10 @@ import (
 
 	"github.com/savvyinsight/agrisense/internal/config"
 	"github.com/savvyinsight/agrisense/internal/device"
-	"github.com/savvyinsight/agrisense/internal/repository/influxdb"
 	"github.com/savvyinsight/agrisense/internal/repository/postgres"
 	"github.com/savvyinsight/agrisense/internal/repository/redis"
 	"github.com/savvyinsight/agrisense/internal/ruleengine"
+	"github.com/savvyinsight/agrisense/internal/sensor"
 	"github.com/savvyinsight/agrisense/internal/service/data"
 )
 
@@ -49,13 +49,13 @@ func TestDataPipeline(t *testing.T) {
 	defer redisClient.Close()
 
 	// Setup InfluxDB connection
-	influxConfig := influxdb.Config{
+	influxConfig := sensor.Config{
 		URL:    cfg.InfluxURL,
 		Token:  cfg.InfluxToken,
 		Org:    cfg.InfluxOrg,
 		Bucket: cfg.InfluxBucket,
 	}
-	influxRepo, err := influxdb.NewRepository(influxConfig)
+	influxRepo, err := sensor.NewRepository(influxConfig)
 	if err != nil {
 		t.Fatalf("Failed to connect to InfluxDB: %v", err)
 	}
@@ -63,8 +63,8 @@ func TestDataPipeline(t *testing.T) {
 
 	// Create repositories
 	deviceRepo := &device.PostgresDeviceRepository{DB: pgDB}
-	sensorTypeRepo := &postgres.SensorTypeRepository{DB: pgDB}
-	cacheRepo := redis.NewCacheRepository(redisClient)
+	sensorTypeRepo := &sensor.PostgresSensorTypeRepository{DB: pgDB}
+	// cacheRepo := redis.NewCacheRepository(redisClient)
 
 	// Create rule engine
 	ruleEngine := ruleengine.NewEngine(
@@ -79,8 +79,8 @@ func TestDataPipeline(t *testing.T) {
 	dataService := data.NewService(
 		sensorTypeRepo, // This implements SensorTypeRepository
 		deviceRepo,     // This now implements all DeviceRepository methods
-		cacheRepo,      // This implements CacheRepository
-		influxRepo,     // This implements InfluxRepository
+		// cacheRepo,      // This implements CacheRepository
+		influxRepo, // This implements InfluxRepository
 		ruleEngine,
 	)
 	// Ensure test device exists

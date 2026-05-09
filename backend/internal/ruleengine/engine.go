@@ -7,6 +7,7 @@ import (
 
 	"github.com/savvyinsight/agrisense/internal/device"
 	"github.com/savvyinsight/agrisense/internal/domain"
+	"github.com/savvyinsight/agrisense/internal/sensor"
 )
 
 type Engine struct {
@@ -84,7 +85,7 @@ func (e *Engine) refreshRulesPeriodically() {
 	}
 }
 
-func (e *Engine) Evaluate(data *domain.SensorData) {
+func (e *Engine) Evaluate(data *sensor.SensorData) {
 	e.rulesMutex.RLock()
 	defer e.rulesMutex.RUnlock()
 
@@ -132,7 +133,7 @@ func (e *Engine) getSensorTypeID(sensorType string) int {
 	}
 }
 
-func (e *Engine) triggerAlert(rule *domain.AlertRule, data *domain.SensorData) {
+func (e *Engine) triggerAlert(rule *domain.AlertRule, data *sensor.SensorData) {
 	// Get device ID from database using the string device_id
 	device, err := e.deviceRepo.GetByDeviceID(data.DeviceID)
 	if err != nil {

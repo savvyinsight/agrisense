@@ -14,10 +14,10 @@ import (
 	"github.com/savvyinsight/agrisense/internal/handler/websocket"
 	"github.com/savvyinsight/agrisense/internal/middleware"
 	"github.com/savvyinsight/agrisense/internal/mqtt"
-	"github.com/savvyinsight/agrisense/internal/repository/influxdb"
 	"github.com/savvyinsight/agrisense/internal/repository/postgres"
 	"github.com/savvyinsight/agrisense/internal/repository/redis"
 	"github.com/savvyinsight/agrisense/internal/ruleengine"
+	"github.com/savvyinsight/agrisense/internal/sensor"
 	"github.com/savvyinsight/agrisense/internal/service/alert"
 	"github.com/savvyinsight/agrisense/internal/service/analytics"
 	"github.com/savvyinsight/agrisense/internal/service/auth"
@@ -62,13 +62,13 @@ func main() {
 	defer redisClient.Close()
 
 	// Setup InfluxDB
-	influxConfig := influxdb.Config{
+	influxConfig := sensor.Config{
 		URL:    cfg.InfluxURL,
 		Token:  cfg.InfluxToken,
 		Org:    cfg.InfluxOrg,
 		Bucket: cfg.InfluxBucket,
 	}
-	influxRepo, err := influxdb.NewRepository(influxConfig)
+	influxRepo, err := sensor.NewRepository(influxConfig)
 	if err != nil {
 		log.Fatalf("Failed to connect to InfluxDB: %v", err)
 	}
@@ -77,8 +77,8 @@ func main() {
 	// Create repositories
 	userRepo := &postgres.UserRepository{DB: pgDB}
 	deviceRepo := &device.PostgresDeviceRepository{DB: pgDB}
-	sensorTypeRepo := &postgres.SensorTypeRepository{DB: pgDB}
-	cacheRepo := redis.NewCacheRepository(redisClient)
+	sensorTypeRepo := &sensor.PostgresSensorTypeRepository{DB: pgDB}
+	// cacheRepo := redis.NewCacheRepository(redisClient)
 
 	// 1. Create MQTT client for sending commands (publisher only)
 	mqttClient, err := mqtt.NewClient(mqtt.Config{
@@ -107,7 +107,7 @@ func main() {
 	dataService := data.NewService(
 		sensorTypeRepo,
 		deviceRepo,
-		cacheRepo,
+		// cacheRepo,
 		influxRepo,
 		ruleEngine,
 	)

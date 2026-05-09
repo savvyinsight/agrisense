@@ -8,6 +8,7 @@ import (
 
 	"github.com/savvyinsight/agrisense/internal/device"
 	"github.com/savvyinsight/agrisense/internal/domain"
+	"github.com/savvyinsight/agrisense/internal/sensor"
 )
 
 type Service struct {
@@ -130,7 +131,7 @@ func (s *Service) DeleteRule(id int) error {
 	return nil
 }
 
-func (s *Service) EvaluateSensorRule(data *domain.SensorData) {
+func (s *Service) EvaluateSensorRule(data *sensor.SensorData) {
 	// Find automation rules that might be triggered by this sensor data
 	// For now, we'll check all enabled rules (can be optimized later)
 	for _, rule := range s.scheduler.rules {
@@ -174,7 +175,7 @@ func (s *Service) evaluateCondition(condition domain.AutomationCondition, actual
 	}
 }
 
-func (s *Service) executeAutomationRule(rule *domain.AutomationRule, triggerData *domain.SensorData) {
+func (s *Service) executeAutomationRule(rule *domain.AutomationRule, triggerData *sensor.SensorData) {
 	log.Printf("Executing automation rule: %s (triggered by %s: %.2f)",
 		rule.Name, triggerData.SensorType, triggerData.Value)
 

@@ -7,33 +7,34 @@ import (
 	"time"
 
 	"github.com/savvyinsight/agrisense/internal/device"
-	"github.com/savvyinsight/agrisense/internal/domain"
+	"github.com/savvyinsight/agrisense/internal/repository/redis"
 	"github.com/savvyinsight/agrisense/internal/ruleengine"
+	"github.com/savvyinsight/agrisense/internal/sensor"
 	"github.com/savvyinsight/agrisense/internal/service/automation"
 )
 
 type Service struct {
-	sensorTypeRepo domain.SensorTypeRepository
+	sensorTypeRepo sensor.SensorTypeRepository
 	deviceRepo     device.DeviceRepository
-	cacheRepo      domain.CacheRepository
-	influxRepo     domain.InfluxRepository
+	cacheRepo      redis.CacheRepository
+	influxRepo     sensor.InfluxRepository
 	ruleEngine     *ruleengine.Engine
 	automationSvc  *automation.Service
 }
 
 func NewService(
-	sensorTypeRepo domain.SensorTypeRepository,
+	sensorTypeRepo sensor.SensorTypeRepository,
 	deviceRepo device.DeviceRepository,
-	cacheRepo domain.CacheRepository,
-	influxRepo domain.InfluxRepository,
+	// cacheRepo redis.CacheRepository,
+	influxRepo sensor.InfluxRepository,
 	ruleEngine *ruleengine.Engine,
 ) *Service {
 	return &Service{
 		sensorTypeRepo: sensorTypeRepo,
 		deviceRepo:     deviceRepo,
-		cacheRepo:      cacheRepo,
-		influxRepo:     influxRepo,
-		ruleEngine:     ruleEngine,
+		// cacheRepo:      cacheRepo,
+		influxRepo: influxRepo,
+		ruleEngine: ruleEngine,
 	}
 }
 
@@ -58,9 +59,9 @@ func (s *Service) ProcessTelemetry(deviceID string, payload []byte) error {
 		}
 		// Process as simple key-value map
 		timestamp := time.Now()
-		var sensorData []domain.SensorData
+		var sensorData []sensor.SensorData
 		for sensorType, value := range readings {
-			sensorData = append(sensorData, domain.SensorData{
+			sensorData = append(sensorData, sensor.SensorData{
 				DeviceID:   deviceID,
 				SensorType: sensorType,
 				Value:      value,
@@ -78,9 +79,9 @@ func (s *Service) ProcessTelemetry(deviceID string, payload []byte) error {
 		}
 	}
 
-	var sensorData []domain.SensorData
+	var sensorData []sensor.SensorData
 	for _, reading := range telemetryData.Readings {
-		sensorData = append(sensorData, domain.SensorData{
+		sensorData = append(sensorData, sensor.SensorData{
 			DeviceID:   deviceID,
 			SensorType: reading.Sensor,
 			Value:      reading.Value,
@@ -91,7 +92,7 @@ func (s *Service) ProcessTelemetry(deviceID string, payload []byte) error {
 	return s.influxRepo.WriteBatch(sensorData)
 }
 
-func (s *Service) GetLatestReading(deviceID, sensorType string) (*domain.SensorData, error) {
+func (s *Service) GetLatestReading(deviceID, sensorType string) (*sensor.SensorData, error) {
 	// Get data from last 24 hours and return the latest
 	start := time.Now().Add(-24 * time.Hour)
 	end := time.Now()
@@ -109,12 +110,12 @@ func (s *Service) GetLatestReading(deviceID, sensorType string) (*domain.SensorD
 	return &data[len(data)-1], nil
 }
 
-func (s *Service) GetHistoricalData(deviceID, sensorType string, start, end time.Time) ([]domain.SensorData, error) {
+func (s *Service) GetHistoricalData(deviceID, sensorType string, start, end time.Time) ([]sensor.SensorData, error) {
 	return s.influxRepo.Query(deviceID, sensorType, start, end)
 }
 
-func (s *Service) GetLatestReadingsForDevices(deviceIDs []string, sensorType string) (map[string]domain.SensorData, error) {
-	result := make(map[string]domain.SensorData)
+func (s *Service) GetLatestReadingsForDevices(deviceIDs []string, sensorType string) (map[string]sensor.SensorData, error) {
+	result := make(map[string]sensor.SensorData)
 	start := time.Now().Add(-24 * time.Hour)
 	end := time.Now()
 
@@ -132,6 +133,6 @@ func (s *Service) GetLatestReadingsForDevices(deviceIDs []string, sensorType str
 	return result, nil
 }
 
-func (s *Service) GetAggregatedData(deviceID, sensorType string, start, end time.Time, interval string) ([]domain.AggregatedData, error) {
+func (s *Service) GetAggregatedData(deviceID, sensorType string, start, end time.Time, interval string) ([]sensor.AggregatedData, error) {
 	return s.influxRepo.QueryAggregate(deviceID, sensorType, start, end, interval)
 }

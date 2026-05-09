@@ -1,4 +1,4 @@
-package influxdb
+package sensor
 
 import (
 	"context"
@@ -6,10 +6,9 @@ import (
 	"time"
 
 	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
-	"github.com/savvyinsight/agrisense/internal/domain"
 )
 
-func (r *Repository) WriteData(data *domain.SensorData) error {
+func (r *Repository) WriteData(data *SensorData) error {
 	writeAPI := r.client.WriteAPIBlocking(r.org, r.bucket)
 
 	point := influxdb2.NewPoint(
@@ -30,7 +29,7 @@ func (r *Repository) WriteData(data *domain.SensorData) error {
 	return writeAPI.WritePoint(ctx, point)
 }
 
-func (r *Repository) WriteBatch(data []domain.SensorData) error {
+func (r *Repository) WriteBatch(data []SensorData) error {
 	writeAPI := r.client.WriteAPIBlocking(r.org, r.bucket)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -56,7 +55,7 @@ func (r *Repository) WriteBatch(data []domain.SensorData) error {
 	return nil
 }
 
-func (r *Repository) Query(deviceID string, sensorType string, start, end time.Time) ([]domain.SensorData, error) {
+func (r *Repository) Query(deviceID string, sensorType string, start, end time.Time) ([]SensorData, error) {
 	queryAPI := r.client.QueryAPI(r.org)
 
 	flux := fmt.Sprintf(`
@@ -74,10 +73,10 @@ func (r *Repository) Query(deviceID string, sensorType string, start, end time.T
 		return nil, fmt.Errorf("failed to query InfluxDB: %w", err)
 	}
 
-	var data []domain.SensorData
+	var data []SensorData
 	for result.Next() {
 		record := result.Record()
-		data = append(data, domain.SensorData{
+		data = append(data, SensorData{
 			DeviceID:   deviceID,
 			SensorType: sensorType,
 			Value:      record.Value().(float64),
@@ -92,7 +91,7 @@ func (r *Repository) Query(deviceID string, sensorType string, start, end time.T
 	return data, nil
 }
 
-func (r *Repository) QueryAggregate(deviceID string, sensorType string, start, end time.Time, interval string) ([]domain.AggregatedData, error) {
+func (r *Repository) QueryAggregate(deviceID string, sensorType string, start, end time.Time, interval string) ([]AggregatedData, error) {
 	queryAPI := r.client.QueryAPI(r.org)
 
 	flux := fmt.Sprintf(`
@@ -111,7 +110,7 @@ func (r *Repository) QueryAggregate(deviceID string, sensorType string, start, e
 		return nil, fmt.Errorf("failed to query InfluxDB: %w", err)
 	}
 
-	var data []domain.AggregatedData
+	var data []AggregatedData
 	for result.Next() {
 		record := result.Record()
 
@@ -126,7 +125,7 @@ func (r *Repository) QueryAggregate(deviceID string, sensorType string, start, e
 			continue
 		}
 
-		data = append(data, domain.AggregatedData{
+		data = append(data, AggregatedData{
 			Timestamp: record.Time(),
 			Avg:       avg,
 		})
@@ -139,10 +138,10 @@ func (r *Repository) QueryAggregate(deviceID string, sensorType string, start, e
 	return data, nil
 }
 
-func (r *Repository) GetSensorTypeByName(name string) (*domain.SensorType, error) {
+func (r *Repository) GetSensorTypeByName(name string) (*SensorType, error) {
 	// This would actually come from PostgreSQL, not InfluxDB
 	// For now, return mock data - will be replaced with PostgreSQL repo call
-	sensorTypes := map[string]domain.SensorType{
+	sensorTypes := map[string]SensorType{
 		"temperature":     {ID: 1, Name: "temperature", Unit: "°C", MinValue: -40, MaxValue: 80},
 		"humidity":        {ID: 2, Name: "humidity", Unit: "%", MinValue: 0, MaxValue: 100},
 		"soil_moisture":   {ID: 3, Name: "soil_moisture", Unit: "%", MinValue: 0, MaxValue: 100},

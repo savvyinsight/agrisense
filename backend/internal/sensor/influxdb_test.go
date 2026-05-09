@@ -1,11 +1,10 @@
-package influxdb
+package sensor
 
 import (
 	"context"
 	"testing"
 	"time"
 
-	"github.com/savvyinsight/agrisense/internal/domain"
 	"github.com/testcontainers/testcontainers-go"
 )
 
@@ -82,7 +81,7 @@ func TestInfluxDBRepository(t *testing.T) {
 	time.Sleep(3 * time.Second)
 
 	// Test WriteData
-	data := &domain.SensorData{
+	data := &SensorData{
 		DeviceID:   "test-device",
 		SensorType: "temperature",
 		Value:      23.5,
@@ -113,7 +112,7 @@ func TestInfluxDBRepository(t *testing.T) {
 	}
 
 	// Test WriteBatch
-	batch := []domain.SensorData{
+	batch := []SensorData{
 		{
 			DeviceID:   "test-device",
 			SensorType: "humidity",

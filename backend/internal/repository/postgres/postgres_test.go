@@ -8,6 +8,7 @@ import (
 
 	"github.com/savvyinsight/agrisense/internal/device"
 	"github.com/savvyinsight/agrisense/internal/domain"
+	"github.com/savvyinsight/agrisense/internal/sensor"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
 	"github.com/testcontainers/testcontainers-go/wait"
@@ -696,7 +697,7 @@ func TestSensorTypeRepository(t *testing.T) {
 	db, cleanup := setupPostgresContainer(t)
 	defer cleanup()
 
-	repo := &SensorTypeRepository{DB: db}
+	repo := &sensor.PostgresSensorTypeRepository{DB: db}
 
 	// Test GetSensorTypes
 	types, err := repo.GetSensorTypes()

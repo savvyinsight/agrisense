@@ -8,23 +8,24 @@ import (
 
 	"github.com/savvyinsight/agrisense/internal/device"
 	"github.com/savvyinsight/agrisense/internal/domain"
+	"github.com/savvyinsight/agrisense/internal/sensor"
 )
 
 type Service struct {
 	dataService *dataServiceAdapter
 	deviceRepo  device.DeviceRepository
-	sensorRepo  domain.SensorTypeRepository
+	sensorRepo  sensor.SensorTypeRepository
 }
 
 // dataServiceAdapter is a thin wrapper to avoid dependency cycle on service/data package.
 type dataServiceAdapter struct {
-	getHistorical func(deviceUID string, sensorType string, start, end time.Time) ([]domain.SensorData, error)
+	getHistorical func(deviceUID string, sensorType string, start, end time.Time) ([]sensor.SensorData, error)
 }
 
 func NewService(
 	deviceRepo device.DeviceRepository,
-	sensorRepo domain.SensorTypeRepository,
-	getHistorical func(deviceUID string, sensorType string, start, end time.Time) ([]domain.SensorData, error),
+	sensorRepo sensor.SensorTypeRepository,
+	getHistorical func(deviceUID string, sensorType string, start, end time.Time) ([]sensor.SensorData, error),
 ) *Service {
 	return &Service{
 		deviceRepo:  deviceRepo,
@@ -82,12 +83,12 @@ func (s *Service) GenerateReport(deviceID int, start, end time.Time, reportType 
 	return result, nil
 }
 
-func (s *Service) aggregateSensorData(data []domain.SensorData, reportType string) []domain.SensorAnalyticsData {
+func (s *Service) aggregateSensorData(data []sensor.SensorData, reportType string) []domain.SensorAnalyticsData {
 	if len(data) == 0 {
 		return nil
 	}
 
-	group := map[time.Time][]domain.SensorData{}
+	group := map[time.Time][]sensor.SensorData{}
 
 	for _, point := range data {
 		t := point.Timestamp.UTC()
