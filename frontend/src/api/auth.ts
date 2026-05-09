@@ -1,5 +1,5 @@
 import api from './client';
-import type { LoginResponse, RegisterResponse } from '../types/api';
+import type { LoginResponse, RegisterResponse } from '@/shared/types/api';
 
 const handleError = (error: unknown): string => {
   return (error as any)?.response?.data?.error || (error as Error).message || 'Request failed';

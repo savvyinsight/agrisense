@@ -11,8 +11,8 @@ import {
   Tabs,
   Tab,
 } from '@mui/material';
-import { login, register } from '../api/auth';
-import { useAuth } from '../store/AuthContext';
+import { login, register } from '@/api/auth';
+import { useAuth } from '@/features/auth/AuthContext';
 
 interface LoginFormData {
   username: string;

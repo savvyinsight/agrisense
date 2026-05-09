@@ -12,14 +12,16 @@ import {
 } from '@mui/material';
 import WifiIcon from '@mui/icons-material/Wifi';
 import WifiOffIcon from '@mui/icons-material/WifiOff';
-import { useAuth } from '../../store/AuthContext';
-import { useWebSocket } from '../../hooks/useWebSocket';
-import DeviceCard from '../../components/DeviceCard';
-import SensorChart from '../../components/SensorChart';
-import AlertPanel from '../../components/AlertPanel';
-import { DeviceCardSkeleton } from '../../components/SkeletonLoader';
-import { getDevices, getLatestReading, getActiveAlerts } from '../../api/devices';
-import type { Device, Alert as AlertType, SensorDataMessage } from '../../types/api';
+import { useAuth } from '@/features/auth/AuthContext';
+import { useWebSocket } from '@/shared/hooks/useWebSocket';
+import DeviceCard from '@/features/devices/DeviceCard';
+import SensorChart from '@/features/sensors/SensorChart';
+import AlertPanel from '@/features/alerts/AlertPanel';
+import { DeviceCardSkeleton } from '@/shared/components/SkeletonLoader';
+import { getDevices } from '@/features/devices/api';
+import { getLatestReading } from '@/features/sensors/api';
+import { getActiveAlerts } from '@/features/alerts/api';
+import type { Device, Alert as AlertType, SensorDataMessage } from '@/shared/types/api';
 
 const Dashboard: React.FC = () => {
   const { t } = useTranslation();

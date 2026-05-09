@@ -30,7 +30,7 @@ import {
   DoneAll as ResolveIcon,
   NotificationsActive as AlertsIcon,
 } from '@mui/icons-material';
-import { getActiveAlerts, acknowledgeAlert, resolveAlert, getAlertHistory } from '../api/devices';
+import { getActiveAlerts, acknowledgeAlert, resolveAlert, getAlertHistory } from '@/features/alerts/api';
 
 const Alerts = () => {
   const { t } = useTranslation();

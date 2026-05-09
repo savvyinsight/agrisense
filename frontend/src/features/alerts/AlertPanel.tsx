@@ -24,8 +24,8 @@ import {
   Error as ErrorIcon,
   Info as InfoIcon,
 } from '@mui/icons-material';
-import { getActiveAlerts, acknowledgeAlert } from '../api/devices';
-import type { Alert as AlertType } from '../types/api';
+import { getActiveAlerts, acknowledgeAlert } from '@/features/alerts/api';
+import type { Alert as AlertType } from '@/shared/types/api';
 
 interface AlertPanelProps {
   open: boolean;

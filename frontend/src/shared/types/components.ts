@@ -38,11 +38,6 @@ export interface SensorChartProps {
   deviceName: string;
 }
 
-export interface TemperatureChartProps {
-  deviceId: string;
-  deviceName: string;
-}
-
 export interface SensorSelectorProps {
   selected: string;
   onSelect: (sensorType: string) => void;

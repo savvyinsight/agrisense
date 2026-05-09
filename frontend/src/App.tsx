@@ -2,16 +2,16 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
-import { AuthProvider, useAuth } from './store/AuthContext';
-import Layout from './components/Layout';
-import Login from './pages/Login';
-import Dashboard from './pages/Dashboard';
-import DeviceManagement from './pages/DeviceManagement';
-import AlertRules from './pages/AlertRules';
-import Alerts from './pages/Alerts';
-import AutomationRules from './pages/AutomationRules';
-import Analytics from './pages/Analytics';
-import MapView from './pages/MapView';
+import { AuthProvider, useAuth } from '@/features/auth/AuthContext';
+import Layout from '@/shared/components/Layout';
+import Login from '@/features/auth/Login';
+import Dashboard from '@/features/sensors/Dashboard';
+import DeviceManagement from '@/features/devices/DeviceManagement';
+import AlertRules from '@/features/alerts/AlertRules';
+import Alerts from '@/features/alerts/Alerts';
+import AutomationRules from '@/features/automation/AutomationRules';
+import Analytics from '@/features/analytics/Analytics';
+import MapView from '@/features/devices/MapView';
 
 type RouteWrapperProps = {
   children: React.ReactNode;

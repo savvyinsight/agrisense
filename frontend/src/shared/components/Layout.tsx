@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import type { Alert as AlertType } from '../types/api';
+import type { Alert as AlertType } from '@/shared/types/api';
 
 import {
   Box,
@@ -37,9 +37,9 @@ import {
   Notifications,
   Language,
 } from '@mui/icons-material';
-import { useAuth } from '../store/AuthContext';
-import { logout } from '../api/auth';
-import { getActiveAlerts } from '../api/devices';
+import { useAuth } from '@/features/auth/AuthContext';
+import { logout } from '@/api/auth';
+import { getActiveAlerts } from '@/features/alerts/api';
 
 const drawerWidth = 280;
 

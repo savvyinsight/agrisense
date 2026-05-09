@@ -17,8 +17,8 @@ import LocationOnIcon from '@mui/icons-material/LocationOn';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
-import { getDevicesDataLatest, getDevices } from '../api/devices';
-import type { Device } from '../types/api';
+import { getDevicesDataLatest, getDevices } from '@/features/devices/api';
+import type { Device } from '@/shared/types/api';
 
 // Fix Leaflet icon issue with webpack
 delete (L.Icon.Default.prototype as any)._getIconUrl;

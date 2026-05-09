@@ -12,7 +12,7 @@ import {
   PowerOff as OfflineIcon,
   Power as OnlineIcon,
 } from '@mui/icons-material';
-import type { Device } from '../../types/api';
+import type { Device } from '@/shared/types/api';
 
 interface DeviceCardProps {
   device: Device;

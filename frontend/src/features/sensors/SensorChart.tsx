@@ -19,7 +19,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts';
-import { getHistoricalData } from '../api/devices';
+import { getHistoricalData } from '@/features/sensors/api';
 import SensorSelector from './SensorSelector';
 
 interface SensorChartProps {

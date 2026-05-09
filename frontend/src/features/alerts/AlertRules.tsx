@@ -31,7 +31,8 @@ import {
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddCircleIcon from '@mui/icons-material/AddCircle';
-import { getAlertRules, createAlertRule, deleteAlertRule, getDevices } from '../api/devices';
+import { getAlertRules, createAlertRule, deleteAlertRule } from '@/features/alerts/api';
+import { getDevices } from '@/features/devices/api';
 
 const emptyRule = {
   name: '',

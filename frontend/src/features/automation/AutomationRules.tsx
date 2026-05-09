@@ -31,7 +31,8 @@ import {
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddCircleIcon from '@mui/icons-material/AddCircle';
-import { getAutomationRules, createAutomationRule, deleteAutomationRule, getDevices } from '../api/devices';
+import { getAutomationRules, createAutomationRule, deleteAutomationRule } from '@/features/automation/api';
+import { getDevices } from '@/features/devices/api';
 
 const emptyRule = {
   name: '',

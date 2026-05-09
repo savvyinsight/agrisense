@@ -32,7 +32,8 @@ import {
   Bar,
 } from 'recharts';
 import AnalyticsIcon from '@mui/icons-material/Analytics';
-import { getAnalyticsReport, getDevices } from '../api/devices';
+import { getAnalyticsReport } from '@/features/analytics/api';
+import { getDevices } from '@/features/devices/api';
 
 const Analytics = () => {
   const { t } = useTranslation();
