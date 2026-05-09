@@ -1,19 +1,17 @@
-package postgres
+package device
 
 import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
 	"time"
-
-	"github.com/savvyinsight/agrisense/internal/domain"
 )
 
-type DeviceRepository struct {
+type PostgresDeviceRepository struct {
 	DB *sql.DB
 }
 
-func (r *DeviceRepository) Create(device *domain.Device) error {
+func (r *PostgresDeviceRepository) Create(device *Device) error {
 	query := `
         INSERT INTO devices (device_id, name, type, location, latitude, longitude, status, firmware_version, config, user_id, created_at, updated_at)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
@@ -44,14 +42,14 @@ func (r *DeviceRepository) Create(device *domain.Device) error {
 	return err
 }
 
-func (r *DeviceRepository) GetByID(id int) (*domain.Device, error) {
+func (r *PostgresDeviceRepository) GetByID(id int) (*Device, error) {
 	query := `
         SELECT id, device_id, name, type, location, latitude, longitude, status, last_heartbeat, 
                firmware_version, config, user_id, created_at, updated_at
         FROM devices WHERE id = $1
     `
 
-	var device domain.Device
+	var device Device
 	var configJSON []byte
 	var latitude sql.NullFloat64
 	var longitude sql.NullFloat64
@@ -94,14 +92,14 @@ func (r *DeviceRepository) GetByID(id int) (*domain.Device, error) {
 	return &device, nil
 }
 
-func (r *DeviceRepository) GetByDeviceID(deviceID string) (*domain.Device, error) {
+func (r *PostgresDeviceRepository) GetByDeviceID(deviceID string) (*Device, error) {
 	query := `
         SELECT id, device_id, name, type, location, latitude, longitude, status, last_heartbeat, 
                firmware_version, config, user_id, created_at, updated_at
         FROM devices WHERE device_id = $1
     `
 
-	var device domain.Device
+	var device Device
 	var configJSON []byte
 	var latitude sql.NullFloat64
 	var longitude sql.NullFloat64
@@ -144,7 +142,7 @@ func (r *DeviceRepository) GetByDeviceID(deviceID string) (*domain.Device, error
 	return &device, nil
 }
 
-func (r *DeviceRepository) GetByUserID(userID int) ([]domain.Device, error) {
+func (r *PostgresDeviceRepository) GetByUserID(userID int) ([]Device, error) {
 	query := `
         SELECT id, device_id, name, type, location, latitude, longitude, status, last_heartbeat, 
                firmware_version, config, user_id, created_at, updated_at
@@ -157,9 +155,9 @@ func (r *DeviceRepository) GetByUserID(userID int) ([]domain.Device, error) {
 	}
 	defer rows.Close()
 
-	var devices []domain.Device
+	var devices []Device
 	for rows.Next() {
-		var device domain.Device
+		var device Device
 		var configJSON []byte
 		var latitude sql.NullFloat64
 		var longitude sql.NullFloat64
@@ -200,7 +198,7 @@ func (r *DeviceRepository) GetByUserID(userID int) ([]domain.Device, error) {
 	return devices, nil
 }
 
-func (r *DeviceRepository) Update(device *domain.Device) error {
+func (r *PostgresDeviceRepository) Update(device *Device) error {
 	query := `
         UPDATE devices 
         SET name = $1, type = $2, location = $3, latitude = $4, longitude = $5, status = $6, 
@@ -230,19 +228,19 @@ func (r *DeviceRepository) Update(device *domain.Device) error {
 	return err
 }
 
-func (r *DeviceRepository) UpdateHeartbeat(deviceID string) error {
+func (r *PostgresDeviceRepository) UpdateHeartbeat(deviceID string) error {
 	query := `UPDATE devices SET last_heartbeat = $1, updated_at = $2 WHERE device_id = $3`
 	_, err := r.DB.Exec(query, time.Now(), time.Now(), deviceID)
 	return err
 }
 
-func (r *DeviceRepository) UpdateStatus(deviceID string, status domain.DeviceStatus) error {
+func (r *PostgresDeviceRepository) UpdateStatus(deviceID string, status DeviceStatus) error {
 	query := `UPDATE devices SET status = $1, updated_at = $2 WHERE device_id = $3`
 	_, err := r.DB.Exec(query, status, time.Now(), deviceID)
 	return err
 }
 
-func (r *DeviceRepository) List(userID int, limit, offset int) ([]domain.Device, int64, error) {
+func (r *PostgresDeviceRepository) List(userID int, limit, offset int) ([]Device, int64, error) {
 	query := `
         SELECT id, device_id, name, type, location, latitude, longitude, status, last_heartbeat, 
                firmware_version, config, user_id, created_at, updated_at
@@ -258,9 +256,9 @@ func (r *DeviceRepository) List(userID int, limit, offset int) ([]domain.Device,
 	}
 	defer rows.Close()
 
-	var devices []domain.Device
+	var devices []Device
 	for rows.Next() {
-		var device domain.Device
+		var device Device
 		var configJSON []byte
 		var latitude sql.NullFloat64
 		var longitude sql.NullFloat64
@@ -306,7 +304,7 @@ func (r *DeviceRepository) List(userID int, limit, offset int) ([]domain.Device,
 	return devices, total, nil
 }
 
-func (r *DeviceRepository) Delete(id int) error {
+func (r *PostgresDeviceRepository) Delete(id int) error {
 	query := `DELETE FROM devices WHERE id = $1`
 	result, err := r.DB.Exec(query, id)
 	if err != nil {

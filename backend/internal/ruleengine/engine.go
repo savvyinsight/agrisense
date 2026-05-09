@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/savvyinsight/agrisense/internal/device"
 	"github.com/savvyinsight/agrisense/internal/domain"
 )
 
@@ -14,13 +15,13 @@ type Engine struct {
 	evaluator  *Evaluator
 	alertSvc   domain.AlertRepository
 	ruleRepo   domain.AlertRuleRepository
-	deviceRepo domain.DeviceRepository
+	deviceRepo device.DeviceRepository
 	stopChan   chan struct{}
 }
 
 func NewEngine(ruleRepo domain.AlertRuleRepository,
 	alertSvc domain.AlertRepository,
-	deviceRepo domain.DeviceRepository) *Engine {
+	deviceRepo device.DeviceRepository) *Engine {
 	return &Engine{
 		rules:      make(map[int]*domain.AlertRule),
 		evaluator:  NewEvaluator(),

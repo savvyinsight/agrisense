@@ -5,7 +5,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/savvyinsight/agrisense/internal/domain"
+	"github.com/savvyinsight/agrisense/internal/device"
 )
 
 type HeartbeatData struct {
@@ -32,7 +32,7 @@ func HandleHeartbeat(deviceID string, payload []byte) {
 		}
 
 		// Mark device as online
-		if err := deviceRepo.UpdateStatus(deviceID, domain.DeviceStatusOnline); err != nil {
+		if err := deviceRepo.UpdateStatus(deviceID, device.DeviceStatusOnline); err != nil {
 			log.Printf("Failed to update device status to online for %s: %v", deviceID, err)
 		}
 

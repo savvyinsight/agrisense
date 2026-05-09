@@ -5,12 +5,12 @@ import (
 	"log"
 	"time"
 
-	"github.com/savvyinsight/agrisense/internal/domain"
+	"github.com/savvyinsight/agrisense/internal/device"
 )
 
 // StatusManager handles periodic device status checks and updates
 type StatusManager struct {
-	deviceRepo       domain.DeviceRepository
+	deviceRepo       device.DeviceRepository
 	heartbeatTimeout time.Duration
 	checkInterval    time.Duration
 	stop             chan bool
@@ -20,7 +20,7 @@ type StatusManager struct {
 // NewStatusManager creates a new device status manager
 // heartbeatTimeout: duration after which a device is considered offline (default: 5 minutes)
 // checkInterval: interval at which to check for offline devices (default: 1 minute)
-func NewStatusManager(deviceRepo domain.DeviceRepository, heartbeatTimeout, checkInterval time.Duration) *StatusManager {
+func NewStatusManager(deviceRepo device.DeviceRepository, heartbeatTimeout, checkInterval time.Duration) *StatusManager {
 	if heartbeatTimeout == 0 {
 		heartbeatTimeout = 5 * time.Minute
 	}
@@ -98,7 +98,7 @@ func (sm *StatusManager) MarkDeviceOffline(deviceID string) error {
 		return fmt.Errorf("device repository not initialized")
 	}
 
-	if err := deviceRepo.UpdateStatus(deviceID, domain.DeviceStatusOffline); err != nil {
+	if err := deviceRepo.UpdateStatus(deviceID, device.DeviceStatusOffline); err != nil {
 		log.Printf("Failed to mark device %s as offline: %v", deviceID, err)
 		return err
 	}
@@ -113,7 +113,7 @@ func (sm *StatusManager) MarkDeviceOnline(deviceID string) error {
 		return fmt.Errorf("device repository not initialized")
 	}
 
-	if err := deviceRepo.UpdateStatus(deviceID, domain.DeviceStatusOnline); err != nil {
+	if err := deviceRepo.UpdateStatus(deviceID, device.DeviceStatusOnline); err != nil {
 		log.Printf("Failed to mark device %s as online: %v", deviceID, err)
 		return err
 	}

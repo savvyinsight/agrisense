@@ -1,25 +1,24 @@
-package rest
+package device
 
 import (
 	"net/http"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"github.com/savvyinsight/agrisense/internal/domain"
 )
 
 type DeviceHandler struct {
-	deviceRepo domain.DeviceRepository
+	deviceRepo DeviceRepository
 }
 
-func NewDeviceHandler(deviceRepo domain.DeviceRepository) *DeviceHandler {
+func NewDeviceHandler(deviceRepo DeviceRepository) *DeviceHandler {
 	return &DeviceHandler{
 		deviceRepo: deviceRepo,
 	}
 }
 
 func (h *DeviceHandler) Create(c *gin.Context) {
-	var device domain.Device
+	var device Device
 	if err := c.ShouldBindJSON(&device); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -34,7 +33,7 @@ func (h *DeviceHandler) Create(c *gin.Context) {
 	device.UserID = userID.(int)
 
 	// Set default status - always offline until device connects
-	device.Status = domain.DeviceStatusOffline
+	device.Status = DeviceStatusOffline
 
 	if err := h.deviceRepo.Create(&device); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -89,7 +88,7 @@ func (h *DeviceHandler) Update(c *gin.Context) {
 		return
 	}
 
-	var device domain.Device
+	var device Device
 	if err := c.ShouldBindJSON(&device); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -97,7 +96,7 @@ func (h *DeviceHandler) Update(c *gin.Context) {
 	device.ID = id
 
 	// Set default status - always offline until device connects
-	device.Status = domain.DeviceStatusOffline
+	device.Status = DeviceStatusOffline
 
 	if err := h.deviceRepo.Update(&device); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})

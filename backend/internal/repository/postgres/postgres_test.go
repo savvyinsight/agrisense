@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/savvyinsight/agrisense/internal/device"
 	"github.com/savvyinsight/agrisense/internal/domain"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
@@ -240,20 +241,20 @@ func TestDeviceRepository(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	repo := &DeviceRepository{DB: db}
+	repo := &device.PostgresDeviceRepository{DB: db}
 
 	// Create
 	location := "Test Location"
 	lat := 12.3456
 	lon := 65.4321
-	device := &domain.Device{
+	device := &device.Device{
 		DeviceID:        "test-device-001",
 		Name:            "Test Device",
-		Type:            domain.DeviceTypeSensor,
+		Type:            device.DeviceTypeSensor,
 		Location:        &location,
 		Latitude:        &lat,
 		Longitude:       &lon,
-		Status:          domain.DeviceStatusOffline,
+		Status:          device.DeviceStatusOffline,
 		FirmwareVersion: ptrString("1.0.0"),
 		Config:          map[string]interface{}{"interval": 30},
 		UserID:          user.ID,
@@ -340,7 +341,7 @@ func TestDeviceRepository(t *testing.T) {
 	}
 
 	// UpdateStatus
-	err = repo.UpdateStatus(device.DeviceID, domain.DeviceStatusOnline)
+	err = repo.UpdateStatus(device.DeviceID, "online")
 	if err != nil {
 		t.Fatalf("Failed to update status: %v", err)
 	}
@@ -392,11 +393,11 @@ func TestAlertRuleRepository(t *testing.T) {
 	}
 	userRepo.Create(user)
 
-	deviceRepo := &DeviceRepository{DB: db}
-	device := &domain.Device{
+	deviceRepo := &device.PostgresDeviceRepository{DB: db}
+	device := &device.Device{
 		DeviceID: "alert-device",
 		Name:     "Alert Device",
-		Type:     domain.DeviceTypeSensor,
+		Type:     device.DeviceTypeSensor,
 		UserID:   user.ID,
 	}
 	deviceRepo.Create(device)
@@ -502,11 +503,11 @@ func TestAlertRepository(t *testing.T) {
 	}
 	userRepo.Create(user)
 
-	deviceRepo := &DeviceRepository{DB: db}
-	device := &domain.Device{
+	deviceRepo := &device.PostgresDeviceRepository{DB: db}
+	device := &device.Device{
 		DeviceID: "history-device",
 		Name:     "History Device",
-		Type:     domain.DeviceTypeSensor,
+		Type:     device.DeviceTypeSensor,
 		UserID:   user.ID,
 	}
 	deviceRepo.Create(device)
@@ -612,11 +613,11 @@ func TestCommandRepository(t *testing.T) {
 	}
 	userRepo.Create(user)
 
-	deviceRepo := &DeviceRepository{DB: db}
-	device := &domain.Device{
+	deviceRepo := &device.PostgresDeviceRepository{DB: db}
+	device := &device.Device{
 		DeviceID: "cmd-device",
 		Name:     "Command Device",
-		Type:     domain.DeviceTypeController,
+		Type:     device.DeviceTypeController,
 		UserID:   user.ID,
 	}
 	deviceRepo.Create(device)

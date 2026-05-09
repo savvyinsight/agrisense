@@ -9,6 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/savvyinsight/agrisense/internal/config"
+	"github.com/savvyinsight/agrisense/internal/device"
 	"github.com/savvyinsight/agrisense/internal/handler/rest"
 	"github.com/savvyinsight/agrisense/internal/handler/websocket"
 	"github.com/savvyinsight/agrisense/internal/middleware"
@@ -75,7 +76,7 @@ func main() {
 
 	// Create repositories
 	userRepo := &postgres.UserRepository{DB: pgDB}
-	deviceRepo := &postgres.DeviceRepository{DB: pgDB}
+	deviceRepo := &device.PostgresDeviceRepository{DB: pgDB}
 	sensorTypeRepo := &postgres.SensorTypeRepository{DB: pgDB}
 	cacheRepo := redis.NewCacheRepository(redisClient)
 

@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/savvyinsight/agrisense/internal/domain"
+	"github.com/savvyinsight/agrisense/internal/device"
 	"github.com/testcontainers/testcontainers-go/modules/redis"
 )
 
@@ -101,7 +101,7 @@ func TestCacheRepository(t *testing.T) {
 	}
 
 	// Test Device Status methods
-	err = repo.SetDeviceStatus("test-device", string(domain.DeviceStatusOnline))
+	err = repo.SetDeviceStatus("test-device", string(device.DeviceStatusOnline))
 	if err != nil {
 		t.Fatalf("Failed to set device status: %v", err)
 	}
@@ -111,7 +111,7 @@ func TestCacheRepository(t *testing.T) {
 		t.Fatalf("Failed to get device status: %v", err)
 	}
 
-	if status != string(domain.DeviceStatusOnline) {
+	if status != string(device.DeviceStatusOnline) {
 		t.Errorf("Expected status online, got %s", status)
 	}
 }

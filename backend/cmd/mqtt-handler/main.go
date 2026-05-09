@@ -7,6 +7,7 @@ import (
 	"syscall"
 
 	"github.com/savvyinsight/agrisense/internal/config"
+	"github.com/savvyinsight/agrisense/internal/device"
 	"github.com/savvyinsight/agrisense/internal/mqtt"
 	"github.com/savvyinsight/agrisense/internal/mqtt/handlers"
 	"github.com/savvyinsight/agrisense/internal/repository/influxdb"
@@ -66,7 +67,7 @@ func main() {
 	defer influxRepo.Close()
 
 	// Create repositories
-	deviceRepo := &postgres.DeviceRepository{DB: pgDB}
+	deviceRepo := &device.PostgresDeviceRepository{DB: pgDB}
 	sensorTypeRepo := &postgres.SensorTypeRepository{DB: pgDB}
 	cacheRepo := redis.NewCacheRepository(redisClient)
 	cmdRepo := &postgres.CommandRepository{DB: pgDB}
@@ -75,7 +76,7 @@ func main() {
 	ruleEngine := ruleengine.NewEngine(
 		&postgres.AlertRuleRepository{DB: pgDB},
 		&postgres.AlertRepository{DB: pgDB},
-		&postgres.DeviceRepository{DB: pgDB},
+		&device.PostgresDeviceRepository{DB: pgDB},
 	)
 	ruleEngine.Start()
 	defer ruleEngine.Stop()

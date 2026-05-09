@@ -6,12 +6,13 @@ import (
 	"strings"
 	"time"
 
+	"github.com/savvyinsight/agrisense/internal/device"
 	"github.com/savvyinsight/agrisense/internal/domain"
 )
 
 type Service struct {
 	dataService *dataServiceAdapter
-	deviceRepo  domain.DeviceRepository
+	deviceRepo  device.DeviceRepository
 	sensorRepo  domain.SensorTypeRepository
 }
 
@@ -21,7 +22,7 @@ type dataServiceAdapter struct {
 }
 
 func NewService(
-	deviceRepo domain.DeviceRepository,
+	deviceRepo device.DeviceRepository,
 	sensorRepo domain.SensorTypeRepository,
 	getHistorical func(deviceUID string, sensorType string, start, end time.Time) ([]domain.SensorData, error),
 ) *Service {

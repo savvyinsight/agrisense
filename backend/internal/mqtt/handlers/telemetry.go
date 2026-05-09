@@ -3,18 +3,18 @@ package handlers
 import (
 	"log"
 
-	"github.com/savvyinsight/agrisense/internal/domain"
+	"github.com/savvyinsight/agrisense/internal/device"
 	"github.com/savvyinsight/agrisense/internal/middleware"
 	"github.com/savvyinsight/agrisense/internal/service/data"
 )
 
 var (
 	dataService *data.Service
-	deviceRepo  domain.DeviceRepository
+	deviceRepo  device.DeviceRepository
 )
 
 // Init sets the data service and device repository for handlers
-func Init(ds *data.Service, dr domain.DeviceRepository) {
+func Init(ds *data.Service, dr device.DeviceRepository) {
 	dataService = ds
 	deviceRepo = dr
 }
@@ -30,7 +30,7 @@ func HandleTelemetry(deviceID string, payload []byte) {
 
 	// Mark device as online when telemetry is received
 	if deviceRepo != nil {
-		if err := deviceRepo.UpdateStatus(deviceID, domain.DeviceStatusOnline); err != nil {
+		if err := deviceRepo.UpdateStatus(deviceID, device.DeviceStatusOnline); err != nil {
 			log.Printf("Failed to update device status to online for %s: %v", deviceID, err)
 		}
 		if err := deviceRepo.UpdateHeartbeat(deviceID); err != nil {

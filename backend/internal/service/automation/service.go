@@ -6,12 +6,13 @@ import (
 	"strings"
 	"time"
 
+	"github.com/savvyinsight/agrisense/internal/device"
 	"github.com/savvyinsight/agrisense/internal/domain"
 )
 
 type Service struct {
 	automationRepo domain.AutomationRuleRepository
-	deviceRepo     domain.DeviceRepository
+	deviceRepo     device.DeviceRepository
 	commandService CommandExecutor
 	scheduler      *Scheduler
 }
@@ -27,7 +28,7 @@ type Scheduler struct {
 
 func NewService(
 	automationRepo domain.AutomationRuleRepository,
-	deviceRepo domain.DeviceRepository,
+	deviceRepo device.DeviceRepository,
 	commandExecutor CommandExecutor,
 ) *Service {
 	return &Service{

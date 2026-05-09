@@ -1,19 +1,20 @@
 package alert
 
 import (
+	"github.com/savvyinsight/agrisense/internal/device"
 	"github.com/savvyinsight/agrisense/internal/domain"
 )
 
 type Service struct {
 	alertRepo  domain.AlertRepository
 	ruleRepo   domain.AlertRuleRepository
-	deviceRepo domain.DeviceRepository
+	deviceRepo device.DeviceRepository
 }
 
 func NewService(
 	alertRepo domain.AlertRepository,
 	ruleRepo domain.AlertRuleRepository,
-	deviceRepo domain.DeviceRepository,
+	deviceRepo device.DeviceRepository,
 ) *Service {
 	return &Service{
 		alertRepo:  alertRepo,

@@ -6,19 +6,20 @@ import (
 	"log"
 	"time"
 
+	"github.com/savvyinsight/agrisense/internal/device"
 	"github.com/savvyinsight/agrisense/internal/domain"
 )
 
 type Service struct {
 	cmdRepo    domain.CommandRepository
-	deviceRepo domain.DeviceRepository
+	deviceRepo device.DeviceRepository
 	// Remove mqtt.Client - we'll use a callback
 	publishFunc func(deviceID string, payload []byte) error
 }
 
 func NewService(
 	cmdRepo domain.CommandRepository,
-	deviceRepo domain.DeviceRepository,
+	deviceRepo device.DeviceRepository,
 	publishFunc func(deviceID string, payload []byte) error, // Inject behavior
 ) *Service {
 	return &Service{
