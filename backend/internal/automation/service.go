@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/savvyinsight/agrisense/internal/control"
 	"github.com/savvyinsight/agrisense/internal/device"
-	"github.com/savvyinsight/agrisense/internal/domain"
 	"github.com/savvyinsight/agrisense/internal/sensor"
 )
 
@@ -19,7 +19,7 @@ type Service struct {
 }
 
 type CommandExecutor interface {
-	ExecuteCommand(deviceID int, command string, parameters map[string]interface{}, userID *int) (*domain.Command, error)
+	ExecuteCommand(deviceID int, command string, parameters map[string]interface{}, userID *int) (*control.Command, error)
 }
 
 type Scheduler struct {

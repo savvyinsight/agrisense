@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/savvyinsight/agrisense/internal/alert"
+	"github.com/savvyinsight/agrisense/internal/control"
 	"github.com/savvyinsight/agrisense/internal/device"
-	"github.com/savvyinsight/agrisense/internal/domain"
 	"github.com/savvyinsight/agrisense/internal/sensor"
 	"github.com/savvyinsight/agrisense/internal/user"
 	"github.com/testcontainers/testcontainers-go"
@@ -625,14 +625,14 @@ func TestCommandRepository(t *testing.T) {
 	}
 	deviceRepo.Create(device)
 
-	repo := &CommandRepository{DB: db}
+	repo := &control.PostgresCommandRepository{DB: db}
 
 	// Create
-	cmd := &domain.Command{
+	cmd := &control.Command{
 		DeviceID:   device.ID,
 		Command:    "turn_on",
 		Parameters: map[string]interface{}{"duration": 30},
-		Status:     domain.CommandStatusPending,
+		Status:     control.CommandStatusPending,
 		UserID:     &user.ID,
 		Metadata:   map[string]interface{}{"source": "test"},
 	}
@@ -673,7 +673,7 @@ func TestCommandRepository(t *testing.T) {
 	}
 
 	// UpdateStatus
-	err = repo.UpdateStatus(cmd.ID, domain.CommandStatusSent)
+	err = repo.UpdateStatus(cmd.ID, control.CommandStatusSent)
 	if err != nil {
 		t.Fatalf("Failed to update command status: %v", err)
 	}
@@ -690,8 +690,8 @@ func TestCommandRepository(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to get updated command: %v", err)
 	}
-	if updated.Status != domain.CommandStatusExecuted {
-		t.Errorf("Expected status %s, got %s", domain.CommandStatusExecuted, updated.Status)
+	if updated.Status != control.CommandStatusExecuted {
+		t.Errorf("Expected status %s, got %s", control.CommandStatusExecuted, updated.Status)
 	}
 }
 

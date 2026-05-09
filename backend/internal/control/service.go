@@ -7,18 +7,17 @@ import (
 	"time"
 
 	"github.com/savvyinsight/agrisense/internal/device"
-	"github.com/savvyinsight/agrisense/internal/domain"
 )
 
 type Service struct {
-	cmdRepo    domain.CommandRepository
+	cmdRepo    CommandRepository
 	deviceRepo device.DeviceRepository
 	// Remove mqtt.Client - we'll use a callback
 	publishFunc func(deviceID string, payload []byte) error
 }
 
 func NewService(
-	cmdRepo domain.CommandRepository,
+	cmdRepo CommandRepository,
 	deviceRepo device.DeviceRepository,
 	publishFunc func(deviceID string, payload []byte) error, // Inject behavior
 ) *Service {
@@ -34,7 +33,7 @@ type CommandRequest struct {
 	Parameters map[string]interface{} `json:"parameters"`
 }
 
-func (s *Service) SendCommand(deviceID int, req CommandRequest, userID *int) (*domain.Command, error) {
+func (s *Service) SendCommand(deviceID int, req CommandRequest, userID *int) (*Command, error) {
 	// Get device to verify it exists and get its external ID
 	device, err := s.deviceRepo.GetByID(deviceID)
 	if err != nil {
@@ -42,11 +41,11 @@ func (s *Service) SendCommand(deviceID int, req CommandRequest, userID *int) (*d
 	}
 
 	// Create command record
-	cmd := &domain.Command{
+	cmd := &Command{
 		DeviceID:   deviceID,
 		Command:    req.Command,
 		Parameters: req.Parameters,
-		Status:     domain.CommandStatusPending,
+		Status:     CommandStatusPending,
 		UserID:     userID,
 		CreatedAt:  time.Now(),
 	}
@@ -69,7 +68,7 @@ func (s *Service) SendCommand(deviceID int, req CommandRequest, userID *int) (*d
 		// Use injected publish function
 		if err := s.publishFunc(device.DeviceID, data); err != nil {
 			log.Printf("Failed to publish command %d: %v", cmd.ID, err)
-			s.cmdRepo.UpdateStatus(cmd.ID, domain.CommandStatusFailed)
+			s.cmdRepo.UpdateStatus(cmd.ID, CommandStatusFailed)
 			return
 		}
 
@@ -81,11 +80,11 @@ func (s *Service) SendCommand(deviceID int, req CommandRequest, userID *int) (*d
 	return cmd, nil
 }
 
-func (s *Service) GetCommandStatus(commandID int) (*domain.Command, error) {
+func (s *Service) GetCommandStatus(commandID int) (*Command, error) {
 	return s.cmdRepo.GetByID(commandID)
 }
 
-func (s *Service) GetDeviceCommands(deviceID int, limit int) ([]domain.Command, error) {
+func (s *Service) GetDeviceCommands(deviceID int, limit int) ([]Command, error) {
 	return s.cmdRepo.GetByDeviceID(deviceID, limit)
 }
 
@@ -114,7 +113,7 @@ func (s *Service) HandleCommandResponse(deviceID string, payload []byte) {
 	case "executed":
 		s.cmdRepo.UpdateDelivery(cmd.ID, cmd.SentAt, &now, &now)
 	case "failed":
-		s.cmdRepo.UpdateStatus(cmd.ID, domain.CommandStatusFailed)
+		s.cmdRepo.UpdateStatus(cmd.ID, CommandStatusFailed)
 		log.Printf("Command %d failed: %s", cmd.ID, response.Message)
 	}
 }
@@ -124,7 +123,7 @@ func (s *Service) SetPublishFunc(fn func(deviceID string, payload []byte) error)
 }
 
 // ExecuteCommand executes a command (used by automation service)
-func (s *Service) ExecuteCommand(deviceID int, command string, parameters map[string]interface{}, userID *int) (*domain.Command, error) {
+func (s *Service) ExecuteCommand(deviceID int, command string, parameters map[string]interface{}, userID *int) (*Command, error) {
 	// Get device to verify it exists and get its external ID
 	device, err := s.deviceRepo.GetByID(deviceID)
 	if err != nil {
@@ -132,11 +131,11 @@ func (s *Service) ExecuteCommand(deviceID int, command string, parameters map[st
 	}
 
 	// Create command record
-	cmd := &domain.Command{
+	cmd := &Command{
 		DeviceID:   deviceID,
 		Command:    command,
 		Parameters: parameters,
-		Status:     domain.CommandStatusPending,
+		Status:     CommandStatusPending,
 		UserID:     userID,
 		CreatedAt:  time.Now(),
 	}
@@ -159,7 +158,7 @@ func (s *Service) ExecuteCommand(deviceID int, command string, parameters map[st
 		// Use injected publish function
 		if err := s.publishFunc(device.DeviceID, data); err != nil {
 			log.Printf("Failed to publish command %d: %v", cmd.ID, err)
-			s.cmdRepo.UpdateStatus(cmd.ID, domain.CommandStatusFailed)
+			s.cmdRepo.UpdateStatus(cmd.ID, CommandStatusFailed)
 			return
 		}
 

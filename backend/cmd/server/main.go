@@ -11,6 +11,7 @@ import (
 	"github.com/savvyinsight/agrisense/internal/alert"
 	"github.com/savvyinsight/agrisense/internal/automation"
 	"github.com/savvyinsight/agrisense/internal/config"
+	"github.com/savvyinsight/agrisense/internal/control"
 	"github.com/savvyinsight/agrisense/internal/device"
 	"github.com/savvyinsight/agrisense/internal/handler/rest"
 	"github.com/savvyinsight/agrisense/internal/handler/websocket"
@@ -21,7 +22,6 @@ import (
 	"github.com/savvyinsight/agrisense/internal/ruleengine"
 	"github.com/savvyinsight/agrisense/internal/sensor"
 	"github.com/savvyinsight/agrisense/internal/service/analytics"
-	"github.com/savvyinsight/agrisense/internal/service/control"
 	"github.com/savvyinsight/agrisense/internal/service/data"
 	"github.com/savvyinsight/agrisense/internal/user"
 )
@@ -114,7 +114,7 @@ func main() {
 
 	// 4. Create control service with injected publish function
 	controlService := control.NewService(
-		&postgres.CommandRepository{DB: pgDB},
+		&control.PostgresCommandRepository{DB: pgDB},
 		deviceRepo,
 		func(deviceID string, payload []byte) error {
 			return mqttClient.PublishCommand(deviceID, payload)
@@ -152,7 +152,7 @@ func main() {
 	deviceHandler := device.NewDeviceHandler(deviceRepo)
 	dataHandler := rest.NewDataHandler(dataService)
 	alertHandler := alert.NewAlertHandler(alertService)
-	controlHandler := rest.NewControlHandler(controlService)
+	controlHandler := control.NewControlHandler(controlService)
 	automationHandler := automation.NewAutomationHandler(automationService)
 	analyticsHandler := rest.NewAnalyticsHandler(analyticsService)
 

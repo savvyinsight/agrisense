@@ -8,6 +8,7 @@ import (
 
 	"github.com/savvyinsight/agrisense/internal/alert"
 	"github.com/savvyinsight/agrisense/internal/config"
+	"github.com/savvyinsight/agrisense/internal/control"
 	"github.com/savvyinsight/agrisense/internal/device"
 	"github.com/savvyinsight/agrisense/internal/mqtt"
 	"github.com/savvyinsight/agrisense/internal/mqtt/handlers"
@@ -15,7 +16,6 @@ import (
 	"github.com/savvyinsight/agrisense/internal/repository/redis"
 	"github.com/savvyinsight/agrisense/internal/ruleengine"
 	"github.com/savvyinsight/agrisense/internal/sensor"
-	"github.com/savvyinsight/agrisense/internal/service/control"
 	"github.com/savvyinsight/agrisense/internal/service/data"
 )
 
@@ -71,7 +71,7 @@ func main() {
 	deviceRepo := &device.PostgresDeviceRepository{DB: pgDB}
 	sensorTypeRepo := &sensor.PostgresSensorTypeRepository{DB: pgDB}
 	// cacheRepo := redis.NewCacheRepository(redisClient)
-	cmdRepo := &postgres.CommandRepository{DB: pgDB}
+	cmdRepo := &control.PostgresCommandRepository{DB: pgDB}
 
 	// Create rule engine
 	ruleEngine := ruleengine.NewEngine(

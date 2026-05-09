@@ -1,18 +1,16 @@
-package postgres
+package control
 
 import (
 	"database/sql"
 	"encoding/json"
 	"time"
-
-	"github.com/savvyinsight/agrisense/internal/domain"
 )
 
-type CommandRepository struct {
+type PostgresCommandRepository struct {
 	DB *sql.DB
 }
 
-func (r *CommandRepository) Create(cmd *domain.Command) error {
+func (r *PostgresCommandRepository) Create(cmd *Command) error {
 	query := `
         INSERT INTO control_commands (
             device_id, command, parameters, status, created_at, user_id, metadata
@@ -46,14 +44,14 @@ func (r *CommandRepository) Create(cmd *domain.Command) error {
 	return err
 }
 
-func (r *CommandRepository) GetByID(id int) (*domain.Command, error) {
+func (r *PostgresCommandRepository) GetByID(id int) (*Command, error) {
 	query := `
         SELECT id, device_id, command, parameters, status, created_at, 
                sent_at, delivered_at, executed_at, user_id, metadata
         FROM control_commands WHERE id = $1
     `
 
-	var cmd domain.Command
+	var cmd Command
 	var parametersJSON []byte
 	var metadataJSON []byte
 
@@ -88,7 +86,7 @@ func (r *CommandRepository) GetByID(id int) (*domain.Command, error) {
 	return &cmd, nil
 }
 
-func (r *CommandRepository) GetByDeviceID(deviceID int, limit int) ([]domain.Command, error) {
+func (r *PostgresCommandRepository) GetByDeviceID(deviceID int, limit int) ([]Command, error) {
 	query := `
         SELECT id, device_id, command, parameters, status, created_at, 
                sent_at, delivered_at, executed_at, user_id, metadata
@@ -104,9 +102,9 @@ func (r *CommandRepository) GetByDeviceID(deviceID int, limit int) ([]domain.Com
 	}
 	defer rows.Close()
 
-	var commands []domain.Command
+	var commands []Command
 	for rows.Next() {
-		var cmd domain.Command
+		var cmd Command
 		var parametersJSON []byte
 		var metadataJSON []byte
 
@@ -138,34 +136,34 @@ func (r *CommandRepository) GetByDeviceID(deviceID int, limit int) ([]domain.Com
 	return commands, nil
 }
 
-func (r *CommandRepository) UpdateStatus(id int, status domain.CommandStatus) error {
+func (r *PostgresCommandRepository) UpdateStatus(id int, status CommandStatus) error {
 	query := `UPDATE control_commands SET status = $1 WHERE id = $2`
 	_, err := r.DB.Exec(query, status, id)
 	return err
 }
 
-func (r *CommandRepository) UpdateDelivery(id int, sentAt, deliveredAt, executedAt *time.Time) error {
+func (r *PostgresCommandRepository) UpdateDelivery(id int, sentAt, deliveredAt, executedAt *time.Time) error {
 	query := `
         UPDATE control_commands 
         SET sent_at = $1, delivered_at = $2, executed_at = $3, status = $4
         WHERE id = $5
     `
 
-	status := domain.CommandStatusPending
+	status := CommandStatusPending
 	switch {
 	case executedAt != nil:
-		status = domain.CommandStatusExecuted
+		status = CommandStatusExecuted
 	case deliveredAt != nil:
-		status = domain.CommandStatusDelivered
+		status = CommandStatusDelivered
 	case sentAt != nil:
-		status = domain.CommandStatusSent
+		status = CommandStatusSent
 	}
 
 	_, err := r.DB.Exec(query, sentAt, deliveredAt, executedAt, status, id)
 	return err
 }
 
-func (r *CommandRepository) GetPending(deviceID int) ([]domain.Command, error) {
+func (r *PostgresCommandRepository) GetPending(deviceID int) ([]Command, error) {
 	query := `
         SELECT id, device_id, command, parameters, status, created_at, 
                sent_at, delivered_at, executed_at, user_id, metadata
@@ -180,9 +178,9 @@ func (r *CommandRepository) GetPending(deviceID int) ([]domain.Command, error) {
 	}
 	defer rows.Close()
 
-	var commands []domain.Command
+	var commands []Command
 	for rows.Next() {
-		var cmd domain.Command
+		var cmd Command
 		var parametersJSON []byte
 		var metadataJSON []byte
 
