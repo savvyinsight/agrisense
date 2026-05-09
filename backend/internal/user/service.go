@@ -1,16 +1,15 @@
-package auth
+package user
 
 import (
 	"errors"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/savvyinsight/agrisense/internal/domain"
 	"golang.org/x/crypto/bcrypt"
 )
 
 type Service struct {
-	userRepo    domain.UserRepository
+	userRepo    UserRepository
 	jwtSecret   []byte
 	tokenExpiry time.Duration
 }
@@ -34,11 +33,11 @@ type RegisterRequest struct {
 }
 
 type LoginResponse struct {
-	Token string      `json:"token"`
-	User  domain.User `json:"user"`
+	Token string `json:"token"`
+	User  User   `json:"user"`
 }
 
-func NewService(userRepo domain.UserRepository, jwtSecret string, tokenExpiry time.Duration) *Service {
+func NewService(userRepo UserRepository, jwtSecret string, tokenExpiry time.Duration) *Service {
 	return &Service{
 		userRepo:    userRepo,
 		jwtSecret:   []byte(jwtSecret),
@@ -46,7 +45,7 @@ func NewService(userRepo domain.UserRepository, jwtSecret string, tokenExpiry ti
 	}
 }
 
-func (s *Service) Register(req RegisterRequest) (*domain.User, error) {
+func (s *Service) Register(req RegisterRequest) (*User, error) {
 	// Check if user exists
 	existing, _ := s.userRepo.GetByEmail(req.Email)
 	if existing != nil {
@@ -60,7 +59,7 @@ func (s *Service) Register(req RegisterRequest) (*domain.User, error) {
 	}
 
 	// Create user
-	user := &domain.User{
+	user := &User{
 		Username: req.Username,
 		Email:    req.Email,
 		Password: string(hashedPassword),
@@ -105,7 +104,7 @@ func (s *Service) Login(req LoginRequest) (*LoginResponse, error) {
 	}, nil
 }
 
-func (s *Service) generateToken(user *domain.User) (string, error) {
+func (s *Service) generateToken(user *User) (string, error) {
 	expirationTime := time.Now().Add(s.tokenExpiry)
 
 	claims := &Claims{

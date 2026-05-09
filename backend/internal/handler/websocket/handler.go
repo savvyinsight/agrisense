@@ -7,7 +7,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
-	"github.com/savvyinsight/agrisense/internal/service/auth"
+	"github.com/savvyinsight/agrisense/internal/user"
 )
 
 var upgrader = websocket.Upgrader{
@@ -19,11 +19,11 @@ var upgrader = websocket.Upgrader{
 }
 
 type Handler struct {
-	authService *auth.Service
+	authService *user.Service
 	hub         *Hub
 }
 
-func NewHander(authService *auth.Service) *Handler {
+func NewHander(authService *user.Service) *Handler {
 	return &Handler{
 		authService: authService,
 		hub:         GetHub(),

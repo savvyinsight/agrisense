@@ -20,10 +20,10 @@ import (
 	"github.com/savvyinsight/agrisense/internal/ruleengine"
 	"github.com/savvyinsight/agrisense/internal/sensor"
 	"github.com/savvyinsight/agrisense/internal/service/analytics"
-	"github.com/savvyinsight/agrisense/internal/service/auth"
 	"github.com/savvyinsight/agrisense/internal/service/automation"
 	"github.com/savvyinsight/agrisense/internal/service/control"
 	"github.com/savvyinsight/agrisense/internal/service/data"
+	"github.com/savvyinsight/agrisense/internal/user"
 )
 
 func main() {
@@ -75,7 +75,7 @@ func main() {
 	defer influxRepo.Close()
 
 	// Create repositories
-	userRepo := &postgres.UserRepository{DB: pgDB}
+	userRepo := &user.PostgresUserRepository{DB: pgDB}
 	deviceRepo := &device.PostgresDeviceRepository{DB: pgDB}
 	sensorTypeRepo := &sensor.PostgresSensorTypeRepository{DB: pgDB}
 	// cacheRepo := redis.NewCacheRepository(redisClient)
@@ -93,7 +93,7 @@ func main() {
 	defer mqttClient.Disconnect()
 
 	// 2. Create services that don't depend on each other
-	authService := auth.NewService(userRepo, cfg.JWTSecret, 24*time.Hour)
+	authService := user.NewService(userRepo, cfg.JWTSecret, 24*time.Hour)
 	wsHander := websocket.NewHander(authService)
 	ruleEngine := ruleengine.NewEngine(
 		&alert.PostgresAlertRuleRepository{DB: pgDB},
@@ -148,7 +148,7 @@ func main() {
 	)
 
 	// Create handlers
-	authHandler := rest.NewAuthHandler(authService)
+	authHandler := user.NewAuthHandler(authService)
 	deviceHandler := device.NewDeviceHandler(deviceRepo)
 	dataHandler := rest.NewDataHandler(dataService)
 	alertHandler := alert.NewAlertHandler(alertService)
@@ -186,7 +186,7 @@ func main() {
 
 	// Protected routes
 	api := r.Group("/api/v1")
-	api.Use(middleware.AuthMiddleware(authService))
+	api.Use(user.AuthMiddleware(authService))
 	{
 		// Device routes
 		devices := api.Group("/devices")

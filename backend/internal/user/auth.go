@@ -1,14 +1,13 @@
-package middleware
+package user
 
 import (
 	"net/http"
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	"github.com/savvyinsight/agrisense/internal/service/auth"
 )
 
-func AuthMiddleware(authService *auth.Service) gin.HandlerFunc {
+func AuthMiddleware(authService *Service) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {

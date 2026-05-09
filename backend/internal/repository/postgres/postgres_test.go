@@ -10,6 +10,7 @@ import (
 	"github.com/savvyinsight/agrisense/internal/device"
 	"github.com/savvyinsight/agrisense/internal/domain"
 	"github.com/savvyinsight/agrisense/internal/sensor"
+	"github.com/savvyinsight/agrisense/internal/user"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
 	"github.com/testcontainers/testcontainers-go/wait"
@@ -151,10 +152,10 @@ func TestUserRepository(t *testing.T) {
 	db, cleanup := setupPostgresContainer(t)
 	defer cleanup()
 
-	repo := &UserRepository{DB: db}
+	repo := &user.PostgresUserRepository{DB: db}
 
 	// Create
-	user := &domain.User{
+	user := &user.User{
 		Username: "testuser",
 		Email:    "test@example.com",
 		Password: "hashedpassword",
@@ -231,8 +232,8 @@ func TestDeviceRepository(t *testing.T) {
 	defer cleanup()
 
 	// First create a user for device ownership
-	userRepo := &UserRepository{DB: db}
-	user := &domain.User{
+	userRepo := &user.PostgresUserRepository{DB: db}
+	user := &user.User{
 		Username: "deviceowner",
 		Email:    "owner@example.com",
 		Password: "hashed",
@@ -386,8 +387,8 @@ func TestAlertRuleRepository(t *testing.T) {
 	defer cleanup()
 
 	// Create user and device
-	userRepo := &UserRepository{DB: db}
-	user := &domain.User{
+	userRepo := &user.PostgresUserRepository{DB: db}
+	user := &user.User{
 		Username: "alertuser",
 		Email:    "alert@example.com",
 		Password: "hashed",
@@ -496,8 +497,8 @@ func TestAlertRepository(t *testing.T) {
 	defer cleanup()
 
 	// Create user, device, and rule
-	userRepo := &UserRepository{DB: db}
-	user := &domain.User{
+	userRepo := &user.PostgresUserRepository{DB: db}
+	user := &user.User{
 		Username: "historyuser",
 		Email:    "history@example.com",
 		Password: "hashed",
@@ -606,8 +607,8 @@ func TestCommandRepository(t *testing.T) {
 	defer cleanup()
 
 	// Create user and device
-	userRepo := &UserRepository{DB: db}
-	user := &domain.User{
+	userRepo := &user.PostgresUserRepository{DB: db}
+	user := &user.User{
 		Username: "cmduser",
 		Email:    "cmd@example.com",
 		Password: "hashed",
