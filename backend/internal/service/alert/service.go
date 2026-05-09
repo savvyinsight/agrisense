@@ -1,7 +1,7 @@
 package alert
 
 import (
-	"github.com/savvyinsight/agrisenseiot/internal/domain"
+	"github.com/savvyinsight/agrisense/internal/domain"
 )
 
 type Service struct {

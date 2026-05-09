@@ -5,7 +5,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/savvyinsight/agrisenseiot/internal/domain"
+	"github.com/savvyinsight/agrisense/internal/domain"
 )
 
 // StatusManager handles periodic device status checks and updates

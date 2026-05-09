@@ -6,7 +6,7 @@ import (
 	"time"
 
 	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
-	"github.com/savvyinsight/agrisenseiot/internal/domain"
+	"github.com/savvyinsight/agrisense/internal/domain"
 )
 
 func (r *Repository) WriteData(data *domain.SensorData) error {

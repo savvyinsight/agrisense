@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/savvyinsight/agrisenseiot/internal/domain"
+	"github.com/savvyinsight/agrisense/internal/domain"
 	"github.com/testcontainers/testcontainers-go/modules/redis"
 )
 

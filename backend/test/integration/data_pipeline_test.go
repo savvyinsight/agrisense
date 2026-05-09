@@ -4,13 +4,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/savvyinsight/agrisenseiot/internal/config"
-	"github.com/savvyinsight/agrisenseiot/internal/domain"
-	"github.com/savvyinsight/agrisenseiot/internal/repository/influxdb"
-	"github.com/savvyinsight/agrisenseiot/internal/repository/postgres"
-	"github.com/savvyinsight/agrisenseiot/internal/repository/redis"
-	"github.com/savvyinsight/agrisenseiot/internal/ruleengine"
-	"github.com/savvyinsight/agrisenseiot/internal/service/data"
+	"github.com/savvyinsight/agrisense/internal/config"
+	"github.com/savvyinsight/agrisense/internal/domain"
+	"github.com/savvyinsight/agrisense/internal/repository/influxdb"
+	"github.com/savvyinsight/agrisense/internal/repository/postgres"
+	"github.com/savvyinsight/agrisense/internal/repository/redis"
+	"github.com/savvyinsight/agrisense/internal/ruleengine"
+	"github.com/savvyinsight/agrisense/internal/service/data"
 )
 
 func TestDataPipeline(t *testing.T) {

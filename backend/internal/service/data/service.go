@@ -6,9 +6,9 @@ import (
 	"log"
 	"time"
 
-	"github.com/savvyinsight/agrisenseiot/internal/domain"
-	"github.com/savvyinsight/agrisenseiot/internal/ruleengine"
-	"github.com/savvyinsight/agrisenseiot/internal/service/automation"
+	"github.com/savvyinsight/agrisense/internal/domain"
+	"github.com/savvyinsight/agrisense/internal/ruleengine"
+	"github.com/savvyinsight/agrisense/internal/service/automation"
 )
 
 type Service struct {

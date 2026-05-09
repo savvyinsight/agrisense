@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/savvyinsight/agrisenseiot/internal/domain"
+	"github.com/savvyinsight/agrisense/internal/domain"
 )
 
 type AutomationRuleRepository struct {

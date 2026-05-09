@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/savvyinsight/agrisenseiot/internal/service/data"
+	"github.com/savvyinsight/agrisense/internal/service/data"
 )
 
 type DataHandler struct {

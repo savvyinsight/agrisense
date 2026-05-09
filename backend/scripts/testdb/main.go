@@ -3,8 +3,8 @@ package main
 import (
 	"log"
 
-	"github.com/savvyinsight/agrisenseiot/internal/config"
-	"github.com/savvyinsight/agrisenseiot/internal/repository/postgres"
+	"github.com/savvyinsight/agrisense/internal/config"
+	"github.com/savvyinsight/agrisense/internal/repository/postgres"
 )
 
 func main() {

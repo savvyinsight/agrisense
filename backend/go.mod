@@ -1,4 +1,4 @@
-module github.com/savvyinsight/agrisenseiot
+module github.com/savvyinsight/agrisense
 
 go 1.25.5
 

@@ -5,8 +5,8 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"github.com/savvyinsight/agrisenseiot/internal/domain"
-	"github.com/savvyinsight/agrisenseiot/internal/service/alert"
+	"github.com/savvyinsight/agrisense/internal/domain"
+	"github.com/savvyinsight/agrisense/internal/service/alert"
 )
 
 type AlertHandler struct {

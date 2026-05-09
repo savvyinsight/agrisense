@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	"github.com/savvyinsight/agrisenseiot/internal/service/auth"
+	"github.com/savvyinsight/agrisense/internal/service/auth"
 )
 
 func AuthMiddleware(authService *auth.Service) gin.HandlerFunc {

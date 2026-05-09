@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/savvyinsight/agrisenseiot/internal/service/analytics"
+	"github.com/savvyinsight/agrisense/internal/service/analytics"
 )
 
 type AnalyticsHandler struct {

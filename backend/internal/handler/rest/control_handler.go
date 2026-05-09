@@ -5,7 +5,7 @@ import (
     "strconv"
 
     "github.com/gin-gonic/gin"
-    "github.com/savvyinsight/agrisenseiot/internal/service/control"
+    "github.com/savvyinsight/agrisense/internal/service/control"
 )
 
 type ControlHandler struct {

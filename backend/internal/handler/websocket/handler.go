@@ -7,7 +7,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
-	"github.com/savvyinsight/agrisenseiot/internal/service/auth"
+	"github.com/savvyinsight/agrisense/internal/service/auth"
 )
 
 var upgrader = websocket.Upgrader{

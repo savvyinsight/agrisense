@@ -3,7 +3,7 @@ package mqtt
 import (
 	"log"
 
-	"github.com/savvyinsight/agrisenseiot/internal/service/data"
+	"github.com/savvyinsight/agrisense/internal/service/data"
 )
 
 type Service struct {
