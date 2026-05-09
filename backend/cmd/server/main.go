@@ -149,7 +149,7 @@ func main() {
 
 	// Create handlers
 	authHandler := rest.NewAuthHandler(authService)
-	deviceHandler := rest.NewDeviceHandler(deviceRepo)
+	deviceHandler := device.NewDeviceHandler(deviceRepo)
 	dataHandler := rest.NewDataHandler(dataService)
 	alertHandler := rest.NewAlertHandler(alertService)
 	controlHandler := rest.NewControlHandler(controlService)
