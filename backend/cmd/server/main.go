@@ -15,7 +15,6 @@ import (
 	"github.com/savvyinsight/agrisense/internal/control"
 	"github.com/savvyinsight/agrisense/internal/data"
 	"github.com/savvyinsight/agrisense/internal/device"
-	"github.com/savvyinsight/agrisense/internal/handler/websocket"
 	"github.com/savvyinsight/agrisense/internal/infra/postgres"
 	"github.com/savvyinsight/agrisense/internal/infra/redis"
 	"github.com/savvyinsight/agrisense/internal/middleware"
@@ -23,6 +22,7 @@ import (
 	"github.com/savvyinsight/agrisense/internal/ruleengine"
 	"github.com/savvyinsight/agrisense/internal/sensor"
 	"github.com/savvyinsight/agrisense/internal/user"
+	"github.com/savvyinsight/agrisense/internal/websocket"
 )
 
 func main() {
