@@ -3,9 +3,9 @@ package handlers
 import (
 	"log"
 
+	"github.com/savvyinsight/agrisense/internal/data"
 	"github.com/savvyinsight/agrisense/internal/device"
 	"github.com/savvyinsight/agrisense/internal/middleware"
-	"github.com/savvyinsight/agrisense/internal/service/data"
 )
 
 var (

@@ -1,4 +1,4 @@
-package rest
+package data
 
 import (
 	"log"
@@ -7,14 +7,13 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/savvyinsight/agrisense/internal/service/data"
 )
 
 type DataHandler struct {
-	dataService *data.Service
+	dataService *Service
 }
 
-func NewDataHandler(dataService *data.Service) *DataHandler {
+func NewDataHandler(dataService *Service) *DataHandler {
 	return &DataHandler{
 		dataService: dataService,
 	}
