@@ -8,7 +8,6 @@ import (
 
 	"github.com/savvyinsight/agrisense/internal/automation"
 	"github.com/savvyinsight/agrisense/internal/device"
-	"github.com/savvyinsight/agrisense/internal/infra/redis"
 	"github.com/savvyinsight/agrisense/internal/ruleengine"
 	"github.com/savvyinsight/agrisense/internal/sensor"
 )
@@ -16,7 +15,7 @@ import (
 type Service struct {
 	sensorTypeRepo sensor.SensorTypeRepository
 	deviceRepo     device.DeviceRepository
-	cacheRepo      redis.CacheRepository
+	cacheRepo      sensor.CacheRepository
 	influxRepo     sensor.InfluxRepository
 	ruleEngine     *ruleengine.Engine
 	automationSvc  *automation.Service
@@ -25,7 +24,7 @@ type Service struct {
 func NewService(
 	sensorTypeRepo sensor.SensorTypeRepository,
 	deviceRepo device.DeviceRepository,
-	cacheRepo redis.CacheRepository,
+	cacheRepo sensor.CacheRepository,
 	influxRepo sensor.InfluxRepository,
 	ruleEngine *ruleengine.Engine,
 ) *Service {

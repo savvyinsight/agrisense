@@ -1,99 +1,82 @@
+//go:build integration
+
 package integration
 
 import (
+	"fmt"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/savvyinsight/agrisense/internal/alert"
-	"github.com/savvyinsight/agrisense/internal/config"
 	"github.com/savvyinsight/agrisense/internal/data"
 	"github.com/savvyinsight/agrisense/internal/device"
-	"github.com/savvyinsight/agrisense/internal/infra/postgres"
 	"github.com/savvyinsight/agrisense/internal/infra/redis"
 	"github.com/savvyinsight/agrisense/internal/ruleengine"
 	"github.com/savvyinsight/agrisense/internal/sensor"
+	"github.com/savvyinsight/agrisense/internal/user"
 )
 
 func TestDataPipeline(t *testing.T) {
-	// Load config
-	cfg, err := config.Load()
-	if err != nil {
-		t.Fatalf("Failed to load config: %v", err)
-	}
+	// Use shared test containers from setup_test.go
+	// testDB, testRedis, testInflux are already initialized
 
-	// Setup PostgreSQL connection
-	pgConfig := postgres.Config{
-		Host:     cfg.DBHost,
-		Port:     cfg.DBPort,
-		User:     cfg.DBUser,
-		Password: cfg.DBPassword,
-		DBName:   cfg.DBName,
-		SSLMode:  cfg.DBSSLMode,
-	}
-	pgDB, err := postgres.NewConnection(pgConfig)
-	if err != nil {
-		t.Fatalf("Failed to connect to PostgreSQL: %v", err)
-	}
-	defer func() {
-		if err := pgDB.Close(); err != nil {
-			t.Fatalf("Failed to close PostgreSQL connection: %v", err)
-		}
-	}()
+	// Create repositories using test containers
+	deviceRepo := &device.PostgresDeviceRepository{DB: testDB}
+	sensorTypeRepo := &sensor.PostgresSensorTypeRepository{DB: testDB}
+	cacheRepo := redis.NewCacheRepository(testRedis)
+	userRepo := &user.PostgresUserRepository{DB: testDB}
 
-	// Setup Redis connection
-	redisConfig := redis.Config{
-		Host:     cfg.RedisHost,
-		Port:     cfg.RedisPort,
-		Password: cfg.RedisPassword,
-		DB:       cfg.RedisDB,
-	}
-	redisClient, err := redis.NewConnection(redisConfig)
-	if err != nil {
-		t.Fatalf("Failed to connect to Redis: %v", err)
-	}
-	defer func() {
-		if err := redisClient.Close(); err != nil {
-			t.Fatalf("Failed to close Redis connection: %v", err)
-		}
-	}()
-
-	// Setup InfluxDB connection
+	// Create InfluxDB repository
 	influxConfig := sensor.Config{
-		URL:    cfg.InfluxURL,
-		Token:  cfg.InfluxToken,
-		Org:    cfg.InfluxOrg,
-		Bucket: cfg.InfluxBucket,
+		URL:    testInfluxURL,
+		Token:  testInfluxToken,
+		Org:    "test-org",
+		Bucket: "test-bucket",
 	}
 	influxRepo, err := sensor.NewRepository(influxConfig)
 	if err != nil {
-		t.Fatalf("Failed to connect to InfluxDB: %v", err)
+		t.Fatalf("Failed to create InfluxDB repository: %v", err)
 	}
 	defer influxRepo.Close()
 
-	// Create repositories
-	deviceRepo := &device.PostgresDeviceRepository{DB: pgDB}
-	sensorTypeRepo := &sensor.PostgresSensorTypeRepository{DB: pgDB}
-	cacheRepo := redis.NewCacheRepository(redisClient)
-
 	// Create rule engine
 	ruleEngine := ruleengine.NewEngine(
-		&alert.PostgresAlertRuleRepository{DB: pgDB},
-		&alert.PostgresAlertRepository{DB: pgDB},
-		&device.PostgresDeviceRepository{DB: pgDB},
+		&alert.PostgresAlertRuleRepository{DB: testDB},
+		&alert.PostgresAlertRepository{DB: testDB},
+		deviceRepo,
 	)
 	if err := ruleEngine.Start(); err != nil {
 		t.Fatalf("Failed to start rule engine: %v", err)
 	}
 	defer ruleEngine.Stop()
 
-	// Create data service with correct repositories
+	// Create data service
 	dataService := data.NewService(
-		sensorTypeRepo, // This implements SensorTypeRepository
-		deviceRepo,     // This now implements all DeviceRepository methods
-		*cacheRepo,     // This implements CacheRepository
-		influxRepo,     // This implements InfluxRepository
+		sensorTypeRepo,
+		deviceRepo,
+		cacheRepo,
+		influxRepo,
 		ruleEngine,
 	)
+
+	// Ensure test user exists
+	testUser := &user.User{
+		Username: "testuser",
+		Email:    "test@example.com",
+		Password: "hashedpass",
+		Role:     "viewer",
+	}
+	err = userRepo.Create(testUser)
+	if err != nil && !strings.Contains(err.Error(), "duplicate") { // Ignore if already exists
+		t.Fatal(err)
+	}
+	// Get the user to ensure we have the ID
+	existingUser, err := userRepo.GetByEmail("test@example.com")
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	// Ensure test device exists
 	existing, _ := deviceRepo.GetByDeviceID("test-device-001")
 	if existing == nil {
@@ -102,7 +85,7 @@ func TestDataPipeline(t *testing.T) {
 			Name:     "Test Device",
 			Type:     device.DeviceTypeSensor,
 			Status:   device.DeviceStatusOnline,
-			UserID:   1,
+			UserID:   existingUser.ID,
 		}
 		err = deviceRepo.Create(testDevice)
 		if err != nil {
@@ -111,15 +94,15 @@ func TestDataPipeline(t *testing.T) {
 	}
 
 	// Test data processing
-	testPayload := []byte(`{
-        "timestamp": "2024-03-08T12:00:00Z",
+	testPayload := fmt.Sprintf(`{
+        "timestamp": "%s",
         "readings": [
             {"sensor": "temperature", "value": 23.5},
             {"sensor": "humidity", "value": 65.2}
         ]
-    }`)
+    }`, time.Now().Format(time.RFC3339))
 
-	err = dataService.ProcessTelemetry("test-device-001", testPayload)
+	err = dataService.ProcessTelemetry("test-device-001", []byte(testPayload))
 	if err != nil {
 		t.Errorf("Failed to process telemetry: %v", err)
 	}

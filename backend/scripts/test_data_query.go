@@ -87,7 +87,7 @@ func main() {
 	dataService := data.NewService(
 		sensorTypeRepo,
 		deviceRepo,
-		*cacheRepo,
+		cacheRepo,
 		influxRepo,
 		ruleEngine,
 	)
