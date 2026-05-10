@@ -1,10 +1,9 @@
-# AgriSenseIoT Frontend
+# AgriSense Frontend
 
-> React + Vite dashboard client for the AgriSenseIoT platform (frontend-only).
+> React + Vite dashboard client for the AgriSense platform.
 
-This repository contains the web user interface for agricultural IoT monitoring, device management, analytics, alerts, and automation rules. Back-end services are implemented in a separate repository:
-
-- https://github.com/savvyinsight/AgriSenseIoT
+This frontend provides the web interface for agricultural IoT monitoring, device management, analytics, alerts, and automation.
+The backend services live in the same monorepo under `../backend`.
 
 ---
 
@@ -23,31 +22,36 @@ This repository contains the web user interface for agricultural IoT monitoring,
 
 - `src/features/` – feature modules (auth, devices, sensors, alerts, analytics, automation)
 - `src/shared/` – shared components, hooks, and TypeScript types
-- `src/api/` – Axios client and auth API wrappers
-- `src/locales` – i18n JSON files
-- `docs` – requirements/design/implementation docs
+- `src/api/` – Axios client and API wrappers
+- `src/assets/` – static assets and styles
+- `src/locales/` – i18n JSON files
+- `src/App.tsx`, `src/i18n.ts`, `src/main.tsx` – application entrypoints
+- `docs/` – requirements, design, and implementation docs
 
 ## ⚙️ Tech stack
 
-- React + Vite
+- React 19 + TypeScript
+- Vite
 - Material UI (MUI)
-- Chart.js
-- WebSocket
-- i18next (i18n)
-- ESLint config
+- Chart.js and Recharts
+- Leaflet for maps
+- Axios for API requests
+- i18next for internationalization
+- ESLint
 
 ## 🚀 Quick start
 
 ```bash
-git clone https://github.com/<your-org>/agrisense-frontend.git
-cd agrisense-frontend
+git clone https://github.com/savvyinsight/agrisense.git
+cd agrisense/frontend
 npm install
 npm run dev
 ```
 
 Open `http://localhost:5173`.
 
-> Backend API is not included in this repository. Configure endpoints via `src/api/client.js` or env vars.
+> Backend API is not included in this frontend package. The monorepo backend is available at `../backend`.
+> Configure endpoints via `src/api/client.ts` or environment variables.
 
 ## 🛠 Build
 
@@ -58,19 +62,11 @@ npm run preview
 
 Result is output in `dist/`.
 
-## 🌐 Live demo
-
-Publicly deployed frontend: [http://47.94.43.108](http://47.94.43.108)
-
-Demo admin credentials (for evaluation only):
-- email: `kaiyumu@qq.com`
-- password: `test123`
-
 ## 🔗 Backend repository
 
-- https://github.com/savvyinsight/AgriSenseIoT
+The backend implementation is available in the same repo under `../backend`.
 
-The existing API reference and implementation is in the backend repository. The frontend expects an API base URL such as `http://47.94.43.108:8080/api/v1` (development default).
+The frontend expects an API base URL configured in `src/api/client.ts` or by environment variables.
 
 ## 🛡 Contributing
 
@@ -94,6 +90,6 @@ Copyright (c) 2026 savvyinsight
 
 ## 📌 Additional notes
 
-- Purely frontend code; no backend inside this repo.
-- Backend service should be run from https://github.com/savvyinsight/AgriSenseIoT.
+- Purely frontend code; no backend is included in this folder.
+- Backend services are available in the monorepo under `../backend`.
 
