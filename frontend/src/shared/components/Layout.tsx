@@ -38,7 +38,7 @@ import {
   Language,
 } from '@mui/icons-material';
 import { useAuth } from '@/features/auth/AuthContext';
-import { logout } from '@/api/auth';
+import { logout } from '@/features/auth/api';
 import { getActiveAlerts } from '@/features/alerts/api';
 
 const drawerWidth = 280;

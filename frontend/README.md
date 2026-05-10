@@ -21,12 +21,9 @@ This repository contains the web user interface for agricultural IoT monitoring,
 
 ## 📁 Repository structure
 
-- `src/pages` – page routes (`Login`, `Dashboard`, `Alerts`, `Analytics`, `MapView`, `DeviceManagement`, `AlertRules`, `AutomationRules`)
-- `src/components` – reusable components (`SensorChart`, `TemperatureChart`, `DeviceCard`, etc.)
-- `src/api` – API client and HTTP wrappers
-- `src/hooks` – custom hooks (`useWebSocket`)
-- `src/store` – auth context and global state
-- `src/assets` – static images/assets
+- `src/features/` – feature modules (auth, devices, sensors, alerts, analytics, automation)
+- `src/shared/` – shared components, hooks, and TypeScript types
+- `src/api/` – Axios client and auth API wrappers
 - `src/locales` – i18n JSON files
 - `docs` – requirements/design/implementation docs
 
