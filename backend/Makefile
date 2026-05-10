@@ -1,7 +1,7 @@
 .PHONY: run test docker-up docker-down migrate-up help
 
 run:
-	go run cmd/server/main.go
+	go run cmd/agrisense/main.go
 
 docker-up:
 	docker compose -f deployments/docker-compose.yml up -d

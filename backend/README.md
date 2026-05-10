@@ -1,13 +1,13 @@
-# AgriSenseIoT 🌱
+# AgriSense 🌱
 
 IoT-based Agricultural Equipment Monitoring and Data Analysis Platform.
 
-[![Go Version](https://img.shields.io/badge/Go-1.21+-00ADD8)](https://golang.org)
+[![Go Version](https://img.shields.io/badge/Go-1.25.5-00ADD8)](https://golang.org)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
 ## 📋 Overview
 
-AgriSenseIoT is a production-ready IoT platform that enables real-time monitoring and control of agricultural environments. It collects data from sensors (temperature, humidity, soil moisture, light), processes it through a rule engine, triggers alerts, and allows remote control of actuators.
+AgriSense is a production-ready IoT platform that enables real-time monitoring and control of agricultural environments. It collects data from sensors (temperature, humidity, soil moisture, light), processes it through a rule engine, triggers alerts, and allows remote control of actuators.
 
 ### ✨ Features
 
@@ -30,15 +30,15 @@ AgriSenseIoT is a production-ready IoT platform that enables real-time monitorin
 ### Prerequisites
 
 - Docker & Docker Compose
-- Go 1.21+ (for development)
+- Go 1.25+ (for development)
 - Make
 
 ### Installation
 
 ```bash
 # Clone repository
-git clone https://github.com/savvyinsight/agrisenseiot.git
-cd agrisenseiot
+git clone https://github.com/savvyinsight/agrisense.git
+cd agrisense
 
 # Download dependencies (go.mod & go.sum are committed to repo)
 go mod download
@@ -52,13 +52,11 @@ make docker-up
 # Run database migrations (auto-runs on docker-up, or manual:)
 make migrate-up
 
-# Start the API server (terminal 1)
-go run cmd/server/main.go
+# Start the backend server
+cd backend
+go run cmd/agrisense/main.go
 
-# Start MQTT handler (terminal 2)
-go run cmd/mqtt-handler/main.go
-
-# Run device simulator (terminal 3)
+# Run device simulator (optional)
 go run scripts/generate-device-simulator/main.go
 
 # Register a user
