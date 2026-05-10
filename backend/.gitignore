@@ -6,7 +6,6 @@
 *.dylib
 *.test
 *.out
-agrisense
 
 # Go specific
 vendor/
@@ -38,8 +37,7 @@ config/local.yaml
 /dist/
 
 # Build outputs from cmd/
-/server
-/mqtt-handler
+/agrisense
 
 # Build outputs
 *.o
