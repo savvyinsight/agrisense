@@ -14,6 +14,7 @@ type Simulator struct {
 	client   mqtt.Client
 	deviceID string
 	stopChan chan bool
+	rng      *rand.Rand
 }
 
 func NewSimulator(deviceID string, broker string) *Simulator {
@@ -30,6 +31,7 @@ func NewSimulator(deviceID string, broker string) *Simulator {
 		client:   client,
 		deviceID: deviceID,
 		stopChan: make(chan bool),
+		rng:      rand.New(rand.NewSource(time.Now().UnixNano())),
 	}
 }
 
@@ -65,8 +67,8 @@ func (s *Simulator) sendHeartbeat() {
 		case <-ticker.C:
 			data := map[string]interface{}{
 				"timestamp": time.Now(),
-				"rssi":      -50 - rand.Intn(20),
-				"battery":   80 + rand.Intn(20),
+				"rssi":      -50 - s.rng.Intn(20),
+				"battery":   80 + s.rng.Intn(20),
 			}
 			payload, _ := json.Marshal(data)
 			topic := fmt.Sprintf("device/%s/heartbeat", s.deviceID)
@@ -82,10 +84,10 @@ func (s *Simulator) sendTelemetry() {
 
 	// 20% chance of high temperature
 	var temp float64
-	if rand.Float32() < 0.2 {
-		temp = 32 + rand.Float64()*8 // 32-40°C (alert zone)
+	if s.rng.Float32() < 0.2 {
+		temp = 32 + s.rng.Float64()*8 // 32-40°C (alert zone)
 	} else {
-		temp = 20 + rand.Float64()*8 // 20-28°C (normal)
+		temp = 20 + s.rng.Float64()*8 // 20-28°C (normal)
 	}
 
 	for {
@@ -97,9 +99,9 @@ func (s *Simulator) sendTelemetry() {
 				"timestamp": time.Now(),
 				"readings": []map[string]interface{}{
 					{"sensor": "temperature", "value": temp},
-					{"sensor": "humidity", "value": 50 + rand.Float64()*20},
-					{"sensor": "soil_moisture", "value": 30 + rand.Float64()*40},
-					{"sensor": "light_intensity", "value": 1000 + rand.Float64()*9000},
+					{"sensor": "humidity", "value": 50 + s.rng.Float64()*20},
+					{"sensor": "soil_moisture", "value": 30 + s.rng.Float64()*40},
+					{"sensor": "light_intensity", "value": 1000 + s.rng.Float64()*9000},
 				},
 			}
 			payload, _ := json.Marshal(data)
@@ -111,8 +113,6 @@ func (s *Simulator) sendTelemetry() {
 }
 
 func main() {
-	rand.Seed(time.Now().UnixNano())
-
 	// Create 3 simulators
 	simulators := make([]*Simulator, 3)
 	for i := range simulators {

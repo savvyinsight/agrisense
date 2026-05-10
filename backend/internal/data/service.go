@@ -25,16 +25,16 @@ type Service struct {
 func NewService(
 	sensorTypeRepo sensor.SensorTypeRepository,
 	deviceRepo device.DeviceRepository,
-	// cacheRepo redis.CacheRepository,
+	cacheRepo redis.CacheRepository,
 	influxRepo sensor.InfluxRepository,
 	ruleEngine *ruleengine.Engine,
 ) *Service {
 	return &Service{
 		sensorTypeRepo: sensorTypeRepo,
 		deviceRepo:     deviceRepo,
-		// cacheRepo:      cacheRepo,
-		influxRepo: influxRepo,
-		ruleEngine: ruleEngine,
+		cacheRepo:      cacheRepo,
+		influxRepo:     influxRepo,
+		ruleEngine:     ruleEngine,
 	}
 }
 

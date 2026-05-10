@@ -125,9 +125,13 @@ func (r *PostgresCommandRepository) GetByDeviceID(deviceID int, limit int) ([]Co
 			return nil, err
 		}
 
-		json.Unmarshal(parametersJSON, &cmd.Parameters)
+		if err := json.Unmarshal(parametersJSON, &cmd.Parameters); err != nil {
+			return nil, err
+		}
 		if len(metadataJSON) > 0 {
-			json.Unmarshal(metadataJSON, &cmd.Metadata)
+			if err := json.Unmarshal(metadataJSON, &cmd.Metadata); err != nil {
+				return nil, err
+			}
 		}
 
 		commands = append(commands, cmd)
@@ -201,9 +205,13 @@ func (r *PostgresCommandRepository) GetPending(deviceID int) ([]Command, error) 
 			return nil, err
 		}
 
-		json.Unmarshal(parametersJSON, &cmd.Parameters)
+		if err := json.Unmarshal(parametersJSON, &cmd.Parameters); err != nil {
+			return nil, err
+		}
 		if len(metadataJSON) > 0 {
-			json.Unmarshal(metadataJSON, &cmd.Metadata)
+			if err := json.Unmarshal(metadataJSON, &cmd.Metadata); err != nil {
+				return nil, err
+			}
 		}
 
 		commands = append(commands, cmd)

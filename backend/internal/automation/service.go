@@ -88,7 +88,9 @@ func (s *Service) CreateRule(rule *AutomationRule) error {
 
 	// Reload rules if enabled
 	if rule.Enabled {
-		s.loadRules()
+		if err := s.loadRules(); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -115,7 +117,9 @@ func (s *Service) UpdateRule(rule *AutomationRule) error {
 	}
 
 	// Reload rules
-	s.loadRules()
+	if err := s.loadRules(); err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -126,7 +130,9 @@ func (s *Service) DeleteRule(id int) error {
 	}
 
 	// Reload rules
-	s.loadRules()
+	if err := s.loadRules(); err != nil {
+		return err
+	}
 
 	return nil
 }

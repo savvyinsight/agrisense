@@ -40,7 +40,9 @@ func setupRedisContainer(t *testing.T) (*CacheRepository, func()) {
 
 	host := parts[0]
 	port := 0
-	fmt.Sscanf(parts[1], "%d", &port)
+	if _, err := fmt.Sscanf(parts[1], "%d", &port); err != nil {
+		t.Fatalf("Failed to parse Redis port: %v", err)
+	}
 
 	// Create Redis client
 	client, err := NewConnection(Config{
@@ -57,7 +59,9 @@ func setupRedisContainer(t *testing.T) (*CacheRepository, func()) {
 
 	cleanup := func() {
 		client.Close()
-		redisContainer.Terminate(ctx)
+		if err := redisContainer.Terminate(ctx); err != nil {
+			t.Fatal(err)
+		}
 	}
 
 	return repo, cleanup

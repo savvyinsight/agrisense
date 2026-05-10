@@ -62,7 +62,7 @@ func main() {
 	// Create repositories
 	deviceRepo := &device.PostgresDeviceRepository{DB: pgDB}
 	sensorTypeRepo := &sensor.PostgresSensorTypeRepository{DB: pgDB}
-	// cacheRepo := redis.NewCacheRepository(redisClient)
+	cacheRepo := redis.NewCacheRepository(redisClient)
 
 	// Create rule engine
 	ruleEngine := ruleengine.NewEngine(
@@ -70,14 +70,16 @@ func main() {
 		&alert.PostgresAlertRepository{DB: pgDB},
 		&device.PostgresDeviceRepository{DB: pgDB},
 	)
-	ruleEngine.Start()
+	if err := ruleEngine.Start(); err != nil {
+		log.Fatalf("Failed to start rule engine: %v", err)
+	}
 	defer ruleEngine.Stop()
 
 	// Create data service
 	dataService := data.NewService(
 		sensorTypeRepo,
 		deviceRepo,
-		// cacheRepo,
+		*cacheRepo,
 		influxRepo,
 		ruleEngine,
 	)

@@ -20,8 +20,8 @@ func setupPostgresContainer(t *testing.T) (*sql.DB, func()) {
 	ctx := context.Background()
 
 	// Create PostgreSQL container
-	pgContainer, err := postgres.RunContainer(ctx,
-		testcontainers.WithImage("postgres:15-alpine"),
+	pgContainer, err := postgres.Run(ctx,
+		"postgres:15-alpine",
 		postgres.WithDatabase("testdb"),
 		postgres.WithUsername("testuser"),
 		postgres.WithPassword("testpass"),
@@ -142,7 +142,9 @@ func setupPostgresContainer(t *testing.T) (*sql.DB, func()) {
 
 	cleanup := func() {
 		db.Close()
-		pgContainer.Terminate(ctx)
+		if err := pgContainer.Terminate(ctx); err != nil {
+			t.Fatal(err)
+		}
 	}
 
 	return db, cleanup
@@ -394,7 +396,9 @@ func TestAlertRuleRepository(t *testing.T) {
 		Password: "hashed",
 		Role:     "admin",
 	}
-	userRepo.Create(user)
+	if err := userRepo.Create(user); err != nil {
+		t.Fatalf("Failed to create user: %v", err)
+	}
 
 	deviceRepo := &device.PostgresDeviceRepository{DB: db}
 	device := &device.Device{
@@ -403,7 +407,9 @@ func TestAlertRuleRepository(t *testing.T) {
 		Type:     device.DeviceTypeSensor,
 		UserID:   user.ID,
 	}
-	deviceRepo.Create(device)
+	if err := deviceRepo.Create(device); err != nil {
+		t.Fatalf("Failed to create device: %v", err)
+	}
 
 	repo := &alert.PostgresAlertRuleRepository{DB: db}
 
@@ -504,7 +510,9 @@ func TestAlertRepository(t *testing.T) {
 		Password: "hashed",
 		Role:     "admin",
 	}
-	userRepo.Create(user)
+	if err := userRepo.Create(user); err != nil {
+		t.Fatalf("Failed to create user: %v", err)
+	}
 
 	deviceRepo := &device.PostgresDeviceRepository{DB: db}
 	device := &device.Device{
@@ -513,7 +521,9 @@ func TestAlertRepository(t *testing.T) {
 		Type:     device.DeviceTypeSensor,
 		UserID:   user.ID,
 	}
-	deviceRepo.Create(device)
+	if err := deviceRepo.Create(device); err != nil {
+		t.Fatalf("Failed to create device: %v", err)
+	}
 
 	ruleRepo := &alert.PostgresAlertRuleRepository{DB: db}
 	rule := &alert.AlertRule{
@@ -526,7 +536,9 @@ func TestAlertRepository(t *testing.T) {
 		Enabled:        true,
 		UserID:         user.ID,
 	}
-	ruleRepo.Create(rule)
+	if err := ruleRepo.Create(rule); err != nil {
+		t.Fatalf("Failed to create rule: %v", err)
+	}
 
 	repo := &alert.PostgresAlertRepository{DB: db}
 
@@ -614,7 +626,9 @@ func TestCommandRepository(t *testing.T) {
 		Password: "hashed",
 		Role:     "admin",
 	}
-	userRepo.Create(user)
+	if err := userRepo.Create(user); err != nil {
+		t.Fatalf("Failed to create user: %v", err)
+	}
 
 	deviceRepo := &device.PostgresDeviceRepository{DB: db}
 	device := &device.Device{
@@ -623,7 +637,9 @@ func TestCommandRepository(t *testing.T) {
 		Type:     device.DeviceTypeController,
 		UserID:   user.ID,
 	}
-	deviceRepo.Create(device)
+	if err := deviceRepo.Create(device); err != nil {
+		t.Fatalf("Failed to create device: %v", err)
+	}
 
 	repo := &control.PostgresCommandRepository{DB: db}
 

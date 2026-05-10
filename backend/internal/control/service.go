@@ -68,13 +68,17 @@ func (s *Service) SendCommand(deviceID int, req CommandRequest, userID *int) (*C
 		// Use injected publish function
 		if err := s.publishFunc(device.DeviceID, data); err != nil {
 			log.Printf("Failed to publish command %d: %v", cmd.ID, err)
-			s.cmdRepo.UpdateStatus(cmd.ID, CommandStatusFailed)
+			if err2 := s.cmdRepo.UpdateStatus(cmd.ID, CommandStatusFailed); err2 != nil {
+				log.Printf("Failed to update command status for %d: %v", cmd.ID, err2)
+			}
 			return
 		}
 
 		// Update status to sent
 		now := time.Now()
-		s.cmdRepo.UpdateDelivery(cmd.ID, &now, nil, nil)
+		if err := s.cmdRepo.UpdateDelivery(cmd.ID, &now, nil, nil); err != nil {
+			log.Printf("Failed to update delivery for command %d: %v", cmd.ID, err)
+		}
 	}()
 
 	return cmd, nil
@@ -111,9 +115,13 @@ func (s *Service) HandleCommandResponse(deviceID string, payload []byte) {
 	now := time.Now()
 	switch response.Status {
 	case "executed":
-		s.cmdRepo.UpdateDelivery(cmd.ID, cmd.SentAt, &now, &now)
+		if err := s.cmdRepo.UpdateDelivery(cmd.ID, cmd.SentAt, &now, &now); err != nil {
+			log.Printf("Failed to update delivery for command %d: %v", cmd.ID, err)
+		}
 	case "failed":
-		s.cmdRepo.UpdateStatus(cmd.ID, CommandStatusFailed)
+		if err := s.cmdRepo.UpdateStatus(cmd.ID, CommandStatusFailed); err != nil {
+			log.Printf("Failed to update command status for %d: %v", cmd.ID, err)
+		}
 		log.Printf("Command %d failed: %s", cmd.ID, response.Message)
 	}
 }
@@ -158,13 +166,17 @@ func (s *Service) ExecuteCommand(deviceID int, command string, parameters map[st
 		// Use injected publish function
 		if err := s.publishFunc(device.DeviceID, data); err != nil {
 			log.Printf("Failed to publish command %d: %v", cmd.ID, err)
-			s.cmdRepo.UpdateStatus(cmd.ID, CommandStatusFailed)
+			if err2 := s.cmdRepo.UpdateStatus(cmd.ID, CommandStatusFailed); err2 != nil {
+				log.Printf("Failed to update command status for %d: %v", cmd.ID, err2)
+			}
 			return
 		}
 
 		// Update status to sent
 		now := time.Now()
-		s.cmdRepo.UpdateDelivery(cmd.ID, &now, nil, nil)
+		if err := s.cmdRepo.UpdateDelivery(cmd.ID, &now, nil, nil); err != nil {
+			log.Printf("Failed to update delivery for command %d: %v", cmd.ID, err)
+		}
 	}()
 
 	return cmd, nil

@@ -76,9 +76,13 @@ func (h *Handler) readPump(client *Client) {
 
 	// Set readline to prevent hanging
 	client.conn.SetReadLimit(512)
-	client.conn.SetReadDeadline(time.Now().Add(60 * time.Second))
+	if err := client.conn.SetReadDeadline(time.Now().Add(60 * time.Second)); err != nil {
+		log.Printf("Failed to set read deadline: %v", err)
+	}
 	client.conn.SetPongHandler(func(string) error {
-		client.conn.SetReadDeadline(time.Now().Add(60 * time.Second))
+		if err := client.conn.SetReadDeadline(time.Now().Add(60 * time.Second)); err != nil {
+			log.Printf("Failed to refresh read deadline: %v", err)
+		}
 		return nil
 	})
 
@@ -108,20 +112,27 @@ func (h *Handler) writePump(client *Client) {
 		select {
 		case message, ok := <-client.send:
 			log.Printf("WritePump sending to user %d: %s", client.userID, string(message))
-			client.conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
+			if err := client.conn.SetWriteDeadline(time.Now().Add(10 * time.Second)); err != nil {
+				log.Printf("Failed to set write deadline: %v", err)
+			}
 			if !ok {
-				client.conn.WriteMessage(websocket.CloseMessage, []byte{})
+				if err := client.conn.WriteMessage(websocket.CloseMessage, []byte{}); err != nil {
+					log.Printf("Failed to write close message: %v", err)
+				}
 				return
 			}
 
-			err := client.conn.WriteMessage(websocket.TextMessage, message)
-			if err != nil {
+			if err := client.conn.WriteMessage(websocket.TextMessage, message); err != nil {
+				log.Printf("Failed to write message: %v", err)
 				return
 			}
 
 		case <-ticker.C:
-			client.conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
+			if err := client.conn.SetWriteDeadline(time.Now().Add(10 * time.Second)); err != nil {
+				log.Printf("Failed to set write deadline for ping: %v", err)
+			}
 			if err := client.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
+				log.Printf("Failed to send ping message: %v", err)
 				return
 			}
 		}

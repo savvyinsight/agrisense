@@ -190,7 +190,9 @@ func (r *PostgresDeviceRepository) GetByUserID(userID int) ([]Device, error) {
 		}
 
 		if len(configJSON) > 0 {
-			json.Unmarshal(configJSON, &device.Config)
+			if err := json.Unmarshal(configJSON, &device.Config); err != nil {
+				return nil, fmt.Errorf("failed to unmarshal device config: %w", err)
+			}
 		}
 		devices = append(devices, device)
 	}
@@ -289,7 +291,9 @@ func (r *PostgresDeviceRepository) List(userID int, limit, offset int) ([]Device
 			return nil, 0, err
 		}
 		if len(configJSON) > 0 {
-			json.Unmarshal(configJSON, &device.Config)
+			if err := json.Unmarshal(configJSON, &device.Config); err != nil {
+				return nil, 0, fmt.Errorf("failed to unmarshal device config: %w", err)
+			}
 		}
 		devices = append(devices, device)
 	}

@@ -67,7 +67,9 @@ func setupInfluxDBContainer(t *testing.T) (*Repository, func()) {
 
 	cleanup := func() {
 		repo.Close()
-		influxContainer.Terminate(ctx)
+		if err := influxContainer.Terminate(ctx); err != nil {
+			t.Fatal(err)
+		}
 	}
 
 	return repo, cleanup

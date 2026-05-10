@@ -65,7 +65,7 @@ func TestDataPipeline(t *testing.T) {
 	// Create repositories
 	deviceRepo := &device.PostgresDeviceRepository{DB: pgDB}
 	sensorTypeRepo := &sensor.PostgresSensorTypeRepository{DB: pgDB}
-	// cacheRepo := redis.NewCacheRepository(redisClient)
+	cacheRepo := redis.NewCacheRepository(redisClient)
 
 	// Create rule engine
 	ruleEngine := ruleengine.NewEngine(
@@ -73,15 +73,17 @@ func TestDataPipeline(t *testing.T) {
 		&alert.PostgresAlertRepository{DB: pgDB},
 		&device.PostgresDeviceRepository{DB: pgDB},
 	)
-	ruleEngine.Start()
+	if err := ruleEngine.Start(); err != nil {
+		t.Fatalf("Failed to start rule engine: %v", err)
+	}
 	defer ruleEngine.Stop()
 
 	// Create data service with correct repositories
 	dataService := data.NewService(
 		sensorTypeRepo, // This implements SensorTypeRepository
 		deviceRepo,     // This now implements all DeviceRepository methods
-		// cacheRepo,      // This implements CacheRepository
-		influxRepo, // This implements InfluxRepository
+		*cacheRepo,     // This implements CacheRepository
+		influxRepo,     // This implements InfluxRepository
 		ruleEngine,
 	)
 	// Ensure test device exists
