@@ -3,7 +3,8 @@
 [![Go Version](https://img.shields.io/badge/Go-1.21+-00ADD8)](https://golang.org)
 [![React Version](https://img.shields.io/badge/React-19+-61DAFB)](https://react.dev)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
-[![CI](https://github.com/savvyinsight/agrisense/actions/workflows/ci.yml/badge.svg)](https://github.com/savvyinsight/agrisense/actions/workflows/ci.yml)
+[![CI](https://github.com/savvyinsight/agrisense/actions/workflows/frontend-ci.yml/badge.svg)](https://github.com/savvyinsight/agrisense/actions/workflows/frontend-ci.yml)
+[![CI](https://github.com/savvyinsight/agrisense/actions/workflows/backend-ci.yml/badge.svg)](https://github.com/savvyinsight/agrisense/actions/workflows/backend-ci.yml)
 
 ## 📋 Overview
 
