@@ -71,7 +71,9 @@ func (h *Handler) readPump(client *Client) {
 	defer func() {
 		log.Printf("readPump exiting for user %d", client.userID)
 		h.hub.unregister <- client
-		client.conn.Close()
+		if err := client.conn.Close(); err != nil {
+			log.Printf("Failed to close websocket connection: %v", err)
+		}
 	}()
 
 	// Set readline to prevent hanging
@@ -105,7 +107,9 @@ func (h *Handler) writePump(client *Client) {
 	defer func() {
 		log.Printf("writePump exiting for user %d", client.userID)
 		ticker.Stop()
-		client.conn.Close()
+		if err := client.conn.Close(); err != nil {
+			log.Printf("Failed to close websocket connection: %v", err)
+		}
 	}()
 
 	for {

@@ -62,7 +62,11 @@ func (r *PostgresUserRepository) List(limit, offset int) ([]User, int64, error) 
 	if err != nil {
 		return nil, 0, err
 	}
-	defer rows.Close()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			_ = err
+		}
+	}()
 
 	var users []User
 	for rows.Next() {

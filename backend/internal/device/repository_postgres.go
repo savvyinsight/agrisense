@@ -153,7 +153,11 @@ func (r *PostgresDeviceRepository) GetByUserID(userID int) ([]Device, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			_ = err
+		}
+	}()
 
 	var devices []Device
 	for rows.Next() {
@@ -256,7 +260,11 @@ func (r *PostgresDeviceRepository) List(userID int, limit, offset int) ([]Device
 	if err != nil {
 		return nil, 0, err
 	}
-	defer rows.Close()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			_ = err
+		}
+	}()
 
 	var devices []Device
 	for rows.Next() {

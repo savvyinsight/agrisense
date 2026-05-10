@@ -34,7 +34,11 @@ func TestDataPipeline(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to connect to PostgreSQL: %v", err)
 	}
-	defer pgDB.Close()
+	defer func() {
+		if err := pgDB.Close(); err != nil {
+			t.Fatalf("Failed to close PostgreSQL connection: %v", err)
+		}
+	}()
 
 	// Setup Redis connection
 	redisConfig := redis.Config{
@@ -47,7 +51,11 @@ func TestDataPipeline(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to connect to Redis: %v", err)
 	}
-	defer redisClient.Close()
+	defer func() {
+		if err := redisClient.Close(); err != nil {
+			t.Fatalf("Failed to close Redis connection: %v", err)
+		}
+	}()
 
 	// Setup InfluxDB connection
 	influxConfig := sensor.Config{

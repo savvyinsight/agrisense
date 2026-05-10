@@ -89,7 +89,11 @@ func (r *PostgresAutomationRuleRepository) GetByUserID(userID int) ([]Automation
 	if err != nil {
 		return nil, fmt.Errorf("failed to get automation rules: %w", err)
 	}
-	defer rows.Close()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			_ = err
+		}
+	}()
 
 	var rules []AutomationRule
 	for rows.Next() {
@@ -132,7 +136,11 @@ func (r *PostgresAutomationRuleRepository) GetEnabledRules() ([]AutomationRule, 
 	if err != nil {
 		return nil, fmt.Errorf("failed to get enabled automation rules: %w", err)
 	}
-	defer rows.Close()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			_ = err
+		}
+	}()
 
 	var rules []AutomationRule
 	for rows.Next() {
@@ -224,7 +232,11 @@ func (r *PostgresAutomationRuleRepository) GetByTargetDeviceID(deviceID int) ([]
 	if err != nil {
 		return nil, fmt.Errorf("failed to get automation rules for device: %w", err)
 	}
-	defer rows.Close()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			_ = err
+		}
+	}()
 
 	var rules []AutomationRule
 	for rows.Next() {

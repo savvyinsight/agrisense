@@ -100,7 +100,11 @@ func (r *PostgresCommandRepository) GetByDeviceID(deviceID int, limit int) ([]Co
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			_ = err
+		}
+	}()
 
 	var commands []Command
 	for rows.Next() {
@@ -180,7 +184,11 @@ func (r *PostgresCommandRepository) GetPending(deviceID int) ([]Command, error) 
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			_ = err
+		}
+	}()
 
 	var commands []Command
 	for rows.Next() {

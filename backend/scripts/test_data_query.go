@@ -34,7 +34,11 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer pgDB.Close()
+	defer func() {
+		if err := pgDB.Close(); err != nil {
+			log.Printf("Failed to close PostgreSQL connection: %v", err)
+		}
+	}()
 
 	// Setup Redis
 	redisClient, err := redis.NewConnection(redis.Config{
@@ -45,7 +49,11 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer redisClient.Close()
+	defer func() {
+		if err := redisClient.Close(); err != nil {
+			log.Printf("Failed to close Redis connection: %v", err)
+		}
+	}()
 
 	// Setup InfluxDB
 	influxRepo, err := sensor.NewRepository(sensor.Config{

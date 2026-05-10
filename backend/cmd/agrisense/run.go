@@ -50,7 +50,11 @@ func runServer(cliCtx *cli.Context) error {
 	if err != nil {
 		log.Fatalf("Failed to connect to PostgreSQL: %v", err)
 	}
-	defer pgDB.Close()
+	defer func() {
+		if err := pgDB.Close(); err != nil {
+			log.Printf("Failed to close PostgreSQL connection: %v", err)
+		}
+	}()
 
 	// Redis
 	redisClient, err := redis.NewConnection(redis.Config{
@@ -60,7 +64,11 @@ func runServer(cliCtx *cli.Context) error {
 	if err != nil {
 		log.Fatalf("Failed to connect to Redis: %v", err)
 	}
-	defer redisClient.Close()
+	defer func() {
+		if err := redisClient.Close(); err != nil {
+			log.Printf("Failed to close Redis connection: %v", err)
+		}
+	}()
 
 	// InfluxDB
 	influxRepo, err := sensor.NewRepository(sensor.Config{

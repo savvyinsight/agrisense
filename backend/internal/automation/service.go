@@ -217,18 +217,19 @@ func (s *Service) validateRule(rule *AutomationRule) error {
 		return fmt.Errorf("target device not found: %w", err)
 	}
 
-	if rule.TriggerType == TriggerTypeSensor {
+	switch rule.TriggerType {
+	case TriggerTypeSensor:
 		if rule.TriggerSensorTypeID == nil {
 			return fmt.Errorf("trigger sensor type ID is required for sensor triggers")
 		}
 		if rule.TriggerValue == nil {
 			return fmt.Errorf("trigger value is required for sensor triggers")
 		}
-	} else if rule.TriggerType == TriggerTypeSchedule {
+	case TriggerTypeSchedule:
 		if rule.ScheduleCron == nil || *rule.ScheduleCron == "" {
 			return fmt.Errorf("schedule cron is required for schedule triggers")
 		}
-	} else {
+	default:
 		return fmt.Errorf("invalid trigger type")
 	}
 

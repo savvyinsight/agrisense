@@ -58,7 +58,9 @@ func setupRedisContainer(t *testing.T) (*CacheRepository, func()) {
 	repo := NewCacheRepository(client)
 
 	cleanup := func() {
-		client.Close()
+		if err := client.Close(); err != nil {
+			t.Fatal(err)
+		}
 		if err := redisContainer.Terminate(ctx); err != nil {
 			t.Fatal(err)
 		}

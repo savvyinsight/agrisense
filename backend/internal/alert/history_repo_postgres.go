@@ -57,7 +57,11 @@ func (r *PostgresAlertRepository) GetActive() ([]Alert, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			_ = err
+		}
+	}()
 
 	var alerts []Alert
 	for rows.Next() {
@@ -108,7 +112,11 @@ func (r *PostgresAlertRepository) GetActivePaginated(limit, offset int) ([]Alert
 	if err != nil {
 		return nil, 0, err
 	}
-	defer rows.Close()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			_ = err
+		}
+	}()
 
 	var alerts []Alert
 	for rows.Next() {
@@ -164,7 +172,11 @@ func (r *PostgresAlertRepository) GetByDeviceID(deviceID int) ([]Alert, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			_ = err
+		}
+	}()
 
 	var alerts []Alert
 	for rows.Next() {
@@ -214,7 +226,11 @@ func (r *PostgresAlertRepository) GetByRuleID(ruleID int) ([]Alert, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			_ = err
+		}
+	}()
 
 	var alerts []Alert
 	for rows.Next() {
@@ -276,7 +292,11 @@ func (r *PostgresAlertRepository) List(limit, offset int) ([]Alert, int64, error
 	if err != nil {
 		return nil, 0, err
 	}
-	defer rows.Close()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			_ = err
+		}
+	}()
 
 	var alerts []Alert
 	for rows.Next() {

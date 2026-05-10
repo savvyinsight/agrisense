@@ -75,7 +75,11 @@ func (r *PostgresAlertRuleRepository) GetByDeviceID(deviceID int) ([]AlertRule, 
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			_ = err
+		}
+	}()
 
 	var rules []AlertRule
 	for rows.Next() {
@@ -113,7 +117,11 @@ func (r *PostgresAlertRuleRepository) GetEnabledRules() ([]AlertRule, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			_ = err
+		}
+	}()
 
 	var rules []AlertRule
 	for rows.Next() {
@@ -197,7 +205,11 @@ func (r *PostgresAlertRuleRepository) List(userID int) ([]AlertRule, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			_ = err
+		}
+	}()
 
 	var rules []AlertRule
 	for rows.Next() {

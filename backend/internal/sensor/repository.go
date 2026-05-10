@@ -39,7 +39,11 @@ func (r *PostgresSensorTypeRepository) GetSensorTypes() ([]SensorType, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			_ = err
+		}
+	}()
 
 	var sensors []SensorType
 	for rows.Next() {

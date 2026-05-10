@@ -141,7 +141,9 @@ func setupPostgresContainer(t *testing.T) (*sql.DB, func()) {
 	}
 
 	cleanup := func() {
-		db.Close()
+		if err := db.Close(); err != nil {
+			t.Fatal(err)
+		}
 		if err := pgContainer.Terminate(ctx); err != nil {
 			t.Fatal(err)
 		}
