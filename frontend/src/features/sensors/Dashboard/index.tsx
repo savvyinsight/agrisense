@@ -30,7 +30,7 @@ const Dashboard: React.FC = () => {
   const [liveAlert, setLiveAlert] = useState<AlertType | null>(null);
   const token = localStorage.getItem('token');
 
-  const handleWebSocketMessage = (data: WebSocketMessage) => {
+  const handleWebSocketMessage = (data: WebSocketMessage) => {//this function is re-created every single render
     if (data.type !== 'sensor_data') return;
     const message = data as SensorDataMessage;
     console.log('🔵 WebSocket received:', message);
@@ -60,7 +60,7 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  const { isConnected } = useWebSocket(token, handleWebSocketMessage);
+  const { isConnected } = useWebSocket(token, handleWebSocketMessage);//new reference every render
 
   useEffect(() => {
     fetchDevices();
