@@ -1,6 +1,5 @@
 import api from '@/api/client';
 import type {
-  ApiResponse,
   HistoricalDataResponse,
   SensorReadingResponse,
 } from '@/shared/types/api';

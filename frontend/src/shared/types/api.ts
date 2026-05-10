@@ -43,6 +43,7 @@ export interface Device {
   longitude?: number;
   config?: DeviceConfig;
   latestTemp?: number | null;
+  last_heartbeat?: string;
   created_at?: string;
   updated_at?: string;
 }
@@ -93,8 +94,11 @@ export interface HistoricalDataResponse {
 export interface Alert {
   id: number;
   device_id: string;
+  device_name?: string;
+  rule_name?: string;
   message: string;
   severity: 'info' | 'warning' | 'critical';
+  status?: 'active' | 'acknowledged' | 'resolved';
   triggered_at: string;
   acknowledged?: boolean;
   resolved?: boolean;
@@ -174,13 +178,20 @@ export interface SensorDataMessage extends WebSocketMessage {
 
 // Analytics Types
 export interface AnalyticsReport {
-  data: HistoricalData[];
+  device_id?: string;
+  device_uid?: string;
+  sensor_reports: SensorReport[];
   summary?: {
     min?: number;
     max?: number;
     average?: number;
     total?: number;
   };
+}
+
+export interface SensorReport {
+  sensor_type: string;
+  data: HistoricalData[];
 }
 
 export interface AnalyticsResponse {

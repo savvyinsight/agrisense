@@ -1,4 +1,4 @@
-import axios, { type AxiosRequestConfig } from 'axios';
+import axios, { type InternalAxiosRequestConfig } from 'axios';
 
 const API_BASE = 'http://localhost:8080/api/v1';
 
@@ -9,16 +9,10 @@ const api = axios.create({
   },
 });
 
-api.interceptors.request.use((config: AxiosRequestConfig) => {
+api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   const token = localStorage.getItem('token');
-  if (token) {
-    if (config.headers) {
-      (config.headers as Record<string, string>).Authorization = `Bearer ${token}`;
-    } else {
-      config.headers = {
-        Authorization: `Bearer ${token}`,
-      };
-    }
+  if (token && config.headers) {
+    config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
 });

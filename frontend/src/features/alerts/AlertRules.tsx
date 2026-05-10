@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Container,
@@ -33,15 +33,16 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import AddCircleIcon from '@mui/icons-material/AddCircle';
 import { getAlertRules, createAlertRule, deleteAlertRule } from '@/features/alerts/api';
 import { getDevices } from '@/features/devices/api';
+import type { AlertRule, Device } from '@/shared/types/api';
 
 const emptyRule = {
   name: '',
-  device_id: null,
+  device_id: null as number | null,
   sensor_type_id: 1, // temperature
   condition: '>',
   threshold_value: '',
   duration_seconds: 300,
-  severity: 'warning',
+  severity: 'warning' as 'info' | 'warning' | 'critical',
   enabled: true,
 };
 
@@ -55,25 +56,24 @@ const AlertRules = () => {
     { id: 4, name: t('alertRules.light') },
   ];
 
-  const getSensorName = (id) => {
+  const getSensorName = (id: number) => {
     return sensorTypes.find(s => s.id === id)?.name || 'Unknown';
   };
 
-  const [rules, setRules] = useState([]);
+  const [rules, setRules] = useState<AlertRule[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [openDialog, setOpenDialog] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
-  const [selectedRule, setSelectedRule] = useState(null);
   const [form, setForm] = useState(emptyRule);
-  const [devices, setDevices] = useState([]);
+  const [devices, setDevices] = useState<Device[]>([]);
   const [deviceLoading, setDeviceLoading] = useState(true);
 
   const loadRules = async () => {
     setLoading(true);
     const res = await getAlertRules();
-    if (res.success) {
+    if (res.success && res.data) {
       setRules(res.data.rules || []);
       setError('');
     } else {
@@ -85,7 +85,7 @@ const AlertRules = () => {
   const loadDevices = async () => {
     setDeviceLoading(true);
     const res = await getDevices();
-    if (res.success) {
+    if (res.success && res.data) {
       setDevices(res.data.devices || []);
     } else {
       setError(res.error || 'Unable to load devices');
@@ -100,23 +100,21 @@ const AlertRules = () => {
 
   const openNew = () => {
     setIsEditMode(false);
-    setSelectedRule(null);
     setForm(emptyRule);
     setOpenDialog(true);
   };
 
-  const openEdit = (rule) => {
+  const openEdit = (rule: AlertRule) => {
     setIsEditMode(true);
-    setSelectedRule(rule);
     setForm({
-      name: rule.name || '',
-      device_id: rule.device_id || '',
-      sensor_type_id: rule.sensor_type_id || 1,
-      condition: rule.condition || '>',
-      threshold_value: rule.threshold_value || '',
-      duration_seconds: rule.duration_seconds || 300,
-      severity: rule.severity || 'warning',
-      enabled: rule.enabled !== false,
+      name: rule.name,
+      device_id: rule.device_id,
+      sensor_type_id: rule.sensor_type_id,
+      condition: rule.condition,
+      threshold_value: rule.threshold_value.toString(),
+      duration_seconds: rule.duration_seconds,
+      severity: rule.severity,
+      enabled: rule.enabled,
     });
     setOpenDialog(true);
   };
@@ -126,7 +124,7 @@ const AlertRules = () => {
     setError('');
   };
 
-  const setField = (name, value) => {
+  const setField = (name: string, value: any) => {
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
@@ -138,11 +136,11 @@ const AlertRules = () => {
 
     const payload = {
       name: form.name,
-      device_id: form.device_id || null,
+      device_id: form.device_id,
       sensor_type_id: form.sensor_type_id,
       condition: form.condition,
       threshold_value: parseFloat(form.threshold_value),
-      duration_seconds: parseInt(form.duration_seconds),
+      duration_seconds: parseInt(form.duration_seconds.toString()),
       severity: form.severity,
       enabled: form.enabled,
     };
@@ -158,7 +156,7 @@ const AlertRules = () => {
     }
   };
 
-  const deleteRule = async (ruleId) => {
+  const deleteRule = async (ruleId: number) => {
     if (!window.confirm(t('common.confirm') + ' ' + t('alertRules.deleteRule') + '?')) {
       return;
     }
@@ -172,13 +170,7 @@ const AlertRules = () => {
     }
   };
 
-  const getDeviceLabel = (deviceId) => {
-    if (!deviceId) return t('devices.allDevices');
-    const device = devices.find(d => d.id === deviceId);
-    return device ? `${device.device_id} - ${device.name}` : 'Unknown Device';
-  };
-
-  const getSeverityColor = (severity) => {
+  const getSeverityColor = (severity: string) => {
     switch (severity) {
       case 'critical': return 'error';
       case 'warning': return 'warning';
@@ -267,7 +259,7 @@ const AlertRules = () => {
                         </IconButton>
                       </Tooltip>
                       <Tooltip title="Delete">
-                        <IconButton onClick={() => deleteRule(rule.id)} size="small" color="error">
+                        <IconButton onClick={() => deleteRule(rule.id!)} size="small" color="error">
                           <DeleteIcon />
                         </IconButton>
                       </Tooltip>
@@ -293,14 +285,14 @@ const AlertRules = () => {
           <FormControl fullWidth>
             <InputLabel>{t('devices.deviceId')}</InputLabel>
             <Select
-              value={form.device_id}
+              value={form.device_id?.toString() || ''}
               label={t('devices.deviceId')}
-              onChange={(e) => setField('device_id', e.target.value)}
+              onChange={(e) => setField('device_id', e.target.value === '' ? null : Number(e.target.value))}
               disabled={deviceLoading}
             >
-              <MenuItem value={null}>{t('devices.allDevices')}</MenuItem>
+              <MenuItem value="">{t('devices.allDevices')}</MenuItem>
               {devices.map((device) => (
-                <MenuItem key={device.id} value={device.id}>
+                <MenuItem key={device.id} value={device.id.toString()}>
                   {device.device_id} - {device.name}
                 </MenuItem>
               ))}
@@ -372,10 +364,10 @@ const AlertRules = () => {
             <Select
               value={form.enabled}
               label={t('common.view')}
-              onChange={(e) => setField('enabled', e.target.value)}
+              onChange={(e) => setField('enabled', e.target.value === 'true')}
             >
-              <MenuItem value={true}>{t('alertRules.active')}</MenuItem>
-              <MenuItem value={false}>{t('alertRules.inactive')}</MenuItem>
+              <MenuItem value={true as any}>{t('alertRules.active')}</MenuItem>
+              <MenuItem value={false as any}>{t('alertRules.inactive')}</MenuItem>
             </Select>
           </FormControl>
 

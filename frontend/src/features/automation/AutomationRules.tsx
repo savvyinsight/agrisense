@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Container,
@@ -33,8 +33,19 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import AddCircleIcon from '@mui/icons-material/AddCircle';
 import { getAutomationRules, createAutomationRule, deleteAutomationRule } from '@/features/automation/api';
 import { getDevices } from '@/features/devices/api';
+import type { AutomationRule, Device } from '@/shared/types/api';
 
-const emptyRule = {
+type AutomationActionParameters = {
+  duration: number;
+  power: number;
+};
+
+type AutomationForm = Omit<AutomationRule, 'id' | 'action_parameters' | 'trigger_value'> & {
+  trigger_value: string;
+  action_parameters: AutomationActionParameters;
+};
+
+const emptyRule: AutomationForm = {
   name: '',
   target_device_id: 0,
   trigger_type: 'sensor',
@@ -43,23 +54,22 @@ const emptyRule = {
   trigger_value: '',
   trigger_duration_seconds: 60,
   action_command: 'turn_on',
-  action_parameters: { duration: 300 },
+  action_parameters: { duration: 300, power: 100 },
   enabled: true,
 };
 
 const AutomationRules = () => {
   const { t } = useTranslation();
   // Add all these state declarations:
-  const [rules, setRules] = useState([]);
-  const [devices, setDevices] = useState([]);
+  const [rules, setRules] = useState<AutomationRule[]>([]);
+  const [devices, setDevices] = useState<Device[]>([]);
   const [deviceLoading, setDeviceLoading] = useState(true);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [openDialog, setOpenDialog] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
-  const [selectedRule, setSelectedRule] = useState(null);
-  const [form, setForm] = useState(emptyRule);
+  const [form, setForm] = useState<AutomationForm>(emptyRule);
 
   const sensorTypes = [
     { id: 1, name: t('alertRules.temperature') },
@@ -78,7 +88,7 @@ const AutomationRules = () => {
     setLoading(true);
     const res = await getAutomationRules();
     if (res.success) {
-      setRules(res.data.rules || []);
+      setRules(res.data?.rules || []);
       setError('');
     } else {
       setError(res.error || 'Unable to load automation rules');
@@ -90,7 +100,7 @@ const AutomationRules = () => {
     setDeviceLoading(true);
     const res = await getDevices();
     if (res.success) {
-      setDevices(res.data.devices || []);
+      setDevices(res.data?.devices || []);
     } else {
       setError(res.error || 'Unable to load devices');
     }
@@ -104,25 +114,26 @@ const AutomationRules = () => {
 
   const openNew = () => {
     setIsEditMode(false);
-    setSelectedRule(null);
     setForm(emptyRule);
     setOpenDialog(true);
   };
 
-  const openEdit = (rule) => {
+  const openEdit = (rule: AutomationRule) => {
     setIsEditMode(true);
-    setSelectedRule(rule);
     setForm({
-      name: rule.name || '',
-      target_device_id: rule.target_device_id || 0,
-      trigger_type: rule.trigger_type || 'sensor',
-      trigger_sensor_type_id: rule.trigger_sensor_type_id || 1,
-      trigger_condition: rule.trigger_condition || '>',
-      trigger_value: rule.trigger_value || '',
-      trigger_duration_seconds: rule.trigger_duration_seconds || 60,
-      action_command: rule.action_command || 'turn_on',
-      action_parameters: rule.action_parameters || { duration: 300 },
-      enabled: rule.enabled !== false,
+      name: rule.name,
+      target_device_id: rule.target_device_id,
+      trigger_type: rule.trigger_type,
+      trigger_sensor_type_id: rule.trigger_sensor_type_id,
+      trigger_condition: rule.trigger_condition,
+      trigger_value: typeof rule.trigger_value === 'number' ? rule.trigger_value.toString() : rule.trigger_value || '',
+      trigger_duration_seconds: rule.trigger_duration_seconds,
+      action_command: rule.action_command,
+      action_parameters: {
+        duration: typeof rule.action_parameters?.duration === 'number' ? rule.action_parameters.duration : 300,
+        power: typeof rule.action_parameters?.power === 'number' ? rule.action_parameters.power : 100,
+      },
+      enabled: rule.enabled,
     });
     setOpenDialog(true);
   };
@@ -132,19 +143,23 @@ const AutomationRules = () => {
     setError('');
   };
 
-  const setField = (name, value) => {
+  const setField = (name: string, value: string | number | boolean) => {
     if (name.startsWith('action_parameters.')) {
-      const key = name.split('.')[1];
-      setForm((prev) => ({
+      const key = name.split('.')[1] as keyof AutomationActionParameters;
+      setForm((prev: AutomationForm) => ({
         ...prev,
         action_parameters: {
           ...prev.action_parameters,
-          [key]: value,
+          [key]: Number(value),
         },
       }));
-    } else {
-      setForm((prev) => ({ ...prev, [name]: value }));
+      return;
     }
+
+    setForm((prev: AutomationForm) => ({
+      ...prev,
+      [name]: value,
+    }));
   };
 
   const saveRule = async () => {
@@ -160,12 +175,12 @@ const AutomationRules = () => {
       trigger_sensor_type_id: form.trigger_sensor_type_id,
       trigger_condition: form.trigger_condition,
       trigger_value: parseFloat(form.trigger_value),
-      trigger_duration_seconds: parseInt(form.trigger_duration_seconds),
+      trigger_duration_seconds: Number(form.trigger_duration_seconds),
       action_command: form.action_command,
       action_parameters: {
         ...form.action_parameters,
-        duration: parseInt(form.action_parameters.duration || 300),
-        power: parseInt(form.action_parameters.power || 100),
+        duration: Number(form.action_parameters.duration || 300),
+        power: Number(form.action_parameters.power || 100),
       },
       enabled: form.enabled,
     };
@@ -181,7 +196,7 @@ const AutomationRules = () => {
     }
   };
 
-  const deleteRule = async (ruleId) => {
+  const deleteRule = async (ruleId: number) => {
     if (!window.confirm(t('common.confirm') + ' ' + t('automation.deleteRule') + '?')) {
       return;
     }
@@ -195,15 +210,15 @@ const AutomationRules = () => {
     }
   };
 
-  const getSensorName = (id) => {
+  const getSensorName = (id: number) => {
     return sensorTypes.find(s => s.id === id)?.name || 'Unknown';
   };
 
-  const getCommandLabel = (command) => {
+  const getCommandLabel = (command: string) => {
     return commands.find(c => c.value === command)?.label || command;
   };
 
-  const getDeviceLabel = (deviceId) => {
+  const getDeviceLabel = (deviceId: number) => {
     if (deviceId === 0) return t('devices.allDevices');
     const device = devices.find(d => d.id === deviceId);
     return device ? `${device.device_id} - ${device.name}` : 'Unknown Device';
@@ -269,7 +284,7 @@ const AutomationRules = () => {
                     </TableCell>
                     <TableCell>
                       {getCommandLabel(rule.action_command)}
-                      {rule.action_parameters?.duration && ` for ${rule.action_parameters.duration}s`}
+                      {typeof rule.action_parameters?.duration === 'number' && ` for ${rule.action_parameters.duration}s`}
                     </TableCell>
                     <TableCell>
                       <Chip
@@ -285,7 +300,7 @@ const AutomationRules = () => {
                         </IconButton>
                       </Tooltip>
                       <Tooltip title="Delete">
-                        <IconButton onClick={() => deleteRule(rule.id)} size="small" color="error">
+                        <IconButton onClick={() => deleteRule(rule.id ?? 0)} size="small" color="error">
                           <DeleteIcon />
                         </IconButton>
                       </Tooltip>
@@ -315,6 +330,7 @@ const AutomationRules = () => {
               value={form.target_device_id}
               label={t('devices.targetDevice')}
               onChange={(e) => setField('target_device_id', e.target.value)}
+              disabled={deviceLoading}
             >
               <MenuItem value={0}>{t('devices.allDevices')}</MenuItem>
               {devices.map((device) => (
@@ -413,12 +429,12 @@ const AutomationRules = () => {
           <FormControl fullWidth>
             <InputLabel>{t('common.status')}</InputLabel>
             <Select
-              value={form.enabled}
+              value={String(form.enabled)}
               label={t('common.status')}
-              onChange={(e) => setField('enabled', e.target.value)}
+              onChange={(e) => setField('enabled', e.target.value === 'true')}
             >
-              <MenuItem value={true}>{t('automation.enabled')}</MenuItem>
-              <MenuItem value={false}>{t('automation.disabled')}</MenuItem>
+              <MenuItem value="true">{t('automation.enabled')}</MenuItem>
+              <MenuItem value="false">{t('automation.disabled')}</MenuItem>
             </Select>
           </FormControl>
 

@@ -1,11 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Container,
   Typography,
   Paper,
   Box,
-  Grid,
   Card,
   CardContent,
   CircularProgress,
@@ -62,7 +61,7 @@ const MapView: React.FC = () => {
         return;
       }
 
-      const deviceIds = devices.map((d) => d.id);
+      const deviceIds = devices.map((d) => String(d.id));
       const readingsResult = await getDevicesDataLatest(deviceIds);
 
       if (readingsResult.success && readingsResult.data) {
@@ -179,9 +178,9 @@ const MapView: React.FC = () => {
           {deviceData.length === 0 ? (
             <Alert severity="info">{t('map.noDevicesWithLocation')}</Alert>
           ) : (
-            <Grid container spacing={3}>
+            <Box sx={{ display: 'grid', gap: 24, gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))' }}>
               {deviceData.map((device) => (
-                <Grid item xs={12} md={6} lg={4} key={device.device_id}>
+                <Box key={device.device_id}>
                   <Card elevation={2}>
                     <CardContent>
                       <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
@@ -225,9 +224,9 @@ const MapView: React.FC = () => {
                       )}
                     </CardContent>
                   </Card>
-                </Grid>
+                </Box>
               ))}
-            </Grid>
+            </Box>
           )}
         </>
       )}

@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import type { Device } from '@/shared/types/api';
 import {
   Container,
   Typography,
@@ -32,11 +33,21 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import AddCircleIcon from '@mui/icons-material/AddCircle';
 import { getDevices, createDevice, updateDevice, deleteDevice } from '@/features/devices/api';
 
-const emptyForm = {
+type DeviceForm = Omit<Device, 'id' | 'created_at' | 'updated_at' | 'latitude' | 'longitude' | 'config'> & {
+  latitude: string;
+  longitude: string;
+  config: {
+    reporting_interval: number;
+    temperature_unit: 'celsius' | 'fahrenheit';
+  };
+};
+
+const emptyForm: DeviceForm = {
   device_id: '',
   name: '',
   type: 'sensor',
   location: '',
+  status: 'offline',
   latitude: '',
   longitude: '',
   config: {
@@ -47,20 +58,20 @@ const emptyForm = {
 
 const DeviceManagement = () => {
   const { t } = useTranslation();
-  const [devices, setDevices] = useState([]);
+  const [devices, setDevices] = useState<Device[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [openDialog, setOpenDialog] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
-  const [selectedDevice, setSelectedDevice] = useState(null);
-  const [form, setForm] = useState(emptyForm);
+  const [selectedDevice, setSelectedDevice] = useState<Device | null>(null);
+  const [form, setForm] = useState<DeviceForm>(emptyForm);
 
   const loadDevices = async () => {
     setLoading(true);
     const res = await getDevices();
     if (res.success) {
-      setDevices(res.data.devices || []);
+      setDevices(res.data?.devices || []);
       setError('');
     } else {
       setError(res.error || 'Unable to load devices');
@@ -79,16 +90,17 @@ const DeviceManagement = () => {
     setOpenDialog(true);
   };
 
-  const openEdit = (device) => {
+  const openEdit = (device: Device) => {
     setIsEditMode(true);
     setSelectedDevice(device);
     setForm({
       ...device,
-      latitude: device.latitude ?? '',
-      longitude: device.longitude ?? '',
+      status: device.status,
+      latitude: device.latitude?.toString() ?? '',
+      longitude: device.longitude?.toString() ?? '',
       config: {
         reporting_interval: device.config?.reporting_interval ?? 60,
-        temperature_unit: device.config?.temperature_unit ?? 'celsius',
+        temperature_unit: (device.config?.temperature_unit as 'celsius' | 'fahrenheit') ?? 'celsius',
       },
     });
     setOpenDialog(true);
@@ -99,19 +111,20 @@ const DeviceManagement = () => {
     setError('');
   };
 
-  const setField = (name, value) => {
+  const setField = (name: string, value: string | number) => {
     if (name.startsWith('config.')) {
-      const key = name.split('.')[1];
-      setForm((prev) => ({
+      const key = name.split('.')[1] as keyof DeviceForm['config'];
+      setForm((prev: DeviceForm) => ({
         ...prev,
         config: {
           ...prev.config,
           [key]: value,
         },
       }));
-    } else {
-      setForm((prev) => ({ ...prev, [name]: value }));
+      return;
     }
+
+    setForm((prev: DeviceForm) => ({ ...prev, [name]: value }));
   };
 
   const saveDevice = async () => {
@@ -133,7 +146,7 @@ const DeviceManagement = () => {
       },
     };
 
-    const result = isEditMode && selectedDevice?.id
+    const result = selectedDevice?.id && isEditMode
       ? await updateDevice(selectedDevice.id, payload)
       : await createDevice(payload);
 
@@ -146,7 +159,7 @@ const DeviceManagement = () => {
     }
   };
 
-  const removeDevice = async (id) => {
+  const removeDevice = async (id: number) => {
     const result = await deleteDevice(id);
     if (result.success) {
       setSuccess('Device deleted successfully');

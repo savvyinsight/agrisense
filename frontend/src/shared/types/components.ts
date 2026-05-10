@@ -1,4 +1,4 @@
-import { ReactNode, FC } from 'react';
+import { ReactNode } from 'react';
 import { User } from './api';
 
 // Auth Context Types

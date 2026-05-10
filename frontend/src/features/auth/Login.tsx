@@ -89,7 +89,7 @@ const Login: React.FC = () => {
             AgriSenseIoT
           </Typography>
           
-          <Tabs value={tab} onChange={(e, v) => setTab(v)} sx={{ mb: 3 }}>
+          <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ mb: 3 }}>
             <Tab label="Login" />
             <Tab label="Register" />
           </Tabs>

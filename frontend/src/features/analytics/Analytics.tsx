@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Container,
@@ -6,12 +6,10 @@ import {
   Paper,
   Box,
   Button,
-  TextField,
   Select,
   MenuItem,
   FormControl,
   InputLabel,
-  Grid,
   Card,
   CardContent,
   CircularProgress,
@@ -34,13 +32,15 @@ import {
 import AnalyticsIcon from '@mui/icons-material/Analytics';
 import { getAnalyticsReport } from '@/features/analytics/api';
 import { getDevices } from '@/features/devices/api';
+import type { Device } from '@/shared/types/api';
+import type { AnalyticsReport } from '@/shared/types/api';
 
 const Analytics = () => {
   const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [reportData, setReportData] = useState(null);
-  const [devices, setDevices] = useState([]);
+  const [reportData, setReportData] = useState<AnalyticsReport | null>(null);
+  const [devices, setDevices] = useState<Device[]>([]);
   const [deviceLoading, setDeviceLoading] = useState(true);
   const [filters, setFilters] = useState({
     deviceId: '',
@@ -49,14 +49,14 @@ const Analytics = () => {
     reportType: 'daily',
   });
 
-  const handleFilterChange = (field, value) => {
+  const handleFilterChange = (field: string, value: any) => {
     setFilters((prev) => ({ ...prev, [field]: value }));
   };
 
   const loadDevices = async () => {
     setDeviceLoading(true);
     const res = await getDevices();
-    if (res.success) {
+    if (res.success && res.data) {
       setDevices(res.data.devices || []);
     } else {
       setError(res.error || 'Unable to load devices');
@@ -75,7 +75,7 @@ const Analytics = () => {
     }
 
     // Find the selected device to get its device_id string
-    const selectedDevice = devices.find(d => d.id === filters.deviceId);
+    const selectedDevice = devices.find(d => d.id === Number(filters.deviceId));
     if (!selectedDevice) {
       setError(t('analytics.deviceNotFound'));
       return;
@@ -93,7 +93,7 @@ const Analytics = () => {
 
     const result = await getAnalyticsReport(params);
 
-    if (result.success) {
+    if (result.success && result.data) {
       setReportData(result.data);
     } else {
       setError(result.error || 'Failed to generate report');
@@ -102,31 +102,31 @@ const Analytics = () => {
     setLoading(false);
   };
 
-  const getSensorDataByType = (sensorType) => {
+  const getSensorDataByType = (sensorType: string) => {
     if (!reportData?.sensor_reports) return null;
     return reportData.sensor_reports.find(s => s.sensor_type === sensorType);
   };
 
-  const calculateAverages = (sensorData) => {
+  const calculateAverages = (sensorData: any) => {
     if (!sensorData?.data || sensorData.data.length === 0) {
       return { avg: 0, min: 0, max: 0 };
     }
-    const values = sensorData.data.map(d => d.avg);
-    const mins = sensorData.data.map(d => d.min);
-    const maxs = sensorData.data.map(d => d.max);
+    const values = sensorData.data.map((d: any) => d.avg);
+    const mins = sensorData.data.map((d: any) => d.min);
+    const maxs = sensorData.data.map((d: any) => d.max);
     
     return {
-      avg: values.reduce((a, b) => a + b, 0) / values.length,
+      avg: values.reduce((a: number, b: number) => a + b, 0) / values.length,
       min: Math.min(...mins),
       max: Math.max(...maxs),
     };
   };
 
-  const formatChartData = (sensorType) => {
+  const formatChartData = (sensorType: string) => {
     const sensorData = getSensorDataByType(sensorType);
     if (!sensorData?.data || !Array.isArray(sensorData.data)) return [];
 
-    return sensorData.data.map((item) => ({
+    return sensorData.data.map((item: any) => ({
       date: item.timestamp?.split('T')[0],
       avg: item.avg,
       min: item.min,
@@ -150,8 +150,8 @@ const Analytics = () => {
 
       <Paper sx={{ p: 3, mb: 3 }} elevation={2}>
         <Typography variant="h6" gutterBottom>{t('analytics.dateRange')}</Typography>
-        <Grid container spacing={3} sx={{ mt: 1 }}>
-          <Grid item xs={12} md={3}>
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3, mt: 1 }}>
+          <Box sx={{ minWidth: 200, flex: '1 1 auto' }}>
             <FormControl fullWidth required>
               <InputLabel>{t('analytics.selectDevice')}</InputLabel>
               <Select
@@ -167,28 +167,36 @@ const Analytics = () => {
                 ))}
               </Select>
             </FormControl>
-          </Grid>
-          <Grid item xs={12} md={2}>
+          </Box>
+          <Box sx={{ minWidth: 150, flex: '1 1 auto' }}>
             <LocalizationProvider dateAdapter={AdapterDateFns}>
               <DatePicker
                 label={t('analytics.startDate')}
                 value={filters.startDate}
                 onChange={(date) => handleFilterChange('startDate', date)}
-                renderInput={(params) => <TextField {...params} fullWidth />}
+                slotProps={{
+                  textField: {
+                    fullWidth: true,
+                  },
+                }}
               />
             </LocalizationProvider>
-          </Grid>
-          <Grid item xs={12} md={2}>
+          </Box>
+          <Box sx={{ minWidth: 150, flex: '1 1 auto' }}>
             <LocalizationProvider dateAdapter={AdapterDateFns}>
               <DatePicker
                 label={t('analytics.endDate')}
                 value={filters.endDate}
                 onChange={(date) => handleFilterChange('endDate', date)}
-                renderInput={(params) => <TextField {...params} fullWidth />}
+                slotProps={{
+                  textField: {
+                    fullWidth: true,
+                  },
+                }}
               />
             </LocalizationProvider>
-          </Grid>
-          <Grid item xs={12} md={4}>
+          </Box>
+          <Box sx={{ minWidth: 200, flex: '1 1 auto' }}>
             <FormControl fullWidth>
               <InputLabel>{t('analytics.reportType')}</InputLabel>
               <Select
@@ -201,8 +209,8 @@ const Analytics = () => {
                 <MenuItem value="monthly">{t('analytics.monthly')}</MenuItem>
               </Select>
             </FormControl>
-          </Grid>
-        </Grid>
+          </Box>
+        </Box>
         <Box sx={{ mt: 3 }}>
           <Button
             variant="contained"
@@ -223,8 +231,8 @@ const Analytics = () => {
 
       {reportData && (
         <>
-          <Grid container spacing={3} sx={{ mb: 3 }}>
-            <Grid item xs={12} md={6} lg={3}>
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3, mb: 3 }}>
+            <Box sx={{ minWidth: 250, flex: '1 1 auto' }}>
               <Card elevation={2}>
                 <CardContent>
                   <Typography color="textSecondary" gutterBottom>
@@ -239,8 +247,8 @@ const Analytics = () => {
                   </Typography>
                 </CardContent>
               </Card>
-            </Grid>
-            <Grid item xs={12} md={6} lg={3}>
+            </Box>
+            <Box sx={{ minWidth: 250, flex: '1 1 auto' }}>
               <Card elevation={2}>
                 <CardContent>
                   <Typography color="textSecondary" gutterBottom>
@@ -255,8 +263,8 @@ const Analytics = () => {
                   </Typography>
                 </CardContent>
               </Card>
-            </Grid>
-            <Grid item xs={12} md={6} lg={3}>
+            </Box>
+            <Box sx={{ minWidth: 250, flex: '1 1 auto' }}>
               <Card elevation={2}>
                 <CardContent>
                   <Typography color="textSecondary" gutterBottom>
@@ -270,8 +278,8 @@ const Analytics = () => {
                   </Typography>
                 </CardContent>
               </Card>
-            </Grid>
-            <Grid item xs={12} md={6} lg={3}>
+            </Box>
+            <Box sx={{ minWidth: 250, flex: '1 1 auto' }}>
               <Card elevation={2}>
                 <CardContent>
                   <Typography color="textSecondary" gutterBottom>
@@ -285,12 +293,12 @@ const Analytics = () => {
                   </Typography>
                 </CardContent>
               </Card>
-            </Grid>
-          </Grid>
+            </Box>
+          </Box>
 
           {reportData.sensor_reports && reportData.sensor_reports.length > 0 && (
-            <Grid container spacing={3}>
-              <Grid item xs={12}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              <Box sx={{ width: '100%' }}>
                 <Paper sx={{ p: 3 }} elevation={2}>
                   <Typography variant="h6" gutterBottom>Temperature Trend</Typography>
                   <ResponsiveContainer width="100%" height={300}>
@@ -309,8 +317,8 @@ const Analytics = () => {
                     </LineChart>
                   </ResponsiveContainer>
                 </Paper>
-              </Grid>
-              <Grid item xs={12} md={6}>
+              </Box>
+              <Box sx={{ flex: '1 1 50%', minWidth: 300 }}>
                 <Paper sx={{ p: 3 }} elevation={2}>
                   <Typography variant="h6" gutterBottom>Humidity Trend</Typography>
                   <ResponsiveContainer width="100%" height={250}>
@@ -323,8 +331,8 @@ const Analytics = () => {
                     </BarChart>
                   </ResponsiveContainer>
                 </Paper>
-              </Grid>
-              <Grid item xs={12} md={6}>
+              </Box>
+              <Box sx={{ flex: '1 1 50%', minWidth: 300 }}>
                 <Paper sx={{ p: 3 }} elevation={2}>
                   <Typography variant="h6" gutterBottom>Soil Moisture Trend</Typography>
                   <ResponsiveContainer width="100%" height={250}>
@@ -343,8 +351,8 @@ const Analytics = () => {
                     </LineChart>
                   </ResponsiveContainer>
                 </Paper>
-              </Grid>
-            </Grid>
+              </Box>
+            </Box>
           )}
         </>
       )}

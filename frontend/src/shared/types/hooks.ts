@@ -1,4 +1,6 @@
 // Hook Types
+import type { WebSocketMessage } from './api';
+
 export interface UseWebSocketOptions {
   autoConnect?: boolean;
   reconnect?: boolean;
@@ -9,11 +11,6 @@ export interface UseWebSocketOptions {
 export interface UseWebSocketReturn {
   isConnected: boolean;
   send: (message: unknown) => void;
-}
-
-export interface WebSocketMessage {
-  type: string;
-  payload: unknown;
 }
 
 export interface MessageHandler {

@@ -55,13 +55,6 @@ const AdminRoute: React.FC<RouteWrapperProps> = ({ children }) => {
   return isAdmin() ? <>{children}</> : <Navigate to="/dashboard" replace />;
 };
 
-const ComingSoon: React.FC<{ title: string }> = ({ title }) => (
-  <div style={{ textAlign: 'center', padding: '50px' }}>
-    <h2>{title}</h2>
-    <p>This feature is coming soon!</p>
-  </div>
-);
-
 function App() {
   return (
     <ThemeProvider theme={theme}>

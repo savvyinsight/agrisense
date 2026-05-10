@@ -1,5 +1,5 @@
 import api from '@/api/client';
-import type { ApiResponse, AnalyticsResponse } from '@/shared/types/api';
+import type { AnalyticsResponse } from '@/shared/types/api';
 
 const handleError = (error: unknown): string => {
   return (error as any)?.response?.data?.error || (error as Error).message || 'Request failed';

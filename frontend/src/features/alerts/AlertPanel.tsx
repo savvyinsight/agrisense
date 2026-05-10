@@ -35,8 +35,6 @@ interface AlertPanelProps {
 
 const AlertPanel: React.FC<AlertPanelProps> = ({ open, onClose, liveAlert }) => {
   const [alerts, setAlerts] = useState<AlertType[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [expandedId, setExpandedId] = useState<number | null>(null);
 
   useEffect(() => {
     if (open) {
@@ -51,13 +49,11 @@ const AlertPanel: React.FC<AlertPanelProps> = ({ open, onClose, liveAlert }) => 
   }, [liveAlert]);
 
   const fetchAlerts = async () => {
-    setLoading(true);
     const result = await getActiveAlerts();
     if (result.success && result.data) {
       const alertsList = result.data.alerts || [];
       setAlerts(alertsList);
     }
-    setLoading(false);
   };
 
   const handleAcknowledge = async (alertId: number | string) => {

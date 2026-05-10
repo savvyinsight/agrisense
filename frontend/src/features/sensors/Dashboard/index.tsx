@@ -1,18 +1,15 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Container,
-  Grid,
   Typography,
   Box,
-  CircularProgress,
   Alert,
   Chip,
   Skeleton,
 } from '@mui/material';
 import WifiIcon from '@mui/icons-material/Wifi';
 import WifiOffIcon from '@mui/icons-material/WifiOff';
-import { useAuth } from '@/features/auth/AuthContext';
 import { useWebSocket } from '@/shared/hooks/useWebSocket';
 import DeviceCard from '@/features/devices/DeviceCard';
 import SensorChart from '@/features/sensors/SensorChart';
@@ -20,12 +17,10 @@ import AlertPanel from '@/features/alerts/AlertPanel';
 import { DeviceCardSkeleton } from '@/shared/components/SkeletonLoader';
 import { getDevices } from '@/features/devices/api';
 import { getLatestReading } from '@/features/sensors/api';
-import { getActiveAlerts } from '@/features/alerts/api';
-import type { Device, Alert as AlertType, SensorDataMessage } from '@/shared/types/api';
+import type { Device, Alert as AlertType, SensorDataMessage, WebSocketMessage } from '@/shared/types/api';
 
 const Dashboard: React.FC = () => {
   const { t } = useTranslation();
-  const { user } = useAuth();
   const [devices, setDevices] = useState<Device[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>('');
@@ -33,13 +28,13 @@ const Dashboard: React.FC = () => {
   const [selectedDevice, setSelectedDevice] = useState<Device | null>(null);
   const [alertPanelOpen, setAlertPanelOpen] = useState<boolean>(false);
   const [liveAlert, setLiveAlert] = useState<AlertType | null>(null);
-  const [alerts, setAlerts] = useState<AlertType[]>([]);
-
   const token = localStorage.getItem('token');
 
-  const handleWebSocketMessage = (data: SensorDataMessage) => {
-    console.log('🔵 WebSocket received:', data);
-    if (data.type === 'sensor_data') {
+  const handleWebSocketMessage = (data: WebSocketMessage) => {
+    if (data.type !== 'sensor_data') return;
+    const message = data as SensorDataMessage;
+    console.log('🔵 WebSocket received:', message);
+    if (message.type === 'sensor_data') {
       const { device_id, sensor_type, value } = data.payload as {
         device_id: string;
         sensor_type: string;
@@ -69,17 +64,8 @@ const Dashboard: React.FC = () => {
 
   useEffect(() => {
     fetchDevices();
-    fetchAlerts();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  const fetchAlerts = async () => {
-    const result = await getActiveAlerts();
-    if (result.success && result.data) {
-      const alertsList = result.data.alerts || [];
-      setAlerts(alertsList);
-    }
-  };
 
   const fetchDevices = async () => {
     const result = await getDevices();
@@ -108,13 +94,13 @@ const Dashboard: React.FC = () => {
           <Skeleton variant="text" width={200} height={40} />
           <Skeleton variant="circular" width={40} height={40} />
         </Box>
-        <Grid container spacing={3}>
+        <Box sx={{ display: 'grid', gap: 3, gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))' }}>
           {[1, 2, 3].map((i) => (
-            <Grid item xs={12} sm={6} md={4} key={i}>
+            <Box key={i}>
               <DeviceCardSkeleton />
-            </Grid>
+            </Box>
           ))}
-        </Grid>
+        </Box>
       </Container>
     );
   }
@@ -143,17 +129,17 @@ const Dashboard: React.FC = () => {
         {devices.length === 0 ? (
           <Alert severity="info">{t('devices.title')} - {t('common.add')} {t('devices.deviceName').toLowerCase()} {t('common.view').toLowerCase()}.</Alert>
         ) : (
-          <Grid container spacing={{ xs: 1, sm: 2, md: 3 }}>
+          <Box sx={{ display: 'grid', gap: { xs: 1, sm: 2, md: 3 }, gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))' }}>
             {devices.map((device) => (
-              <Grid item xs={12} sm={6} md={4} key={device.id}>
+              <Box key={device.id}>
                 <DeviceCard
                   device={device}
                   liveTemp={liveUpdates[`${device.device_id}:temperature`]}
                   onClick={() => setSelectedDevice(device)}
                 />
-              </Grid>
+              </Box>
             ))}
-          </Grid>
+          </Box>
         )}
 
         {selectedDevice && (

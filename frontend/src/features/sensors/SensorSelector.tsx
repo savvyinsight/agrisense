@@ -1,4 +1,3 @@
-import React from 'react';
 import { ToggleButton, ToggleButtonGroup, Box } from '@mui/material';
 import {
   Thermostat as TempIcon,
@@ -25,7 +24,7 @@ const SensorSelector: React.FC<SensorSelectorProps> = ({ selected, onSelect }) =
       <ToggleButtonGroup
         value={selected}
         exclusive
-        onChange={(e, val) => val && onSelect(val)}
+        onChange={(_, val) => val && onSelect(val)}
         aria-label="sensor type"
         size="small"
       >

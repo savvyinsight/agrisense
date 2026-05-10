@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Container,
@@ -18,7 +18,7 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  Alert,
+  Alert as MuiAlert,
   CircularProgress,
   Tabs,
   Tab,
@@ -31,15 +31,16 @@ import {
   NotificationsActive as AlertsIcon,
 } from '@mui/icons-material';
 import { getActiveAlerts, acknowledgeAlert, resolveAlert, getAlertHistory } from '@/features/alerts/api';
+import type { Alert } from '@/shared/types/api';
 
 const Alerts = () => {
   const { t } = useTranslation();
-  const [activeAlerts, setActiveAlerts] = useState([]);
-  const [alertHistory, setAlertHistory] = useState([]);
+  const [activeAlerts, setActiveAlerts] = useState<Alert[]>([]);
+  const [alertHistory, setAlertHistory] = useState<Alert[]>([]);
   const [loading, setLoading] = useState(true);
   const [tabValue, setTabValue] = useState(0);
-  const [resolveDialog, setResolveDialog] = useState({ open: false, alert: null });
-  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+  const [resolveDialog, setResolveDialog] = useState({ open: false, alert: null as Alert | null });
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' | 'warning' | 'info' });
   
   // Pagination state
   const [activePage, setActivePage] = useState(0);
@@ -57,17 +58,17 @@ const Alerts = () => {
     try {
       if (tabValue === 0) {
         const result = await getActiveAlerts(activePage + 1, rowsPerPage);
-        if (result.success) {
+        if (result.success && result.data) {
           const data = result.data;
-          setActiveAlerts(data.alerts || data || []);
-          setTotalActive(data.total || data.length || 0);
+          setActiveAlerts(data.alerts || []);
+          setTotalActive(data.total || (Array.isArray(data) ? data.length : 0));
         }
       } else {
         const result = await getAlertHistory(historyPage + 1, rowsPerPage);
-        if (result.success) {
+        if (result.success && result.data) {
           const data = result.data;
-          setAlertHistory(data.alerts || data || []);
-          setTotalHistory(data.total || data.length || 0);
+          setAlertHistory(data.alerts || []);
+          setTotalHistory(data.total || (Array.isArray(data) ? data.length : 0));
         }
       }
     } catch (error) {
@@ -76,7 +77,7 @@ const Alerts = () => {
     setLoading(false);
   };
 
-  const handleTabChange = (event, newValue) => {
+  const handleTabChange = (_event: any, newValue: number) => {
     setTabValue(newValue);
     // Reset pagination when switching tabs
     if (newValue === 0) {
@@ -86,22 +87,22 @@ const Alerts = () => {
     }
   };
 
-  const handleActivePageChange = (event, newPage) => {
+  const handleActivePageChange = (_event: any, newPage: number) => {
     setActivePage(newPage);
   };
 
-  const handleHistoryPageChange = (event, newPage) => {
+  const handleHistoryPageChange = (_event: any, newPage: number) => {
     setHistoryPage(newPage);
   };
 
-  const handleRowsPerPageChange = (event) => {
+  const handleRowsPerPageChange = (event: any) => {
     const newRowsPerPage = parseInt(event.target.value, 10);
     setRowsPerPage(newRowsPerPage);
     setActivePage(0);
     setHistoryPage(0);
   };
 
-  const handleAcknowledge = async (alertId) => {
+  const handleAcknowledge = async (alertId: number) => {
     try {
       const result = await acknowledgeAlert(alertId);
       if (result.success) {
@@ -137,7 +138,7 @@ const Alerts = () => {
     setResolveDialog({ open: false, alert: null });
   };
 
-  const getSeverityColor = (severity) => {
+  const getSeverityColor = (severity: string) => {
     switch (severity) {
       case 'critical': return 'error';
       case 'warning': return 'warning';
@@ -146,7 +147,7 @@ const Alerts = () => {
     }
   };
 
-  const getSeverityIcon = (severity) => {
+  const getSeverityIcon = (severity: string) => {
     switch (severity) {
       case 'critical': return '🔴';
       case 'warning': return '🟡';
@@ -155,7 +156,7 @@ const Alerts = () => {
     }
   };
 
-  const formatDate = (dateString) => {
+  const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString();
   };
 
@@ -305,13 +306,13 @@ const Alerts = () => {
         autoHideDuration={4000}
         onClose={() => setSnackbar({ ...snackbar, open: false })}
       >
-        <Alert
+        <MuiAlert
           onClose={() => setSnackbar({ ...snackbar, open: false })}
           severity={snackbar.severity}
           sx={{ width: '100%' }}
         >
           {snackbar.message}
-        </Alert>
+        </MuiAlert>
       </Snackbar>
     </Container>
   );
