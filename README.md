@@ -1,7 +1,7 @@
 # AgriSense — Open IoT Platform for Smart Agriculture
 
-[![Go Version](https://img.shields.io/badge/Go-1.21+-00ADD8)](https://golang.org)
-[![React Version](https://img.shields.io/badge/React-19+-61DAFB)](https://react.dev)
+[![Go Version](https://img.shields.io/badge/Go-1.25.5-00ADD8)](https://golang.org)
+[![React Version](https://img.shields.io/badge/React-19.2.0-61DAFB)](https://react.dev)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![CI](https://github.com/savvyinsight/agrisense/actions/workflows/frontend-ci.yml/badge.svg)](https://github.com/savvyinsight/agrisense/actions/workflows/frontend-ci.yml)
 [![CI](https://github.com/savvyinsight/agrisense/actions/workflows/backend-ci.yml/badge.svg)](https://github.com/savvyinsight/agrisense/actions/workflows/backend-ci.yml)
@@ -34,7 +34,7 @@ AgriSense is a full-stack, open-source IoT platform for real-time agricultural m
 ```
 agrisense/
 ├── backend/                   # Go backend services
-│   ├── cmd/                  # Executables (API server, MQTT handler)
+│   ├── cmd/                  # Executable entrypoint
 │   ├── internal/             # Business logic and adapters
 │   ├── deployments/          # Docker, nginx, Prometheus configs
 │   ├── test/                 # Integration & load tests
@@ -43,10 +43,14 @@ agrisense/
 │
 ├── frontend/                 # React + TypeScript frontend
 │   ├── src/
-│   │   ├── pages/           # Page components
-│   │   ├── components/      # Reusable UI components
 │   │   ├── api/             # API client functions
-│   │   └── hooks/           # Custom React hooks
+│   │   ├── assets/          # Static images and styles
+│   │   ├── features/        # Feature pages and views
+│   │   ├── locales/         # Translations and i18n resources
+│   │   ├── shared/          # Shared UI and utilities
+│   │   ├── App.tsx
+│   │   ├── i18n.ts
+│   │   └── main.tsx
 │   └── package.json
 │
 ├── docker-compose.yml        # Local development stack
@@ -58,7 +62,7 @@ agrisense/
 ### Prerequisites
 
 - **Docker & Docker Compose** (for full stack)
-- **Go 1.21+** (for backend development)
+- **Go 1.25+** (for backend development)
 - **Node.js 18+** (for frontend development)
 - **Make** (for convenient commands)
 
@@ -81,17 +85,13 @@ agrisense/
    make migrate-up
    ```
 
-4. **Start backend services in separate terminals**
+4. **Start the backend server**
    ```bash
-   # Terminal 1: API Server
-   go run cmd/server/main.go
-
-   # Terminal 2: MQTT Handler
-   go run cmd/mqtt-handler/main.go
-
-   # Terminal 3: Device Simulator (for testing)
-   go run scripts/generate-device-simulator/main.go
+   cd backend
+   go run cmd/agrisense/main.go
    ```
+
+   This launches the unified AgriSense backend, including the HTTP API, WebSocket hub, and MQTT handling.
 
 5. **Start frontend (in separate terminal)**
    ```bash
