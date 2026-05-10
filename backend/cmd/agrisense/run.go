@@ -101,7 +101,7 @@ func runServer(cliCtx *cli.Context) error {
 	defer ruleEngine.Stop()
 
 	// Data service
-	dataService := data.NewService(sensorTypeRepo, deviceRepo, *cacheRepo, influxRepo, ruleEngine)
+	dataService := data.NewService(sensorTypeRepo, deviceRepo, cacheRepo, influxRepo, ruleEngine)
 
 	// MQTT client (for publishing commands from the API server)
 	mqttClient, err := mqtt.NewClient(mqtt.Config{
@@ -171,7 +171,7 @@ func runServer(cliCtx *cli.Context) error {
 	// ── 6. Create HTTP handlers ────────────────────────────────────
 	authHandler := user.NewAuthHandler(authService)
 	deviceHandler := device.NewDeviceHandler(deviceRepo)
-	dataHandler := data.NewDataHandler(dataService)
+	dataHandler := data.NewDataHandler(dataService, deviceRepo)
 	alertHandler := alert.NewAlertHandler(alertService)
 	controlHandler := control.NewControlHandler(controlService)
 	automationHandler := automation.NewAutomationHandler(automationService)

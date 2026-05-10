@@ -3,30 +3,45 @@ package data
 import (
 	"log"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/savvyinsight/agrisense/internal/device"
 )
 
 type DataHandler struct {
 	dataService *Service
+	deviceRepo  device.DeviceRepository
 }
 
-func NewDataHandler(dataService *Service) *DataHandler {
+func NewDataHandler(dataService *Service, deviceRepo device.DeviceRepository) *DataHandler {
 	return &DataHandler{
 		dataService: dataService,
+		deviceRepo:  deviceRepo,
 	}
 }
 
 func (h *DataHandler) GetLatest(c *gin.Context) {
-	deviceID := c.Param("id") // Change from :deviceId to :id
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid device id"})
+		return
+	}
+
+	device, err := h.deviceRepo.GetByID(id)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "device not found"})
+		return
+	}
+
 	sensorType := c.Query("sensor_type")
 	if sensorType == "" {
 		sensorType = "temperature" // Default
 	}
 
-	reading, err := h.dataService.GetLatestReading(deviceID, sensorType)
+	reading, err := h.dataService.GetLatestReading(device.DeviceID, sensorType)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
@@ -36,7 +51,19 @@ func (h *DataHandler) GetLatest(c *gin.Context) {
 }
 
 func (h *DataHandler) GetHistorical(c *gin.Context) {
-	deviceID := c.Param("id") // Fix #1: Use "id", not "deviceId"
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid device id"})
+		return
+	}
+
+	device, err := h.deviceRepo.GetByID(id)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "device not found"})
+		return
+	}
+
+	deviceID := device.DeviceID
 	sensorType := c.Query("sensor_type")
 
 	log.Printf("GetHistorical called: device=%s, type=%s", deviceID, sensorType)
@@ -51,7 +78,6 @@ func (h *DataHandler) GetHistorical(c *gin.Context) {
 	endStr := c.Query("end")
 
 	var start, end time.Time
-	var err error
 
 	if startStr != "" {
 		start, err = time.Parse(time.RFC3339, startStr)
@@ -117,7 +143,19 @@ func (h *DataHandler) GetLatestForMultipleDevices(c *gin.Context) {
 }
 
 func (h *DataHandler) GetAggregated(c *gin.Context) {
-	deviceID := c.Param("deviceId")
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid device id"})
+		return
+	}
+
+	device, err := h.deviceRepo.GetByID(id)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "device not found"})
+		return
+	}
+
+	deviceID := device.DeviceID
 	sensorType := c.Query("sensor_type")
 	interval := c.DefaultQuery("interval", "1h")
 
@@ -131,7 +169,6 @@ func (h *DataHandler) GetAggregated(c *gin.Context) {
 	endStr := c.Query("end")
 
 	var start, end time.Time
-	var err error
 
 	if startStr != "" {
 		start, err = time.Parse(time.RFC3339, startStr)

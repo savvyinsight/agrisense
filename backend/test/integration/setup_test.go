@@ -56,6 +56,10 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		panic(err)
 	}
+	testDB.SetMaxOpenConns(1)
+	if err := testDB.PingContext(ctx); err != nil {
+		panic(err)
+	}
 
 	// Run migrations
 	migrationSQL, err := os.ReadFile("../../deployments/init/postgres/001_init.sql")
@@ -102,7 +106,9 @@ func TestMain(m *testing.M) {
 				"DOCKER_INFLUXDB_INIT_BUCKET":      "test-bucket",
 				"DOCKER_INFLUXDB_INIT_ADMIN_TOKEN": "test-token",
 			},
-			WaitingFor: wait.ForListeningPort("8086/tcp"),
+			WaitingFor: wait.ForHTTP("/health").WithPort("8086/tcp").WithStatusCodeMatcher(func(status int) bool {
+				return status == 200
+			}).WithStartupTimeout(60 * time.Second),
 		},
 		Started: true,
 	})
