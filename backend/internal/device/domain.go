@@ -28,6 +28,7 @@ type Device struct {
 	LastHeartbeat   *time.Time             `json:"last_heartbeat,omitempty"`
 	FirmwareVersion *string                `json:"firmware_version,omitempty"`
 	Config          map[string]interface{} `json:"config,omitempty"`
+	FieldID         *int                   `json:"field_id,omitempty"`
 	UserID          int                    `json:"user_id"`
 	CreatedAt       time.Time              `json:"created_at"`
 	UpdatedAt       time.Time              `json:"updated_at"`

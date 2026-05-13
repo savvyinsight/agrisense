@@ -13,8 +13,8 @@ type PostgresDeviceRepository struct {
 
 func (r *PostgresDeviceRepository) Create(device *Device) error {
 	query := `
-        INSERT INTO devices (device_id, name, type, location, latitude, longitude, status, firmware_version, config, user_id, created_at, updated_at)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+        INSERT INTO devices (device_id, name, type, location, latitude, longitude, status, firmware_version, config, field_id, user_id, created_at, updated_at)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
         RETURNING id
     `
 
@@ -34,6 +34,7 @@ func (r *PostgresDeviceRepository) Create(device *Device) error {
 		device.Status,
 		device.FirmwareVersion,
 		configJSON,
+		device.FieldID,
 		device.UserID,
 		time.Now(),
 		time.Now(),
@@ -45,7 +46,7 @@ func (r *PostgresDeviceRepository) Create(device *Device) error {
 func (r *PostgresDeviceRepository) GetByID(id int) (*Device, error) {
 	query := `
         SELECT id, device_id, name, type, location, latitude, longitude, status, last_heartbeat, 
-               firmware_version, config, user_id, created_at, updated_at
+               firmware_version, config, field_id, user_id, created_at, updated_at
         FROM devices WHERE id = $1
     `
 
@@ -66,6 +67,7 @@ func (r *PostgresDeviceRepository) GetByID(id int) (*Device, error) {
 		&device.LastHeartbeat,
 		&device.FirmwareVersion,
 		&configJSON,
+		&device.FieldID,
 		&device.UserID,
 		&device.CreatedAt,
 		&device.UpdatedAt,
@@ -95,7 +97,7 @@ func (r *PostgresDeviceRepository) GetByID(id int) (*Device, error) {
 func (r *PostgresDeviceRepository) GetByDeviceID(deviceID string) (*Device, error) {
 	query := `
         SELECT id, device_id, name, type, location, latitude, longitude, status, last_heartbeat, 
-               firmware_version, config, user_id, created_at, updated_at
+               firmware_version, config, field_id, user_id, created_at, updated_at
         FROM devices WHERE device_id = $1
     `
 
@@ -116,6 +118,7 @@ func (r *PostgresDeviceRepository) GetByDeviceID(deviceID string) (*Device, erro
 		&device.LastHeartbeat,
 		&device.FirmwareVersion,
 		&configJSON,
+		&device.FieldID,
 		&device.UserID,
 		&device.CreatedAt,
 		&device.UpdatedAt,
@@ -145,7 +148,7 @@ func (r *PostgresDeviceRepository) GetByDeviceID(deviceID string) (*Device, erro
 func (r *PostgresDeviceRepository) GetByUserID(userID int) ([]Device, error) {
 	query := `
         SELECT id, device_id, name, type, location, latitude, longitude, status, last_heartbeat, 
-               firmware_version, config, user_id, created_at, updated_at
+               firmware_version, config, field_id, user_id, created_at, updated_at
         FROM devices WHERE user_id = $1 ORDER BY id
     `
 
@@ -178,6 +181,7 @@ func (r *PostgresDeviceRepository) GetByUserID(userID int) ([]Device, error) {
 			&device.LastHeartbeat,
 			&device.FirmwareVersion,
 			&configJSON,
+			&device.FieldID,
 			&device.UserID,
 			&device.CreatedAt,
 			&device.UpdatedAt,
@@ -208,8 +212,8 @@ func (r *PostgresDeviceRepository) Update(device *Device) error {
 	query := `
         UPDATE devices 
         SET name = $1, type = $2, location = $3, latitude = $4, longitude = $5, status = $6, 
-            firmware_version = $7, config = $8, updated_at = $9
-        WHERE id = $10
+            firmware_version = $7, config = $8, field_id = $9, updated_at = $10
+        WHERE id = $11
     `
 
 	configJSON, err := json.Marshal(device.Config)
@@ -227,6 +231,7 @@ func (r *PostgresDeviceRepository) Update(device *Device) error {
 		device.Status,
 		device.FirmwareVersion,
 		configJSON,
+		device.FieldID,
 		time.Now(),
 		device.ID,
 	)
@@ -249,7 +254,7 @@ func (r *PostgresDeviceRepository) UpdateStatus(deviceID string, status DeviceSt
 func (r *PostgresDeviceRepository) List(userID int, limit, offset int) ([]Device, int64, error) {
 	query := `
         SELECT id, device_id, name, type, location, latitude, longitude, status, last_heartbeat, 
-               firmware_version, config, user_id, created_at, updated_at
+               firmware_version, config, field_id, user_id, created_at, updated_at
         FROM devices 
         WHERE user_id = $1 OR $1 = 0
         ORDER BY id 
@@ -284,6 +289,7 @@ func (r *PostgresDeviceRepository) List(userID int, limit, offset int) ([]Device
 			&device.LastHeartbeat,
 			&device.FirmwareVersion,
 			&configJSON,
+			&device.FieldID,
 			&device.UserID,
 			&device.CreatedAt,
 			&device.UpdatedAt,

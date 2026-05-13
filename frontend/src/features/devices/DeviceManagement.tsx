@@ -1,340 +1,161 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { Device } from '@/shared/types/api';
-import {
-  Container,
-  Typography,
-  Paper,
-  Box,
-  Button,
-  IconButton,
-  Tooltip,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
-  Snackbar,
-  Alert,
-  CircularProgress,
-} from '@mui/material';
-import EditIcon from '@mui/icons-material/Edit';
-import DeleteIcon from '@mui/icons-material/Delete';
-import AddCircleIcon from '@mui/icons-material/AddCircle';
+import { DataTable } from '@/shared/components/DataTable';
+import { Modal } from '@/shared/components/Modal';
+import { toast } from '@/shared/components/Toast';
 import { getDevices, createDevice, updateDevice, deleteDevice } from '@/features/devices/api';
+import type { Device } from '@/shared/types/api';
 
-type DeviceForm = Omit<Device, 'id' | 'created_at' | 'updated_at' | 'latitude' | 'longitude' | 'config'> & {
-  latitude: string;
-  longitude: string;
-  config: {
-    reporting_interval: number;
-    temperature_unit: 'celsius' | 'fahrenheit';
-  };
+const emptyForm = {
+  device_id: '', name: '', type: 'sensor', location: '',
+  latitude: '', longitude: '',
+  config: { reporting_interval: 60, temperature_unit: 'celsius' as 'celsius' | 'fahrenheit' },
 };
 
-const emptyForm: DeviceForm = {
-  device_id: '',
-  name: '',
-  type: 'sensor',
-  location: '',
-  status: 'offline',
-  latitude: '',
-  longitude: '',
-  config: {
-    reporting_interval: 60,
-    temperature_unit: 'celsius',
-  },
-};
-
-const DeviceManagement = () => {
+export default function DeviceManagement() {
   const { t } = useTranslation();
   const [devices, setDevices] = useState<Device[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
-  const [openDialog, setOpenDialog] = useState(false);
-  const [isEditMode, setIsEditMode] = useState(false);
-  const [selectedDevice, setSelectedDevice] = useState<Device | null>(null);
-  const [form, setForm] = useState<DeviceForm>(emptyForm);
+  const [open, setOpen] = useState(false);
+  const [editId, setEditId] = useState<number | null>(null);
+  const [form, setForm] = useState(emptyForm);
+  const [deleteTarget, setDeleteTarget] = useState<Device | null>(null);
 
-  const loadDevices = async () => {
+  const load = async () => {
     setLoading(true);
     const res = await getDevices();
-    if (res.success) {
-      setDevices(res.data?.devices || []);
-      setError('');
-    } else {
-      setError(res.error || 'Unable to load devices');
-    }
+    if (res.success) setDevices(res.data?.devices || []);
     setLoading(false);
   };
 
-  useEffect(() => {
-    loadDevices();
-  }, []);
+  useEffect(() => { load(); }, []);
 
-  const openNew = () => {
-    setIsEditMode(false);
-    setSelectedDevice(null);
-    setForm(emptyForm);
-    setOpenDialog(true);
+  const openNew = () => { setEditId(null); setForm(emptyForm); setOpen(true); };
+  const openEdit = (d: Device) => {
+    setEditId(d.id);
+    setForm({ device_id: d.device_id, name: d.name, type: d.type, location: d.location || '', latitude: d.latitude?.toString() ?? '', longitude: d.longitude?.toString() ?? '', config: { reporting_interval: d.config?.reporting_interval ?? 60, temperature_unit: (d.config?.temperature_unit as 'celsius' | 'fahrenheit') ?? 'celsius' } });
+    setOpen(true);
   };
 
-  const openEdit = (device: Device) => {
-    setIsEditMode(true);
-    setSelectedDevice(device);
-    setForm({
-      ...device,
-      status: device.status,
-      latitude: device.latitude?.toString() ?? '',
-      longitude: device.longitude?.toString() ?? '',
-      config: {
-        reporting_interval: device.config?.reporting_interval ?? 60,
-        temperature_unit: (device.config?.temperature_unit as 'celsius' | 'fahrenheit') ?? 'celsius',
-      },
-    });
-    setOpenDialog(true);
-  };
-
-  const closeDialog = () => {
-    setOpenDialog(false);
+  const save = async () => {
+    if (!form.device_id || !form.name) { setError(t('devices.idAndNameRequired')); return; }
     setError('');
-  };
-
-  const setField = (name: string, value: string | number) => {
-    if (name.startsWith('config.')) {
-      const key = name.split('.')[1] as keyof DeviceForm['config'];
-      setForm((prev: DeviceForm) => ({
-        ...prev,
-        config: {
-          ...prev.config,
-          [key]: value,
-        },
-      }));
-      return;
-    }
-
-    setForm((prev: DeviceForm) => ({ ...prev, [name]: value }));
-  };
-
-  const saveDevice = async () => {
-    if (!form.device_id || !form.name) {
-      setError('Device ID and Name are required');
-      return;
-    }
-
     const payload = {
-      device_id: form.device_id,
-      name: form.name,
-      type: form.type,
-      location: form.location,
-      latitude: parseFloat(form.latitude) || 0,
-      longitude: parseFloat(form.longitude) || 0,
-      config: {
-        reporting_interval: Number(form.config.reporting_interval) || 60,
-        temperature_unit: form.config.temperature_unit,
-      },
+      device_id: form.device_id, name: form.name, type: form.type, location: form.location,
+      latitude: parseFloat(form.latitude) || 0, longitude: parseFloat(form.longitude) || 0,
+      config: { reporting_interval: Number(form.config.reporting_interval), temperature_unit: form.config.temperature_unit },
     };
-
-    const result = selectedDevice?.id && isEditMode
-      ? await updateDevice(selectedDevice.id, payload)
-      : await createDevice(payload);
-
-    if (result.success) {
-      setSuccess(`Device ${isEditMode ? 'updated' : 'added'} successfully`);
-      closeDialog();
-      loadDevices();
-    } else {
-      setError(result.error || 'Failed to save device');
-    }
+    const res = editId ? await updateDevice(editId, payload) : await createDevice(payload);
+    if (res.success) { toast('success', editId ? t('devices.updated') : t('devices.created')); setOpen(false); load(); }
+    else setError(res.error || t('devices.failedToSave'));
   };
 
-  const removeDevice = async (id: number) => {
-    const result = await deleteDevice(id);
-    if (result.success) {
-      setSuccess('Device deleted successfully');
-      loadDevices();
-    } else {
-      setError(result.error || 'Failed to delete device');
+  const confirmRemove = (d: Device) => setDeleteTarget(d);
+
+  const executeRemove = async () => {
+    if (!deleteTarget?.id) return;
+    const res = await deleteDevice(deleteTarget.id);
+    if (res.success) { toast('success', t('devices.deleted')); setDeleteTarget(null); load(); }
+  };
+
+  const statusColor = (s: string) => {
+    switch (s) {
+      case 'online': return 'bg-success-bg text-success border-success/30';
+      case 'offline': return 'bg-critical-bg text-critical border-critical/30';
+      default: return 'bg-surface-hover text-text-muted border-border-default';
     }
   };
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 4 }}>
-      <Box
-        sx={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          mb: 3,
-        }}
-      >
-        <Typography variant="h4" fontWeight={700}>{t('devices.title')}</Typography>
-        <Button
-          sx={{ textTransform: 'none' }}
-          variant="contained"
-          startIcon={<AddCircleIcon />}
-          onClick={openNew}
-        >
-          {t('devices.addDevice')}
-        </Button>
-      </Box>
+    <div className="max-w-5xl mx-auto space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-lg font-bold text-text-primary">{t('devices.title')}</h1>
+          <p className="text-sm text-text-muted mt-0.5">{t('devices.subtitle')}</p>
+        </div>
+        <button onClick={openNew} className="px-3 py-2 rounded-lg bg-accent hover:bg-accent-hover text-white text-sm font-medium transition-colors">+ {t('devices.addDevice')}</button>
+      </div>
 
-      <Paper sx={{ p: 2, mb: 3 }} elevation={2}>
-        <Typography variant="body2" color="text.secondary">
-          {t('devices.subtitle')}
-        </Typography>
-      </Paper>
+      {error && <div className="text-sm p-3 rounded-lg bg-critical-bg text-critical border border-critical/30">{error}</div>}
 
       {loading ? (
-        <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
-          <CircularProgress />
-        </Box>
+        <div className="space-y-2">{[1, 2, 3].map((i) => <div key={i} className="h-12 rounded-lg bg-surface-card border border-border-default animate-pulse" />)}</div>
       ) : (
-        <TableContainer component={Paper} elevation={2} sx={{ mb: 3 }}>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>{t('devices.deviceId')}</TableCell>
-                <TableCell>{t('devices.deviceName')}</TableCell>
-                <TableCell>{t('devices.deviceType')}</TableCell>
-                <TableCell>{t('devices.location')}</TableCell>
-                <TableCell>{t('devices.status')}</TableCell>
-                <TableCell>{t('common.refresh')}</TableCell>
-                <TableCell align="right">{t('devices.actions')}</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {devices.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7} align="center" sx={{ py: 5 }}>
-                    {t('common.error')}. {t('common.add')} "{t('devices.addDevice')}" {t('common.view').toLowerCase()} {t('common.add')} {t('devices.deviceName').toLowerCase()}.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                devices.map((device) => (
-                  <TableRow key={device.id || device.device_id} hover>
-                    <TableCell>{device.device_id}</TableCell>
-                    <TableCell>{device.name}</TableCell>
-                    <TableCell>{device.type}</TableCell>
-                    <TableCell>{device.location || '-'}</TableCell>
-                    <TableCell>{device.status || 'unknown'}</TableCell>
-                    <TableCell>{device.config?.reporting_interval || '-'}</TableCell>
-                    <TableCell align="right">
-                      <Tooltip title="Edit">
-                        <IconButton onClick={() => openEdit(device)} size="small">
-                          <EditIcon />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="Delete">
-                        <IconButton onClick={() => removeDevice(device.id)} size="small" color="error">
-                          <DeleteIcon />
-                        </IconButton>
-                      </Tooltip>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
+        <DataTable
+          columns={[
+            { key: 'device_id', header: t('devices.deviceId') },
+            { key: 'name', header: t('devices.deviceName') },
+            { key: 'type', header: t('devices.deviceType') },
+            { key: 'location', header: t('devices.location'), render: (d: Device) => d.location || '-' },
+            { key: 'status', header: t('devices.status'), render: (d: Device) => <span className={`text-xs font-medium px-2 py-0.5 rounded-full border ${statusColor(d.status)}`}>{t(`devices.${d.status}`)}</span> },
+          ]}
+          data={devices}
+          keyExtractor={(d) => d.id ?? d.device_id}
+          onEdit={openEdit}
+          onDelete={confirmRemove}
+          emptyMessage={t('devices.noDevices')}
+        />
       )}
 
-      <Dialog open={openDialog} fullWidth maxWidth="sm" onClose={closeDialog}>
-        <DialogTitle>{isEditMode ? t('devices.editDevice') : t('devices.addDevice')}</DialogTitle>
-        <DialogContent sx={{ display: 'grid', gap: 16, mt: 1 }}>
-          <TextField
-            label={t('devices.deviceId')}
-            value={form.device_id}
-            onChange={(e) => setField('device_id', e.target.value)}
-            required
-            fullWidth
-          />
-          <TextField
-            label={t('devices.deviceName')}
-            value={form.name}
-            onChange={(e) => setField('name', e.target.value)}
-            required
-            fullWidth
-          />
+      <Modal open={open} onClose={() => setOpen(false)} title={editId ? t('devices.editDevice') : t('devices.addDevice')} actions={
+        <><button onClick={() => setOpen(false)} className="px-4 py-2 rounded-lg text-sm text-text-secondary hover:text-text-primary hover:bg-surface-hover transition-colors">{t('devices.cancel')}</button><button onClick={save} className="px-4 py-2 rounded-lg bg-accent hover:bg-accent-hover text-white text-sm font-medium transition-colors">{t('devices.save')}</button></>
+      }>
+        <div>
+          <label className="block text-xs font-medium text-text-secondary mb-1.5">{t('devices.deviceId')}</label>
+          <input value={form.device_id} onChange={(e) => setForm({ ...form, device_id: e.target.value })} className="w-full px-3 py-2 rounded-lg bg-surface-base border border-border-default text-text-primary text-sm focus:outline-none focus:border-accent" />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-text-secondary mb-1.5">{t('devices.deviceName')}</label>
+          <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="w-full px-3 py-2 rounded-lg bg-surface-base border border-border-default text-text-primary text-sm focus:outline-none focus:border-accent" />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-text-secondary mb-1.5">{t('devices.deviceType')}</label>
+          <select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })} className="w-full px-3 py-2 rounded-lg bg-surface-base border border-border-default text-text-primary text-sm focus:outline-none focus:border-accent">
+            <option value="sensor">{t('devices.sensor')}</option>
+            <option value="controller">{t('devices.controller')}</option>
+            <option value="both">{t('devices.gateway')}</option>
+          </select>
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-text-secondary mb-1.5">{t('devices.location')}</label>
+          <input value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} className="w-full px-3 py-2 rounded-lg bg-surface-base border border-border-default text-text-primary text-sm focus:outline-none focus:border-accent" />
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-xs font-medium text-text-secondary mb-1.5">{t('devices.latitude')}</label>
+            <input value={form.latitude} onChange={(e) => setForm({ ...form, latitude: e.target.value })} className="w-full px-3 py-2 rounded-lg bg-surface-base border border-border-default text-text-primary text-sm focus:outline-none focus:border-accent" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-text-secondary mb-1.5">{t('devices.longitude')}</label>
+            <input value={form.longitude} onChange={(e) => setForm({ ...form, longitude: e.target.value })} className="w-full px-3 py-2 rounded-lg bg-surface-base border border-border-default text-text-primary text-sm focus:outline-none focus:border-accent" />
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-xs font-medium text-text-secondary mb-1.5">{t('devices.reportingInterval')}</label>
+            <input type="number" value={form.config.reporting_interval} onChange={(e) => setForm({ ...form, config: { ...form.config, reporting_interval: Number(e.target.value) } })} className="w-full px-3 py-2 rounded-lg bg-surface-base border border-border-default text-text-primary text-sm focus:outline-none focus:border-accent" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-text-secondary mb-1.5">{t('devices.temperatureUnit')}</label>
+            <select value={form.config.temperature_unit} onChange={(e) => setForm({ ...form, config: { ...form.config, temperature_unit: e.target.value as 'celsius' | 'fahrenheit' } })} className="w-full px-3 py-2 rounded-lg bg-surface-base border border-border-default text-text-primary text-sm focus:outline-none focus:border-accent">
+              <option value="celsius">{t('devices.celsius')}</option>
+              <option value="fahrenheit">{t('devices.fahrenheit')}</option>
+            </select>
+          </div>
+        </div>
+      </Modal>
 
-          <FormControl fullWidth>
-            <InputLabel>{t('devices.deviceType')}</InputLabel>
-            <Select value={form.type} label={t('devices.deviceType')} onChange={(e) => setField('type', e.target.value)}>
-              <MenuItem value="sensor">{t('devices.sensor')}</MenuItem>
-              <MenuItem value="controller">{t('devices.controller')}</MenuItem>
-              <MenuItem value="both">{t('devices.gateway')}</MenuItem>
-            </Select>
-          </FormControl>
-
-          <TextField
-            label={t('devices.location')}
-            value={form.location}
-            onChange={(e) => setField('location', e.target.value)}
-            fullWidth
-          />
-
-          <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
-            <TextField
-              label="Latitude"
-              value={form.latitude}
-              onChange={(e) => setField('latitude', e.target.value)}
-              fullWidth
-            />
-            <TextField
-              label="Longitude"
-              value={form.longitude}
-              onChange={(e) => setField('longitude', e.target.value)}
-              fullWidth
-            />
-          </Box>
-
-          <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
-            <TextField
-              label={t('devices.firmwareVersion')}
-              type="number"
-              value={form.config.reporting_interval}
-              onChange={(e) => setField('config.reporting_interval', e.target.value)}
-              fullWidth
-            />
-            <FormControl fullWidth>
-              <InputLabel>{t('devices.batteryLevel')}</InputLabel>
-              <Select
-                value={form.config.temperature_unit}
-                label={t('devices.batteryLevel')}
-                onChange={(e) => setField('config.temperature_unit', e.target.value)}
-              >
-                <MenuItem value="celsius">Celsius</MenuItem>
-                <MenuItem value="fahrenheit">Fahrenheit</MenuItem>
-              </Select>
-            </FormControl>
-          </Box>
-
-          {error && <Alert severity="error">{error}</Alert>}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={closeDialog}>{t('common.cancel')}</Button>
-          <Button variant="contained" onClick={saveDevice}>{isEditMode ? t('common.edit') : t('common.add')}</Button>
-        </DialogActions>
-      </Dialog>
-
-      <Snackbar open={!!success} autoHideDuration={3500} onClose={() => setSuccess('')}>
-        <Alert onClose={() => setSuccess('')} severity="success" sx={{ width: '100%' }}>
-          {success}
-        </Alert>
-      </Snackbar>
-    </Container>
+      {/* Delete confirmation modal */}
+      <Modal open={deleteTarget !== null} onClose={() => setDeleteTarget(null)} title={t('devices.deleteConfirmTitle')} actions={
+        <><button onClick={() => setDeleteTarget(null)} className="px-4 py-2 min-h-[44px] rounded-lg text-sm text-text-secondary hover:text-text-primary hover:bg-surface-hover transition-colors">{t('common.cancel')}</button><button onClick={executeRemove} className="px-4 py-2 min-h-[44px] rounded-lg bg-critical hover:bg-critical/80 text-white text-sm font-medium transition-colors">{t('common.delete')}</button></>
+      }>
+        <div className="text-center py-2">
+          <span className="text-3xl block mb-3">⚠️</span>
+          <p className="text-sm text-text-primary font-medium mb-1">{t('common.delete')} {deleteTarget?.name || deleteTarget?.device_id}?</p>
+          <p className="text-xs text-text-muted">{t('devices.deleteConfirmDesc')}</p>
+        </div>
+      </Modal>
+    </div>
   );
-};
-
-export default DeviceManagement;
+}
