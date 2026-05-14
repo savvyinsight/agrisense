@@ -63,6 +63,7 @@ export interface Device {
   latitude?: number;
   longitude?: number;
   config?: DeviceConfig;
+  field_id?: number | null;
   latestTemp?: number | null;
   last_heartbeat?: string;
   created_at?: string;
@@ -119,10 +120,11 @@ export interface Alert {
   rule_name?: string;
   message: string;
   severity: 'info' | 'warning' | 'critical';
-  status?: 'active' | 'acknowledged' | 'resolved';
+  status: 'triggered' | 'acknowledged' | 'resolved';
   triggered_at: string;
-  acknowledged?: boolean;
-  resolved?: boolean;
+  acknowledged_at?: string;
+  resolved_at?: string;
+  metadata?: Record<string, unknown>;
 }
 
 export interface AlertsResponse {

@@ -1,151 +1,73 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-  Container,
-  Box,
-  Typography,
-  TextField,
-  Button,
-  Paper,
-  Alert,
-  Tabs,
-  Tab,
-} from '@mui/material';
+import { useTranslation } from 'react-i18next';
 import { login, register } from '@/features/auth/api';
-import { useAuth } from '@/features/auth/AuthContext';
+import { useAuthStore } from '@/shared/stores/authStore';
 
-interface LoginFormData {
-  username: string;
-  email: string;
-  password: string;
-}
-
-const Login: React.FC = () => {
+export default function Login() {
   const navigate = useNavigate();
-  const { setUser } = useAuth();
-  const [tab, setTab] = useState<number>(0);
-  const [formData, setFormData] = useState<LoginFormData>({
-    username: '',
-    email: '',
-    password: '',
-  });
-  const [error, setError] = useState<string>('');
-  const [loading, setLoading] = useState<boolean>(false);
+  const { t } = useTranslation();
+  const { setAuth } = useAuthStore();
+  const [tab, setTab] = useState<0 | 1>(0);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [username, setUsername] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
-
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setLoading(true);
-
-    let result: any;
     if (tab === 0) {
-      result = await login(formData.email, formData.password);
-      if (result.success && result.data) {
-        setUser(result.data.user);
-        navigate('/dashboard');
-      }
+      const result = await login(email, password);
+      if (result.success && result.data) { setAuth(result.data.user, result.data.token); navigate('/dashboard'); }
+      else setError(result.error || t('auth.loginFailed'));
     } else {
-      result = await register(formData.username, formData.email, formData.password);
-      if (result.success) {
-        setTab(0);
-        setError('Registration successful! Please login.');
-      }
-    }
-
-    if (!result.success) {
-      setError(result.error);
+      const result = await register(username, email, password);
+      if (result.success) { setTab(0); setError(t('auth.registerSuccess')); }
+      else setError(result.error || t('auth.registerFailed'));
     }
     setLoading(false);
   };
+
   return (
-    <Container 
-      component="main" 
-      maxWidth="xs"
-      sx={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-      }}
-    >
-      <Box
-        sx={{
-          marginTop: 8,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-        }}
-      >
-        <Paper elevation={3} sx={{ p: 4, width: '100%' }}>
-          <Typography component="h1" variant="h5" align="center" gutterBottom>
-            AgriSenseIoT
-          </Typography>
-          
-          <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ mb: 3 }}>
-            <Tab label="Login" />
-            <Tab label="Register" />
-          </Tabs>
+    <div className="min-h-screen bg-surface-base flex items-center justify-center p-4">
+      <div className="w-full max-w-sm">
+        <div className="text-center mb-8">
+          <h1 className="text-2xl font-bold text-text-primary tracking-tight">{t('auth.appTitle')}</h1>
+          <p className="text-sm text-text-muted mt-1">{t('auth.appSubtitle')}</p>
+        </div>
 
-          {error && (
-            <Alert severity={error.includes('successful') ? 'success' : 'error'} sx={{ mb: 2 }}>
-              {error}
-            </Alert>
-          )}
+        <div className="rounded-xl border border-border-default bg-surface-card p-6">
+          <div className="flex gap-1 rounded-lg bg-surface-base p-1 mb-6">
+            <button onClick={() => setTab(0)} className={`flex-1 py-2 text-sm font-medium rounded-md transition-colors ${tab === 0 ? 'bg-accent text-white' : 'text-text-secondary hover:text-text-primary'}`}>{t('auth.signIn')}</button>
+            <button onClick={() => setTab(1)} className={`flex-1 py-2 text-sm font-medium rounded-md transition-colors ${tab === 1 ? 'bg-accent text-white' : 'text-text-secondary hover:text-text-primary'}`}>{t('auth.createAccount')}</button>
+          </div>
 
-          <Box component="form" onSubmit={handleSubmit}>
+          {error && <div className={`text-sm p-3 rounded-lg mb-4 ${error.includes('successful') ? 'bg-success-bg text-success' : 'bg-critical-bg text-critical'}`}>{error}</div>}
+
+          <form onSubmit={handleSubmit} className="space-y-4">
             {tab === 1 && (
-              <TextField
-                margin="normal"
-                required
-                fullWidth
-                name="username"
-                label="Username"
-                value={formData.username}
-                onChange={handleChange}
-              />
+              <div>
+                <label className="block text-sm font-medium text-text-secondary mb-1.5">{t('auth.username')}</label>
+                <input type="text" value={username} onChange={(e) => setUsername(e.target.value)} className="w-full px-3 py-2 rounded-lg bg-surface-base border border-border-default text-text-primary placeholder-text-muted text-sm focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-colors" placeholder={t('auth.yourUsername')} required />
+              </div>
             )}
-            <TextField
-              margin="normal"
-              required
-              fullWidth
-              name="email"
-              label="Email"
-              type="email"
-              value={formData.email}
-              onChange={handleChange}
-            />
-            <TextField
-              margin="normal"
-              required
-              fullWidth
-              name="password"
-              label="Password"
-              type="password"
-              value={formData.password}
-              onChange={handleChange}
-            />
-            <Button
-              type="submit"
-              fullWidth
-              variant="contained"
-              sx={{ mt: 3, mb: 2 }}
-              disabled={loading}
-            >
-              {loading ? 'Please wait...' : tab === 0 ? 'Sign In' : 'Sign Up'}
-            </Button>
-          </Box>
-        </Paper>
-      </Box>
-    </Container>
+            <div>
+              <label className="block text-sm font-medium text-text-secondary mb-1.5">{t('auth.email')}</label>
+              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full px-3 py-2 rounded-lg bg-surface-base border border-border-default text-text-primary placeholder-text-muted text-sm focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-colors" placeholder={t('auth.yourEmail')} required />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-text-secondary mb-1.5">{t('auth.password')}</label>
+              <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full px-3 py-2 rounded-lg bg-surface-base border border-border-default text-text-primary placeholder-text-muted text-sm focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-colors" placeholder={t('auth.yourPassword')} required />
+            </div>
+            <button type="submit" disabled={loading} className="w-full py-2.5 rounded-lg bg-accent hover:bg-accent-hover text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+              {loading ? t('common.loading') : tab === 0 ? t('auth.signIn') : t('auth.createAccount')}
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
   );
-};
-
-export default Login;
+}

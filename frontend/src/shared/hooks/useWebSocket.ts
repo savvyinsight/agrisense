@@ -18,7 +18,7 @@ export const useWebSocket = (token: string | null, onMessage?: (data: WebSocketM
       wsRef.current.close();
     }
 
-    const ws = new WebSocket(`ws://localhost:8080/ws?token=${token}`);
+    const ws = new WebSocket(`/ws?token=${token}`);
     wsRef.current = ws;
 
     ws.onopen = () => {
