@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	"agrisense/internal/user"
+	"github.com/savvyinsight/agrisense/internal/user"
 )
 
 const (
@@ -37,7 +37,7 @@ func TenantIsolationMiddleware(next http.Handler) http.Handler {
 		}
 
 		// User MUST have an account_id
-		if usr.AccountID == nil {
+		if usr.AccountID == 0 {
 			http.Error(w, "User account not found", http.StatusForbidden)
 			return
 		}
@@ -52,7 +52,7 @@ func TenantIsolationMiddleware(next http.Handler) http.Handler {
 			}
 
 			// Enforce tenant isolation: user can only access their own account
-			if reqAccountIDInt != *usr.AccountID {
+			if reqAccountIDInt != usr.AccountID {
 				http.Error(w, "Forbidden: Cannot access another account's data", http.StatusForbidden)
 				return
 			}
@@ -60,7 +60,7 @@ func TenantIsolationMiddleware(next http.Handler) http.Handler {
 
 		// Store user and account info in context for handlers
 		ctx = context.WithValue(ctx, ContextKeyUser, usr)
-		ctx = context.WithValue(ctx, ContextKeyAccountID, *usr.AccountID)
+		ctx = context.WithValue(ctx, ContextKeyAccountID, usr.AccountID)
 
 		// Extract farm_id if present
 		farmIDStr := r.URL.Query().Get("farm_id")

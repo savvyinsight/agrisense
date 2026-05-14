@@ -22,7 +22,7 @@ type User struct {
 	Email     string    `json:"email"`
 	Password  string    `json:"-"` // excluded from JSON
 	Role      string    `json:"role"` // DEPRECATED - use UserPermission instead
-	AccountID *int      `json:"account_id"` // NULL for system users
+	AccountID int       `json:"account_id"` // Account ownership (can be 0 for system users)
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }

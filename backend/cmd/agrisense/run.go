@@ -89,6 +89,12 @@ func runServer(cliCtx *cli.Context) error {
 	alertRepo := &alert.PostgresAlertRepository{DB: pgDB}
 	cacheRepo := redis.NewCacheRepository(redisClient)
 
+	// Multi-tenant RBAC repositories
+	accountRepo := &user.PostgresAccountRepository{DB: pgDB}
+	permissionRepo := &user.PostgresPermissionRepository{DB: pgDB}
+	invitationRepo := &user.PostgresInvitationRepository{DB: pgDB}
+	auditRepo := &user.PostgresAuditLogRepository{DB: pgDB}
+
 	// ── 4. Create services ─────────────────────────────────────────
 	authService := user.NewService(userRepo, cfg.JWTSecret, 24*time.Hour)
 	wsHandler := websocket.NewHander(authService)
@@ -176,6 +182,15 @@ func runServer(cliCtx *cli.Context) error {
 	controlHandler := control.NewControlHandler(controlService)
 	automationHandler := automation.NewAutomationHandler(automationService)
 	analyticsHandler := analytics.NewAnalyticsHandler(analyticsService)
+	
+	// Multi-tenant RBAC handler
+	userHandler := &user.UserHandler{
+		UserRepo:       userRepo,
+		AccountRepo:    accountRepo,
+		PermissionRepo: permissionRepo,
+		InvitationRepo: invitationRepo,
+		AuditRepo:      auditRepo,
+	}
 
 	// ── 7. Setup HTTP router ──────────────────────────────────────
 	r := gin.Default()
@@ -269,6 +284,19 @@ func runServer(cliCtx *cli.Context) error {
 			deviceGroup.POST("/commands", controlHandler.SendCommand)
 			deviceGroup.GET("/commands", controlHandler.ListDeviceCommands)
 			deviceGroup.GET("/commands/:cmdId", controlHandler.GetCommandStatus)
+		}
+
+		// Multi-tenant RBAC routes
+		accounts := api.Group("/accounts/:id")
+		{
+			// Team management
+			accounts.GET("/users", userHandler.ListTeamHandler)
+			accounts.POST("/users/invite", userHandler.InviteUserHandler)
+			accounts.PUT("/users/permission", userHandler.UpdateUserPermissionHandler)
+			accounts.DELETE("/users/permission", userHandler.RevokeUserHandler)
+
+			// Audit log
+			accounts.GET("/audit", userHandler.GetAuditLogHandler)
 		}
 	}
 

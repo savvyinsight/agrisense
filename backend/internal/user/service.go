@@ -15,9 +15,10 @@ type Service struct {
 }
 
 type Claims struct {
-	UserID int    `json:"user_id"`
-	Email  string `json:"email"`
-	Role   string `json:"role"`
+	UserID    int    `json:"user_id"`
+	Email     string `json:"email"`
+	Role      string `json:"role"`
+	AccountID int    `json:"account_id"`
 	jwt.RegisteredClaims
 }
 
@@ -108,9 +109,10 @@ func (s *Service) generateToken(user *User) (string, error) {
 	expirationTime := time.Now().Add(s.tokenExpiry)
 
 	claims := &Claims{
-		UserID: user.ID,
-		Email:  user.Email,
-		Role:   user.Role,
+		UserID:    user.ID,
+		Email:     user.Email,
+		Role:      user.Role,
+		AccountID: user.AccountID,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(expirationTime),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
