@@ -11,7 +11,7 @@ import {
   TableHead,
   TableRow,
   TablePagination,
-  TextField,
+  
   Select,
   MenuItem,
   Button,
@@ -92,7 +92,7 @@ export const AuditLogViewer: React.FC = () => {
     }
   };
 
-  const handleChangePage = (event: unknown, newPage: number) => {
+  const handleChangePage = (_event: unknown, newPage: number) => {
     setPage(newPage);
   };
 

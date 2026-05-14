@@ -74,7 +74,7 @@ interface Invitation {
 }
 
 export const TeamManagement: React.FC = () => {
-  const { user, account } = useAuth();
+  const { account } = useAuth();
   const { canInviteUsers } = usePermission();
 
   const [tabValue, setTabValue] = useState(0);
@@ -257,7 +257,7 @@ export const TeamManagement: React.FC = () => {
 
           <Tabs
             value={tabValue}
-            onChange={(e, newValue) => setTabValue(newValue)}
+            onChange={(_e, newValue) => setTabValue(newValue)}
             sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}
           >
             <Tab label={`Team Members (${teamMembers.length})`} />

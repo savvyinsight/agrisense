@@ -10,7 +10,7 @@ interface IrrigationHistoryProps {
 
 export function IrrigationHistory({ zone, zoneId, className }: IrrigationHistoryProps) {
   const [events, setEvents] = useState<IrrigationEvent[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [_loading, _setLoading] = useState(false);
 
   useEffect(() => {
     // Mock data: In production, fetch from API

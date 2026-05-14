@@ -41,9 +41,8 @@ export function AlertRuleDetail({ alert, rules, className }: AlertRuleDetailProp
       {showRuleDetail && (
         <Modal
           title={`Alert Rule: ${rule.name}`}
-          isOpen={showRuleDetail}
+          open={showRuleDetail}
           onClose={() => setShowRuleDetail(false)}
-          size="md"
         >
           <div className="space-y-4">
             {/* Rule Name & Status */}

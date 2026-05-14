@@ -70,16 +70,6 @@ export class AlertNotificationService {
       badge: '/logo-badge.png',
       tag: `alert-${alert.id}`,
       requireInteraction: alert.severity === 'critical',
-      actions: [
-        {
-          action: 'view',
-          title: 'View',
-        },
-        {
-          action: 'dismiss',
-          title: 'Dismiss',
-        },
-      ],
       data: {
         alert_id: alert.id,
         field_id: alert.field_id,
@@ -102,15 +92,6 @@ export class AlertNotificationService {
         notification.close();
       };
 
-      // Handle action buttons
-      notification.onaction = (event) => {
-        if (event.action === 'view') {
-          window.focus();
-          window.location.href = `/alerts?id=${alert.id}`;
-        }
-        notification.close();
-      };
-
       // Auto-close non-critical alerts after 10 seconds
       if (alert.severity !== 'critical') {
         setTimeout(() => notification.close(), 10000);
@@ -123,7 +104,7 @@ export class AlertNotificationService {
   /**
    * Close specific notification
    */
-  closeAlert(alertId: number): void {
+  closeAlert(): void {
     // Browser doesn't provide API to close specific notifications
     // This is a placeholder for future enhancement
   }

@@ -222,3 +222,36 @@ export interface AnalyticsResponse {
   data?: AnalyticsReport;
   error?: string;
 }
+
+// Irrigation Types
+export interface IrrigationZone {
+  id: number;
+  name: string;
+  field_id: number;
+  location?: {
+    latitude: number;
+    longitude: number;
+  };
+  target_moisture: number;
+  current_moisture?: number;
+  status: 'idle' | 'running' | 'error';
+  last_run?: string;
+  created_at?: string;
+}
+
+export interface IrrigationEvent {
+  id: number;
+  field_id: number;
+  zone_id: number;
+  status: 'scheduled' | 'running' | 'completed' | 'failed';
+  start_time: string;
+  end_time?: string;
+  duration_minutes: number;
+  water_usage_liters: number;
+  trigger_type?: 'manual' | 'schedule' | 'rule';
+}
+
+export interface IrrigationResponse {
+  zones: IrrigationZone[];
+  total: number;
+}

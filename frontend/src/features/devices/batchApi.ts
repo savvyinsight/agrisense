@@ -1,5 +1,4 @@
 import api from '@/api/client';
-import type { ApiResponse } from '@/shared/types';
 
 /**
  * Batch device data API - optimized for bulk operations

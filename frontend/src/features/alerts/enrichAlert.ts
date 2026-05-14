@@ -9,16 +9,17 @@ export function enrichAlert(
   rules: AlertRule[] = [],
   fieldContext?: { field_id?: number; field_name?: string; crop?: string }
 ): Alert2 {
+  const deviceNum = rawAlert.device_id ? rawAlert.device_id.split('_')[1] : null;
   const rule = rules.find((r) => 
-    (r.device_id === null || r.device_id === rawAlert.device_id?.split('_')[1]) &&
+    (r.device_id === null || r.device_id?.toString() === deviceNum) &&
     r.enabled
   );
 
-  let severity = rawAlert.severity || 'medium';
+  let severity: 'critical' | 'high' | 'medium' | 'low' = (rawAlert.severity as any) || 'medium';
   let recommendedAction = rawAlert.recommended_action || 'Monitor situation';
 
   if (rule) {
-    severity = (rule.severity === 'critical' || rule.severity === 'warning') ? rule.severity : 'medium';
+    severity = (rule.severity === 'critical') ? (rule.severity as any) : 'medium';
     
     // Generate context-aware recommendations
     if (rule.sensor_type_id === 1) { // Temperature sensor
@@ -51,7 +52,7 @@ export function enrichAlert(
     rule_name: rule?.name || rawAlert.rule_name,
     title,
     message: rawAlert.message || '',
-    severity: severity as any,
+    severity,
     status: rawAlert.status || 'active',
     confidence: rawAlert.confidence || 85,
     triggered_at: rawAlert.triggered_at || new Date().toISOString(),
@@ -64,8 +65,7 @@ export function enrichAlert(
  */
 export function shouldTriggerAlert(
   value: number,
-  rule: AlertRule,
-  duration_seconds = 0
+  rule: AlertRule
 ): boolean {
   const threshold = typeof rule.threshold_value === 'string' 
     ? parseFloat(rule.threshold_value) 

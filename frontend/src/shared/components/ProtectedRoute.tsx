@@ -1,6 +1,6 @@
 import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
-import { Box, CircularProgress, Alert, Button } from '@mui/material';
+import { Box, CircularProgress, Alert } from '@mui/material';
 import { useAuth } from '@/features/auth/AuthContext';
 import usePermission from '@/hooks/usePermission';
 

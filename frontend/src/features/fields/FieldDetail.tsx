@@ -1,8 +1,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { AlertBanner } from '@/shared/components/AlertBanner';
-import { TrendChart, generateTrendData } from '@/shared/components/TrendChart';
+import { TrendChart } from '@/shared/components/TrendChart';
 import { getField } from '@/features/fields/api';
 import type { Field } from '@/shared/types';
 import { cn } from '@/shared/lib/cn';
@@ -176,4 +175,27 @@ export default function FieldDetail() {
       </div>
     </div>
   );
+}
+
+// Helper function to generate trend data
+function generateTrendData(
+  days: number,
+  baseValue: number,
+  variance: number,
+  options?: { secondary?: { base: number; variance: number } }
+): { label: string; value: number; secondary?: number }[] {
+  const data = [];
+  const now = new Date();
+  for (let i = days - 1; i >= 0; i--) {
+    const date = new Date(now);
+    date.setDate(date.getDate() - i);
+    const value = baseValue + (Math.random() - 0.5) * variance * 2;
+    const secondary = options?.secondary ? options.secondary.base + (Math.random() - 0.5) * options.secondary.variance * 2 : undefined;
+    data.push({
+      label: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      value: Math.round(value * 10) / 10,
+      secondary: secondary ? Math.round(secondary * 10) / 10 : undefined,
+    });
+  }
+  return data;
 }

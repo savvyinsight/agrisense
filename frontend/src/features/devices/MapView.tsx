@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { FarmMap } from '@/shared/components/FarmMap';
-import { getDevices, getDevicesDataLatest } from '@/features/devices/api';
+import { getDevices } from '@/features/devices/api';
 import { getFields } from '@/features/fields/api';
 import type { Device } from '@/shared/types/api';
 import type { Field } from '@/shared/types';
