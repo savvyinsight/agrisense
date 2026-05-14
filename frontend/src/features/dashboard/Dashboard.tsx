@@ -320,11 +320,11 @@ export default function Dashboard() {
         <div className="rounded-lg border border-border-default bg-surface-card p-4">
           <h3 className="text-sm font-semibold text-text-primary mb-4">{t('dashboard.irrigationToday')}</h3>
           <div className="space-y-2.5">
-            {[{ zone: t('irrigation.title'), status: t('irrigation.active'), time: 'Running 60m', water: '5,700 L', urgent: true },
-              { zone: t('irrigation.title'), status: t('irrigation.active'), time: 'Running 45m', water: '5,400 L', urgent: false },
-              { zone: t('irrigation.title'), status: t('irrigation.failed'), time: 'Failed 15m ago', water: '0 L', urgent: true },
+            {[{ id: 'north', zone: 'North Field', status: t('irrigation.active'), time: 'Running 60m', water: '5,700 L', urgent: true },
+              { id: 'central', zone: 'Central Field', status: t('irrigation.active'), time: 'Running 45m', water: '5,400 L', urgent: false },
+              { id: 'south', zone: 'South Field', status: t('irrigation.failed'), time: 'Failed 15m ago', water: '0 L', urgent: true },
             ].map((item) => (
-              <div key={item.zone} className={cn('flex items-center justify-between py-2 px-3 rounded-md', item.urgent ? 'bg-critical-bg' : '')}>
+              <div key={item.id} className={cn('flex items-center justify-between py-2 px-3 rounded-md', item.urgent ? 'bg-critical-bg' : '')}>
                 <div className="flex items-center gap-2">
                   <span className={cn('w-2 h-2 rounded-full', item.urgent ? 'bg-critical' : 'bg-info-bright')} />
                   <span className="text-sm text-text-primary">{item.zone}</span>
