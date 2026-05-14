@@ -3,10 +3,13 @@ import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '@/shared/stores/authStore';
 import { useAlertsStore } from '@/shared/stores/alertsStore';
 import { useWebSocket } from '@/shared/hooks/useWebSocket';
-import { getActiveAlerts, getAlertHistory, acknowledgeAlert } from '@/features/alerts/api';
+import { getActiveAlerts, getAlertHistory, acknowledgeAlert, getAlertRules } from '@/features/alerts/api';
+import { groupAlerts, getIssueTypeEmoji, getIssueTypeLabel } from '@/features/alerts/groupAlerts';
+import { alertNotificationService } from '@/features/alerts/NotificationService';
+import { AlertRuleDetail } from '@/features/alerts/AlertRuleDetail';
 import { cn } from '@/shared/lib/cn';
 import { toast } from '@/shared/components/Toast';
-import type { Alert2, WebSocketMessage, SensorDataMessage } from '@/shared/types';
+import type { Alert2, WebSocketMessage, SensorDataMessage, AlertRule } from '@/shared/types';
 
 const severityIcon: Record<string, string> = { critical: '🔴', high: '🟠', medium: '🟡', low: '🔵' };
 const severityBorder: Record<string, string> = { critical: 'border-l-critical', high: 'border-l-warning', medium: 'border-l-warning', low: 'border-l-info' };
@@ -16,31 +19,49 @@ export default function Alerts() {
   const { t } = useTranslation();
   const { alerts, setAlerts, addAlert } = useAlertsStore();
   const token = useAuthStore((s) => s.token);
-  const [tab, setTab] = useState<'active' | 'history'>('active');
+  const [tab, setTab] = useState<'active' | 'history' | 'grouped'>('active');
   const [history, setHistory] = useState<Alert2[]>([]);
+  const [alertRules, setAlertRules] = useState<AlertRule[]>([]);
   const [loading, setLoading] = useState(true);
+  const [notificationEnabled, setNotificationEnabled] = useState(false);
 
   useWebSocket(token, (data: WebSocketMessage) => {
     if (data.type !== 'sensor_data') return;
     const p = (data as SensorDataMessage).payload as { device_id: string; value: number };
     if (p.value > 30) {
-      addAlert({
+      const newAlert: Alert2 = {
         id: Date.now(), device_id: p.device_id,
         title: `High temperature detected on ${p.device_id}`,
         message: `Temperature reached ${p.value.toFixed(1)}°C — above safe threshold of 30°C`,
         severity: p.value > 35 ? 'critical' : 'high', status: 'active', triggered_at: new Date().toISOString(),
         recommended_action: p.value > 35 ? 'Inspect field immediately. Check irrigation and shade coverage.' : 'Monitor temperature. Consider ventilation.',
         confidence: p.value > 35 ? 95 : 80,
-      });
+      };
+      addAlert(newAlert);
+      // Send push notification if enabled
+      if (notificationEnabled) {
+        alertNotificationService.sendAlert(newAlert);
+      }
     }
   });
 
   useEffect(() => {
+    // Request notification permission on mount
+    alertNotificationService.requestPermission().then((granted) => {
+      setNotificationEnabled(granted);
+    });
+  }, []);
+
+  useEffect(() => {
     (async () => {
       setLoading(true);
-      const res = tab === 'active' ? await getActiveAlerts() : await getAlertHistory();
-      if (res.success && res.data) {
-        const mapped: Alert2[] = (res.data.alerts || []).map((a) => ({
+      const [alertRes, rulesRes] = await Promise.all([
+        tab === 'active' ? getActiveAlerts() : getAlertHistory(),
+        getAlertRules(),
+      ]);
+
+      if (alertRes.success && alertRes.data) {
+        const mapped: Alert2[] = (alertRes.data.alerts || []).map((a) => ({
           id: a.id, device_id: a.device_id, device_name: a.device_name, rule_name: a.rule_name,
           title: a.message, message: a.message,
           severity: a.severity === 'critical' ? 'critical' : a.severity === 'warning' ? 'high' : 'medium',
@@ -51,6 +72,11 @@ export default function Alerts() {
         if (tab === 'active') setAlerts(mapped);
         else setHistory(mapped);
       }
+
+      if (rulesRes.success && rulesRes.data) {
+        setAlertRules(rulesRes.data.rules || []);
+      }
+
       setLoading(false);
     })();
   }, [tab, setAlerts]);
@@ -61,7 +87,8 @@ export default function Alerts() {
     else toast('error', t('alerts.acknowledgeError'));
   };
 
-  const display = tab === 'active' ? alerts : history;
+  const display = tab === 'active' ? alerts : tab === 'history' ? history : alerts;
+  const grouped = groupAlerts(display);
   const activeCount = alerts.filter((a) => a.status === 'active').length;
   const critical = display.filter((a) => a.severity === 'critical');
   const high = display.filter((a) => a.severity === 'high');
@@ -79,9 +106,17 @@ export default function Alerts() {
         <button onClick={() => setTab('active')} className={cn('px-4 py-2 text-sm font-medium rounded-md transition-colors', tab === 'active' ? 'bg-accent text-white' : 'text-text-secondary hover:text-text-primary')}>
           Active ({activeCount})
         </button>
+        <button onClick={() => setTab('grouped')} className={cn('px-4 py-2 text-sm font-medium rounded-md transition-colors', tab === 'grouped' ? 'bg-accent text-white' : 'text-text-secondary hover:text-text-primary')}>
+          Grouped ({grouped.length})
+        </button>
         <button onClick={() => setTab('history')} className={cn('px-4 py-2 text-sm font-medium rounded-md transition-colors', tab === 'history' ? 'bg-accent text-white' : 'text-text-secondary hover:text-text-primary')}>
           History ({history.length})
         </button>
+        {!notificationEnabled && (
+          <button onClick={() => alertNotificationService.requestPermission().then(setNotificationEnabled)} className={cn('px-4 py-2 text-sm font-medium rounded-md transition-colors ml-auto text-yellow-600 hover:text-yellow-700 bg-yellow-50')}>
+            🔔 Enable Notifications
+          </button>
+        )}
       </div>
 
       {loading ? (
@@ -161,6 +196,77 @@ export default function Alerts() {
                   </div>
                 ))}
               </div>
+            </div>
+          )}
+
+          {/* Grouped view */}
+          {tab === 'grouped' && (
+            <div className="space-y-4">
+              {grouped.length === 0 ? (
+                <div className="rounded-lg border border-border-default bg-surface-card p-8 text-center">
+                  <span className="text-3xl block mb-3">✅</span>
+                  <p className="text-sm text-text-primary font-medium">No grouped alerts</p>
+                </div>
+              ) : (
+                grouped.map((group) => (
+                  <div
+                    key={group.key}
+                    className={cn(
+                      'rounded-lg border border-l-[4px] p-4',
+                      group.severity === 'critical'
+                        ? 'bg-critical-bg border-critical'
+                        : group.severity === 'high'
+                          ? 'bg-warning-bg border-warning'
+                          : 'bg-surface-card border-border-default'
+                    )}
+                  >
+                    <div className="flex items-start gap-3">
+                      <span className="text-2xl">{getIssueTypeEmoji(group.issue_type)}</span>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 flex-wrap mb-2">
+                          <span className="text-sm font-bold text-text-primary">
+                            {group.field_name || 'Farm'} — {getIssueTypeLabel(group.issue_type)}
+                          </span>
+                          <span
+                            className={cn(
+                              'px-2 py-1 rounded text-xs font-semibold',
+                              group.severity === 'critical'
+                                ? 'bg-critical text-white'
+                                : group.severity === 'high'
+                                  ? 'bg-warning text-white'
+                                  : 'bg-text-muted text-white'
+                            )}
+                          >
+                            {group.count} {group.count === 1 ? 'Alert' : 'Alerts'}
+                          </span>
+                        </div>
+
+                        <p className="text-sm text-text-secondary mb-3">{group.latest.title}</p>
+
+                        {group.latest.recommended_action && (
+                          <div className="mb-3 text-sm bg-text-primary/5 rounded-md p-2.5 border border-text-primary/10">
+                            <span className="font-semibold text-text-primary text-xs uppercase">Recommendation</span>
+                            <p className="text-text-secondary mt-0.5">{group.latest.recommended_action}</p>
+                          </div>
+                        )}
+
+                        <div className="text-xs text-text-muted mb-3">
+                          <p>First triggered: {new Date(group.first_triggered).toLocaleString()}</p>
+                          <p>Last triggered: {new Date(group.last_triggered).toLocaleString()}</p>
+                        </div>
+
+                        {group.latest.rule_name && (
+                          <AlertRuleDetail alert={group.latest} rules={alertRules} className="mb-3" />
+                        )}
+
+                        <button onClick={() => handleAcknowledge(group.latest.id)} className="px-3 py-1.5 text-xs font-medium rounded-md bg-surface-hover text-text-secondary hover:text-text-primary hover:bg-border-default transition-colors">
+                          Acknowledge
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           )}
         </div>

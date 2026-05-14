@@ -1,5 +1,5 @@
 .PHONY: dev dev-backend dev-frontend build build-frontend build-backend \
-        up down logs migrate test test-backend test-frontend lint frontend-lint \
+        docker-up docker-down logs migrate test test-backend test-frontend lint frontend-lint \
         backend-lint tidy help
 
 # ─── Development ─────────────────────────────────────────────────────────
@@ -24,10 +24,10 @@ build-frontend:                     ## Build frontend for production
 
 # ─── Infrastructure (Docker) ──────────────────────────────────────────────
 
-up:                                 ## Start all Docker dependencies
+docker-up:                                 ## Start all Docker dependencies
 	cd backend && make docker-up
 
-down:                               ## Stop all Docker dependencies
+docker-down:                               ## Stop all Docker dependencies
 	cd backend && make docker-down
 
 logs:                               ## View Docker logs

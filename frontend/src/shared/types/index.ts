@@ -18,6 +18,8 @@ export interface Field {
   temperature?: number;
   humidity?: number;
   last_irrigation?: string;
+  latitude?: number;
+  longitude?: number;
   zones?: Zone[];
 }
 

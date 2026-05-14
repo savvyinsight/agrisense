@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -189,7 +190,11 @@ func runServer(cliCtx *cli.Context) error {
 	// ── 7. Setup HTTP router ──────────────────────────────────────
 	r := gin.Default()
 	r.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://localhost:5173", "https://agrisense-frontend-bice.vercel.app"},
+		AllowOriginFunc: func(origin string) bool {
+			return origin == "" ||
+				strings.HasPrefix(origin, "http://localhost:") ||
+				origin == "https://agrisense-frontend-bice.vercel.app"
+		},
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
 		ExposeHeaders:    []string{"Content-Length"},

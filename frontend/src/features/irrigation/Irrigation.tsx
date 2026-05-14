@@ -94,7 +94,7 @@ export default function Irrigation() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           {sorted.map((zone) => {
             const cfg = statusConfig[zone.status];
-            const moisturePct = Math.round((zone.moisture / zone.targetMoisture) * 100);
+            const moisturePct = Math.round((zone.moisture / zone.target_moisture) * 100);
             const needsAttention = moisturePct < 50 || zone.status === 'failed';
             return (
               <div key={zone.id} className={cn('rounded-lg border p-4 transition-colors', zone.status === 'active' ? 'bg-info-bg border-l-[3px] border-l-info-bright' : zone.status === 'failed' ? 'bg-critical-bg border-l-[3px] border-l-critical' : needsAttention ? 'bg-warning-bg border-l-[3px] border-l-warning' : 'bg-surface-card border-border-default')}>

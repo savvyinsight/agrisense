@@ -43,7 +43,9 @@
     "irrigationToday": "Irrigation Today",
     "fieldStatus": "Fields Needing Attention",
     "alertThresholdExceeded": "Temperature threshold exceeded",
-    "today": "Today"
+    "today": "Today",
+    "riskSafe": "Safe", "riskCaution": "Caution", "riskCritical": "Critical",
+    "heatIndex": "Heat Index", "uvIndex": "UV Index"
   },
   "fields": {
     "title": "Fields", "totalFields": "Total Fields",

@@ -271,7 +271,7 @@ func (r *PostgresDeviceRepository) List(userID int, limit, offset int) ([]Device
 		}
 	}()
 
-	var devices []Device
+	devices := make([]Device, 0)
 	for rows.Next() {
 		var device Device
 		var configJSON []byte

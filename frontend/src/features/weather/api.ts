@@ -7,6 +7,8 @@ export interface WeatherCurrent {
   rainfall_mm: number;
   wind_speed: number;
   forecast: string;
+  heat_index?: number;
+  uv_index?: number;
 }
 
 export const getCurrentWeather = async (): Promise<ApiResponse<WeatherCurrent>> => {

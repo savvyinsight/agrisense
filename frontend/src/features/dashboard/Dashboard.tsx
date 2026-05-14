@@ -10,37 +10,108 @@ import { FieldCard } from '@/shared/components/FieldCard';
 import { FarmMap } from '@/shared/components/FarmMap';
 import { TrendChart, generateTrendData } from '@/shared/components/TrendChart';
 import { getDevices, getDevicesDataLatest } from '@/features/devices/api';
-import { getActiveAlerts, acknowledgeAlert } from '@/features/alerts/api';
-import { getZones } from '@/features/irrigation/api';
-import { getCurrentWeather } from '@/features/weather/api';
+import { getActiveAlerts, acknowledgeAlert, getAlertRules } from '@/features/alerts/api';
+import { enrichAlert } from '@/features/alerts/enrichAlert';
+import { getZones, startZone, stopZone, type IrrigationZone } from '@/features/irrigation/api';
+import { getCurrentWeather, type WeatherCurrent } from '@/features/weather/api';
+import { WeatherCard } from '@/features/dashboard/WeatherCard';
 import { toast } from '@/shared/components/Toast';
 import { getFields } from '@/features/fields/api';
-import type { Field, Alert2, WebSocketMessage, SensorDataMessage, Device } from '@/shared/types';
+import type { Field, Alert2, WebSocketMessage, SensorDataMessage, Device, AlertRule } from '@/shared/types';
 import { cn } from '@/shared/lib/cn';
 
 export default function Dashboard() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { user, isAdmin } = useAuthStore();
+  const { isAdmin } = useAuthStore();
   const { alerts, setAlerts, addAlert } = useAlertsStore();
   const token = useAuthStore((s) => s.token);
   const [devices, setDevices] = useState<Device[]>([]);
   const [fields, setFields] = useState<Field[]>([]);
-  const [deviceData, setDeviceData] = useState<(Device & { readings?: Record<string, number> })[]>([]);
+  const [alertRules, setAlertRules] = useState<AlertRule[]>([]);
   const [totalWater, setTotalWater] = useState(0);
-  const [weatherText, setWeatherText] = useState('--');
+  const [weather, setWeather] = useState<WeatherCurrent | null>(null);
+  const [zones, setZones] = useState<IrrigationZone[]>([]);
+  const [irrigationActionId, setIrrigationActionId] = useState<number | null>(null);
 
   const handleWsMessage = (data: WebSocketMessage) => {
-    if (data.type !== 'sensor_data') return;
-    const p = (data as SensorDataMessage).payload as { device_id: string; value: number };
-    if (p.value > 30) {
-      addAlert({
-        id: Date.now(), device_id: p.device_id,
-        title: `${p.value.toFixed(1)}°C — High temperature detected`,
-        message: '', severity: p.value > 35 ? 'critical' : 'high', status: 'active',
-        triggered_at: new Date().toISOString(),
-        recommended_action: 'Check ventilation or shade coverage',
-      });
+    const fieldContextMap = fields.reduce((map, f) => {
+      map[f.id] = { field_id: f.id, field_name: f.name, crop: f.crop };
+      return map;
+    }, {} as Record<number, any>);
+
+    switch (data.type) {
+      case 'sensor_data': {
+        const p = (data as SensorDataMessage).payload as { device_id: string; sensor_type: string; value: number; timestamp: string };
+        const device = devices.find((d) => d.device_id === p.device_id);
+        const fieldCtx = device?.field_id ? fieldContextMap[device.field_id] : undefined;
+        
+        if (p.sensor_type === 'temperature' && p.value > 30) {
+          const rawAlert: Partial<Alert2> = {
+            device_id: p.device_id,
+            device_name: device?.name,
+            title: `${p.value.toFixed(1)}°C — Temperature high`,
+            severity: p.value > 35 ? 'critical' : 'high',
+            triggered_at: p.timestamp,
+          };
+          addAlert(enrichAlert(rawAlert, alertRules, fieldCtx));
+        } else if (p.sensor_type === 'moisture' && p.value < 30) {
+          const rawAlert: Partial<Alert2> = {
+            device_id: p.device_id,
+            device_name: device?.name,
+            title: `${p.value.toFixed(0)}% — Soil moisture low`,
+            severity: p.value < 20 ? 'critical' : 'high',
+            triggered_at: p.timestamp,
+          };
+          addAlert(enrichAlert(rawAlert, alertRules, fieldCtx));
+        }
+        break;
+      }
+      case 'zone_update': {
+        const zones = (data as any).payload as { id: number; field_id: number; moisture: number; status: string };
+        if (zones.moisture < 30) {
+          const fieldCtx = fieldContextMap[zones.field_id];
+          const rawAlert: Partial<Alert2> = {
+            device_id: `zone_${zones.id}`,
+            title: `Zone moisture critically low (${zones.moisture}%)`,
+            severity: 'high',
+            triggered_at: new Date().toISOString(),
+          };
+          addAlert(enrichAlert(rawAlert, alertRules, fieldCtx));
+        }
+        break;
+      }
+      case 'alert_triggered': {
+        const alert = (data as any).payload as { field_id?: number; device_id?: string; severity: string; message: string };
+        const fieldCtx = alert.field_id ? fieldContextMap[alert.field_id] : undefined;
+        const rawAlert: Partial<Alert2> = {
+          device_id: alert.device_id || `alert_${Date.now()}`,
+          title: alert.message,
+          severity: (alert.severity === 'critical' || alert.severity === 'high') ? alert.severity : 'medium',
+          triggered_at: new Date().toISOString(),
+        };
+        addAlert(enrichAlert(rawAlert, alertRules, fieldCtx));
+        break;
+      }
+      case 'device_connected': {
+        const device = (data as any).payload as { device_id: string; name?: string };
+        toast('success', `Device ${device.name || device.device_id} connected`);
+        break;
+      }
+      case 'device_disconnected': {
+        const device = (data as any).payload as { device_id: string; name?: string };
+        const fieldCtx = devices.find((d) => d.device_id === device.device_id)?.field_id 
+          ? fieldContextMap[devices.find((d) => d.device_id === device.device_id)!.field_id!] 
+          : undefined;
+        const rawAlert: Partial<Alert2> = {
+          device_id: device.device_id,
+          title: `Device offline: ${device.name || device.device_id}`,
+          severity: 'high',
+          triggered_at: new Date().toISOString(),
+        };
+        addAlert(enrichAlert(rawAlert, alertRules, fieldCtx));
+        break;
+      }
     }
   };
 
@@ -48,16 +119,16 @@ export default function Dashboard() {
 
   useEffect(() => {
     (async () => {
-      const [deviceRes, alertRes, fieldRes] = await Promise.all([getDevices(), getActiveAlerts(), getFields()]);
+      const [deviceRes, alertRes, fieldRes, rulesRes] = await Promise.all([
+        getDevices(), 
+        getActiveAlerts(), 
+        getFields(),
+        getAlertRules(),
+      ]);
       if (deviceRes.success && deviceRes.data) {
-        setDevices(deviceRes.data.devices);
-        const ids = deviceRes.data.devices.map((d) => String(d.id));
-        const rr = await getDevicesDataLatest(ids);
-        const rd: Record<string, any> = rr.success && rr.data ? rr.data.devices || {} : {};
-        setDeviceData(deviceRes.data.devices.map((d) => ({
-          ...d,
-          readings: rd[d.device_id] || {},
-        })));
+        setDevices(deviceRes.data.devices || []);
+        const ids = (deviceRes.data.devices || []).map((d: any) => String(d.id));
+        await getDevicesDataLatest(ids);
       }
       if (alertRes.success && alertRes.data) {
         setAlerts((alertRes.data.alerts || []).map((a) => ({
@@ -70,40 +141,60 @@ export default function Dashboard() {
         })));
       }
       if (fieldRes.success && fieldRes.data) setFields(fieldRes.data);
+      if (rulesRes.success && rulesRes.data) setAlertRules(rulesRes.data.rules || []);
 
       const [zoneRes, weatherRes] = await Promise.all([getZones(), getCurrentWeather()]);
       if (zoneRes.success && zoneRes.data) {
-        setTotalWater(zoneRes.data.reduce((sum, z) => sum + (z.runtime_minutes || z.runtime || 0) * (z.flow_rate_lpm || z.flowRate || 0), 0));
+        setZones(zoneRes.data);
+        setTotalWater(zoneRes.data.reduce((sum, z) => sum + z.runtime_minutes * z.flow_rate_lpm, 0));
       }
       if (weatherRes.success && weatherRes.data) {
-        const w = weatherRes.data;
-        setWeatherText(`${w.temperature}°C / ${w.humidity}%`);
+        setWeather(weatherRes.data);
       }
     })();
   }, [setAlerts]);
 
-  // Generate mock field geometry for the map
-  const fieldGeo = useMemo(() => fields.map((f, i) => ({
-    id: f.id, name: f.name, health: f.health, soil_moisture: f.soil_moisture,
-    alerts: f.health === 'critical' ? 1 : f.health === 'warning' ? 1 : undefined,
-    zoneCount: f.zones?.length || 0,
-    geometry: {
-      type: 'Polygon' as const,
-      coordinates: [[
-        [114.3 + (i % 3) * 0.04 - 0.02, 30.5 + i * 0.03 - 0.015],
-        [114.3 + (i % 3) * 0.04 + 0.02, 30.5 + i * 0.03 - 0.015],
-        [114.3 + (i % 3) * 0.04 + 0.025, 30.5 + i * 0.03 + 0.015],
-        [114.3 + (i % 3) * 0.04 - 0.015, 30.5 + i * 0.03 + 0.02],
-        [114.3 + (i % 3) * 0.04 - 0.02, 30.5 + i * 0.03 - 0.015],
-      ]],
-    },
-  })), [fields]);
+  // Generate field geometry with real coordinates if available, else use location-based fallback
+  const fieldGeo = useMemo(() => fields.map((f, i) => {
+    // Try to use real coordinates from backend; fallback to generated if missing
+    const hasRealGeo = f.latitude && f.longitude;
+    const coordinates = hasRealGeo 
+      ? [[f.longitude!, f.latitude!, 0], [f.longitude! + 0.01, f.latitude!, 0], [f.longitude! + 0.01, f.latitude! + 0.01, 0], [f.longitude!, f.latitude! + 0.01, 0], [f.longitude!, f.latitude!, 0]]
+      : [[114.3 + (i % 3) * 0.04 - 0.02, 30.5 + i * 0.03 - 0.015], [114.3 + (i % 3) * 0.04 + 0.02, 30.5 + i * 0.03 - 0.015], [114.3 + (i % 3) * 0.04 + 0.025, 30.5 + i * 0.03 + 0.015], [114.3 + (i % 3) * 0.04 - 0.015, 30.5 + i * 0.03 + 0.02], [114.3 + (i % 3) * 0.04 - 0.02, 30.5 + i * 0.03 - 0.015]];
+    return {
+      id: f.id, name: f.name, health: f.health, soil_moisture: f.soil_moisture,
+      alerts: f.health === 'critical' ? 1 : f.health === 'warning' ? 1 : undefined,
+      zoneCount: f.zones?.length || 0,
+      geometry: {
+        type: 'Polygon' as const,
+        coordinates: [coordinates],
+      },
+    };
+  }), [fields]);
 
   const handleAcknowledge = async (id: number) => {
     const res = await acknowledgeAlert(id);
     if (res.success) { setAlerts(alerts.filter((a) => a.id !== id)); toast('success', t('alerts.alertAcknowledged')); }
     else toast('error', t('alerts.acknowledgeError'));
   };
+
+  const handleZoneAction = async (zoneId: number, action: () => Promise<any>, successMsg: string, errorMsg: string) => {
+    setIrrigationActionId(zoneId);
+    const res = await action();
+    if (res.success) {
+      toast('success', successMsg);
+      setZones(zones.map((z) => z.id === zoneId ? (res.data || z) : z));
+    } else {
+      toast('error', errorMsg);
+    }
+    setIrrigationActionId(null);
+  };
+
+  const handleZoneStart = (zoneId: number) =>
+    handleZoneAction(zoneId, () => startZone(zoneId), t('irrigation.started'), t('common.failedToSave'));
+
+  const handleZoneStop = (zoneId: number) =>
+    handleZoneAction(zoneId, () => stopZone(zoneId), t('irrigation.stopped'), t('common.failedToSave'));
 
   const criticalCount = alerts.filter((a) => a.status === 'active' && a.severity === 'critical').length;
   const highActive = alerts.filter((a) => a.status === 'active' && a.severity === 'high');
@@ -137,12 +228,16 @@ export default function Dashboard() {
       )}
 
       {/* ─── TIER 2: Status bar ─── */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-2 md:gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3">
         <StatusCard label={t('dashboard.farmHealth')} value={`${healthPct}%`} status={healthPct === 100 ? 'healthy' : healthPct > 0 ? 'warning' : 'critical'} icon="🌾" subtitle={isConnected ? t('dashboard.live') : t('dashboard.offline')} />
         <StatusCard label={t('dashboard.criticalAlerts')} value={criticalCount} status={criticalCount > 0 ? 'critical' : 'healthy'} icon="⚡" subtitle={criticalCount > 0 ? t('dashboard.requiresAttention') : t('dashboard.allClear')} onClick={() => navigate('/alerts')} />
         <StatusCard label={t('dashboard.waterUsage')} value={`${(totalWater / 1000).toFixed(1)}k L`} status="info" icon="💧" subtitle={t('dashboard.today')} onClick={() => navigate('/irrigation')} />
-        <StatusCard label={t('dashboard.weatherRisk')} value={weatherText} status="info" icon="☀" subtitle={t('common.today')} onClick={() => navigate('/weather')} />
         <StatusCard label={t('dashboard.connectivity')} value={`${onlineCount}/${devices.length}`} status={devices.length > 0 && onlineCount === devices.length ? 'healthy' : 'warning'} icon="📡" subtitle={isConnected ? t('dashboard.systemOnline') : t('dashboard.disconnected')} />
+      </div>
+
+      {/* ─── Weather Card ─── */}
+      <div className="md:max-w-md">
+        <WeatherCard weather={weather} onClick={() => navigate('/weather')} />
       </div>
 
       {/* ─── MAIN: Map + Priority Feed ─── */}
@@ -150,7 +245,7 @@ export default function Dashboard() {
         <div className="lg:col-span-2 order-2 lg:order-1">
           <FarmMap
             fields={fieldGeo}
-            height={340}
+            height={typeof window !== 'undefined' && window.innerWidth < 768 ? 250 : 340}
             onFieldClick={(f) => navigate(`/fields/${f.id}`)}
             className="shadow-elevated"
           />
@@ -244,6 +339,165 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+
+      {/* ─── IRRIGATION STATUS SECTION ─── */}
+      {zones.length > 0 && (
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-sm font-semibold text-text-primary flex items-center gap-2">
+              💧 {t('irrigation.irrigationStatus')}
+              <span className="text-xs font-normal text-text-secondary bg-surface-elevated px-2 py-0.5 rounded-full">{zones.length} {t('irrigation.zones')}</span>
+            </h2>
+            <button onClick={() => navigate('/irrigation')} className="text-xs text-accent hover:underline font-medium">
+              {t('common.viewAll')}
+            </button>
+          </div>
+
+          {/* Irrigation Status Grid - Mobile responsive (1 col mobile, 2 col tablet, 3 col desktop) */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {zones.map((zone) => {
+              const moisturePct = Math.round((zone.moisture / zone.target_moisture) * 100);
+              
+              // Status indicator color: green (optimal), yellow (warning), red (critical)
+              let statusColor = 'text-success';
+              let statusBg = 'bg-success-bg';
+              let statusBorder = 'border-l-success';
+              
+              if (zone.status === 'failed') {
+                statusColor = 'text-critical';
+                statusBg = 'bg-critical-bg';
+                statusBorder = 'border-l-critical';
+              } else if (moisturePct < 40) {
+                // Critical moisture
+                statusColor = 'text-critical';
+                statusBg = 'bg-critical-bg';
+                statusBorder = 'border-l-critical';
+              } else if (moisturePct < 60) {
+                // Warning moisture
+                statusColor = 'text-warning';
+                statusBg = 'bg-warning-bg';
+                statusBorder = 'border-l-warning';
+              }
+
+              const statusConfig: Record<string, { color: string; bg: string }> = {
+                active: { color: 'text-info-bright', bg: 'bg-info-bg' },
+                scheduled: { color: 'text-accent', bg: 'bg-accent/10' },
+                idle: { color: 'text-text-muted', bg: 'bg-surface-hover' },
+                failed: { color: 'text-critical', bg: 'bg-critical-bg' },
+              };
+              const cfg = statusConfig[zone.status] || statusConfig.idle;
+
+              return (
+                <div
+                  key={zone.id}
+                  className={cn(
+                    'rounded-lg border border-l-[3px] p-4 transition-all hover:shadow-sm',
+                    statusBg,
+                    statusBorder,
+                    'bg-surface-card'
+                  )}
+                >
+                  {/* Zone Header */}
+                  <div className="flex items-start justify-between mb-3">
+                    <div>
+                      <h3 className="text-sm font-semibold text-text-primary">{zone.name}</h3>
+                      <span className={cn('text-xs font-medium px-2 py-0.5 rounded-full mt-1 inline-block', cfg.color, cfg.bg)}>
+                        {t(`irrigation.${zone.status}`)}
+                      </span>
+                    </div>
+                    <div
+                      className={cn(
+                        'w-3 h-3 rounded-full',
+                        zone.status === 'failed'
+                          ? 'bg-critical'
+                          : moisturePct < 40
+                          ? 'bg-critical'
+                          : moisturePct < 60
+                          ? 'bg-warning'
+                          : 'bg-success'
+                      )}
+                    />
+                  </div>
+
+                  {/* Moisture Display */}
+                  <div className="mb-3">
+                    <div className="flex justify-between text-xs text-text-secondary mb-1.5">
+                      <span className="font-medium">
+                        <span className={cn('font-semibold', statusColor)}>
+                          {zone.moisture}%
+                        </span>
+                        <span className="text-text-muted"> / {zone.target_moisture}%</span>
+                      </span>
+                      <span className="text-text-muted">Target</span>
+                    </div>
+                    {/* Moisture progress bar */}
+                    <div className="h-2 bg-surface-elevated rounded-full overflow-hidden">
+                      <div
+                        className={cn('h-full rounded-full transition-all', statusColor === 'text-success' ? 'bg-success' : statusColor === 'text-warning' ? 'bg-warning' : 'bg-critical')}
+                        style={{ width: `${Math.min(moisturePct, 100)}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Zone Details */}
+                  <div className="grid grid-cols-2 gap-2 text-xs text-text-muted mb-3 pb-3 border-b border-border-default">
+                    <div>
+                      <span className="block text-text-secondary font-medium">Runtime</span>
+                      <span>{zone.runtime_minutes}m</span>
+                    </div>
+                    <div>
+                      <span className="block text-text-secondary font-medium">Flow Rate</span>
+                      <span>{zone.flow_rate_lpm} L/min</span>
+                    </div>
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="grid grid-cols-2 gap-2">
+                    {isAdmin() && zone.status !== 'active' && zone.status !== 'failed' && (
+                      <button
+                        onClick={() => handleZoneStart(zone.id)}
+                        disabled={irrigationActionId === zone.id}
+                        className="py-2 px-3 rounded-md bg-accent/20 text-accent text-xs font-medium hover:bg-accent/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed min-h-[36px] flex items-center justify-center"
+                        title={t('irrigation.startZone')}
+                      >
+                        {irrigationActionId === zone.id ? (
+                          <span className="w-3 h-3 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+                        ) : (
+                          <>▶ {t('common.start')}</>
+                        )}
+                      </button>
+                    )}
+                    {isAdmin() && zone.status === 'active' && (
+                      <button
+                        onClick={() => handleZoneStop(zone.id)}
+                        disabled={irrigationActionId === zone.id}
+                        className="py-2 px-3 rounded-md bg-critical/20 text-critical text-xs font-medium hover:bg-critical/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed min-h-[36px] flex items-center justify-center"
+                        title={t('irrigation.stopZone')}
+                      >
+                        {irrigationActionId === zone.id ? (
+                          <span className="w-3 h-3 border-2 border-critical border-t-transparent rounded-full animate-spin" />
+                        ) : (
+                          <>⏹ {t('common.stop')}</>
+                        )}
+                      </button>
+                    )}
+                    <button
+                      onClick={() => navigate('/irrigation')}
+                      className={cn(
+                        'py-2 px-3 rounded-md bg-surface-hover text-text-secondary text-xs font-medium hover:bg-surface-elevated transition-colors min-h-[36px]',
+                        (!isAdmin() || (zone.status !== 'active' && zone.status !== 'failed')) ? 'col-span-1' : 'col-span-2'
+                      )}
+                      title={t('common.view')}
+                    >
+                      {!isAdmin() || (zone.status !== 'active' && zone.status !== 'failed') ? '⚙' : isAdmin() && zone.status === 'active' ? '⚙' : '→'} {t('common.view')}
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
