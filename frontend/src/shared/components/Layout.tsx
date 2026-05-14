@@ -40,6 +40,8 @@ import {
 import { useAuth } from '@/features/auth/AuthContext';
 import { logout } from '@/features/auth/api';
 import { getActiveAlerts } from '@/features/alerts/api';
+import AccountSelector from '@/features/auth/AccountSelector';
+import RoleBadge from '@/features/auth/RoleBadge';
 
 const drawerWidth = 280;
 
@@ -184,6 +186,12 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
             {navigationItems.find((item) => item.path === location.pathname)?.text || 'Dashboard'}
           </Typography>
+
+          {/* Account Selector */}
+          <AccountSelector />
+
+          {/* Role Badge */}
+          <RoleBadge />
 
           <IconButton color="inherit" size="large" onClick={handleAlertsClick}>
             <Badge badgeContent={alerts.length} color="error">

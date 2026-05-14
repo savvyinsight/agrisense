@@ -8,9 +8,30 @@ export interface User {
   id: number;
   username: string;
   email: string;
-  role: 'admin' | 'viewer';
+  role: 'admin' | 'viewer' | 'account_owner' | 'farm_manager' | 'operator' | 'technician';
+  account_id?: number;
   created_at?: string;
   updated_at?: string;
+}
+
+export interface Account {
+  id: number;
+  name: string;
+  subscription_tier: 'basic' | 'professional' | 'enterprise';
+  owner_id: number;
+  is_active: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface UserPermission {
+  id: number;
+  user_id: number;
+  account_id: number;
+  farm_id?: number;
+  role: string;
+  granted_by_id: number;
+  created_at?: string;
 }
 
 export interface ApiResponse<T> {
