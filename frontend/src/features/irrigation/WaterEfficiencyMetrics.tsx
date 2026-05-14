@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { TrendChart, generateTrendData } from '@/shared/components/TrendChart';
+import { TrendChart } from '@/shared/components/TrendChart';
 import { cn } from '@/shared/lib/cn';
 
 interface WaterEfficiencyMetricsProps {
@@ -56,11 +56,10 @@ export function WaterEfficiencyMetrics({ className }: WaterEfficiencyMetricsProp
 
   // Prepare chart data
   const chartData = useMemo(() => {
-    return efficiencyData.map((d, idx) => ({
-      x: idx,
-      y: d.used,
-      secondary: d.expected,
+    return efficiencyData.map((d) => ({
       label: d.date,
+      value: d.used,
+      secondary: d.expected,
     }));
   }, [efficiencyData]);
 

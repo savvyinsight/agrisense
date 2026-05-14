@@ -35,8 +35,10 @@ export function MoistureHeatmap({ zones, height = 300, className }: MoistureHeat
     [zones]
   );
 
-  const maxMoisture = Math.max(...zonesWithPct.map((z) => z.target_moisture), 100);
-  const cellHeight = Math.max(60, height / Math.ceil(zonesWithPct.length / 4));
+  // Note: These are calculated for reference but not used in current implementation
+  // They can be used when implementing dynamic sizing or advanced features
+  void Math.max(...zonesWithPct.map((z) => z.target_moisture), 100);
+  void Math.max(60, height / Math.ceil(zonesWithPct.length / 4));
 
   return (
     <div className={cn('rounded-lg border border-border-default bg-surface-card p-4', className)}>

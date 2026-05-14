@@ -9,7 +9,7 @@ import { useAuth } from '@/features/auth/AuthContext';
  *   if (can('operator', farmId)) { ... }
  */
 export const usePermission = () => {
-  const { user, hasPermission, hasRole } = useAuth();
+  const { user, hasPermission } = useAuth();
 
   const can = (role: string, farmId?: number): boolean => {
     if (!user) return false;

@@ -97,8 +97,10 @@ export const AccountSelector: React.FC<AccountSelectorProps> = ({ accounts = [] 
         open={open}
         onClose={handleClose}
         aria-labelledby="account-selector-button"
-        PaperProps={{
-          sx: { minWidth: isMobile ? 280 : 320 },
+        slotProps={{
+          paper: {
+            sx: { minWidth: isMobile ? 280 : 320 },
+          },
         }}
       >
         {accountList.map((acc) => (
@@ -116,11 +118,10 @@ export const AccountSelector: React.FC<AccountSelectorProps> = ({ accounts = [] 
           >
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: 1, minWidth: 0 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                {acc.isOwner && (
+                {acc.owner_id === user?.id && (
                   <OwnerIcon
                     sx={{ fontSize: '1rem' }}
                     aria-label="Account owner"
-                    title="Account owner"
                   />
                 )}
               </Box>
