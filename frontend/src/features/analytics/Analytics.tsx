@@ -1,363 +1,143 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  Container,
-  Typography,
-  Paper,
-  Box,
-  Button,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
-  Card,
-  CardContent,
-  CircularProgress,
-  Alert,
-} from '@mui/material';
-import { DatePicker } from '@mui/x-date-pickers/DatePicker';
-import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-} from 'recharts';
-import AnalyticsIcon from '@mui/icons-material/Analytics';
-import { getAnalyticsReport } from '@/features/analytics/api';
+import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { getDevices } from '@/features/devices/api';
-import type { Device } from '@/shared/types/api';
-import type { AnalyticsReport } from '@/shared/types/api';
+import { getAnalyticsReport } from '@/features/analytics/api';
+import { StatusCard } from '@/shared/components/StatusCard';
+import { ChartSkeleton } from '@/shared/components/SkeletonLoader';
+import type { Device, AnalyticsReport } from '@/shared/types/api';
 
-const Analytics = () => {
+export default function Analytics() {
   const { t } = useTranslation();
+  const [devices, setDevices] = useState<Device[]>([]);
+  const [selectedId, setSelectedId] = useState('');
+  const [startDate, setStartDate] = useState(() => new Date(Date.now() - 30 * 86400000));
+  const [endDate, setEndDate] = useState(() => new Date());
+  const [reportType, setReportType] = useState('daily');
+  const [report, setReport] = useState<AnalyticsReport | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [reportData, setReportData] = useState<AnalyticsReport | null>(null);
-  const [devices, setDevices] = useState<Device[]>([]);
-  const [deviceLoading, setDeviceLoading] = useState(true);
-  const [filters, setFilters] = useState({
-    deviceId: '',
-    startDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // 30 days ago
-    endDate: new Date(),
-    reportType: 'daily',
-  });
-
-  const handleFilterChange = (field: string, value: any) => {
-    setFilters((prev) => ({ ...prev, [field]: value }));
-  };
-
-  const loadDevices = async () => {
-    setDeviceLoading(true);
-    const res = await getDevices();
-    if (res.success && res.data) {
-      setDevices(res.data.devices || []);
-    } else {
-      setError(res.error || 'Unable to load devices');
-    }
-    setDeviceLoading(false);
-  };
 
   useEffect(() => {
-    loadDevices();
+    getDevices().then((res) => { if (res.success && res.data) setDevices(res.data.devices); });
   }, []);
 
   const generateReport = async () => {
-    if (!filters.deviceId) {
-      setError(t('analytics.selectDeviceRequired'));
-      return;
-    }
-
-    // Find the selected device to get its device_id string
-    const selectedDevice = devices.find(d => d.id === Number(filters.deviceId));
-    if (!selectedDevice) {
-      setError(t('analytics.deviceNotFound'));
-      return;
-    }
-
-    setLoading(true);
-    setError('');
-
-    const params = {
-      deviceId: selectedDevice.id,
-      start: filters.startDate.toISOString(),
-      end: filters.endDate.toISOString(),
-      reportType: filters.reportType,
-    };
-
-    const result = await getAnalyticsReport(params);
-
-    if (result.success && result.data) {
-      setReportData(result.data);
-    } else {
-      setError(result.error || 'Failed to generate report');
-    }
-
+    if (!selectedId) { setError(t('analytics.selectDeviceRequired')); return; }
+    setLoading(true); setError('');
+    const res = await getAnalyticsReport({ device_id: Number(selectedId), start: startDate.toISOString(), end: endDate.toISOString(), report_type: reportType });
+    if (res.success && res.data) setReport(res.data);
+    else setError(res.error || t('analytics.failedToGenerate'));
     setLoading(false);
   };
 
-  const getSensorDataByType = (sensorType: string) => {
-    if (!reportData?.sensor_reports) return null;
-    return reportData.sensor_reports.find(s => s.sensor_type === sensorType);
-  };
+  const getSensorData = (type: string) => report?.sensor_reports?.find((s) => s.sensor_type === type);
+  const avg = (type: string) => { const d = getSensorData(type)?.data; if (!d?.length) return null; return d.reduce((a: number, b: any) => a + (b.avg ?? b.value ?? 0), 0) / d.length; };
+  const fmt = (type: string) => { const d = getSensorData(type)?.data; if (!d) return []; return d.map((x: any) => ({ date: x.timestamp?.split('T')[0] || x.date, value: x.avg ?? x.value ?? 0 })); };
 
-  const calculateAverages = (sensorData: any) => {
-    if (!sensorData?.data || sensorData.data.length === 0) {
-      return { avg: 0, min: 0, max: 0 };
-    }
-    const values = sensorData.data.map((d: any) => d.avg);
-    const mins = sensorData.data.map((d: any) => d.min);
-    const maxs = sensorData.data.map((d: any) => d.max);
-    
-    return {
-      avg: values.reduce((a: number, b: number) => a + b, 0) / values.length,
-      min: Math.min(...mins),
-      max: Math.max(...maxs),
-    };
-  };
-
-  const formatChartData = (sensorType: string) => {
-    const sensorData = getSensorDataByType(sensorType);
-    if (!sensorData?.data || !Array.isArray(sensorData.data)) return [];
-
-    return sensorData.data.map((item: any) => ({
-      date: item.timestamp?.split('T')[0],
-      avg: item.avg,
-      min: item.min,
-      max: item.max,
-      count: item.count,
-    }));
-  };
+  const metrics = [
+    { label: t('analytics.avgTemperature'), value: avg('temperature'), unit: '°C' },
+    { label: t('analytics.avgHumidity'), value: avg('humidity'), unit: '%' },
+    { label: t('analytics.avgSoilMoisture'), value: avg('soil_moisture'), unit: '%' },
+    { label: t('analytics.reportTypeLabel'), value: null, unit: reportType },
+  ];
 
   return (
-    <Container maxWidth="lg">
-      <Box
-        sx={{
-          display: 'flex',
-          alignItems: 'center',
-          mb: 3,
-        }}
-      >
-        <AnalyticsIcon sx={{ mr: 2, fontSize: 40 }} />
-        <Typography variant="h4" fontWeight={700}>{t('analytics.title')}</Typography>
-      </Box>
+    <div className="max-w-7xl mx-auto space-y-6">
+      <div>
+        <h1 className="text-lg font-bold text-text-primary">{t('analytics.title')}</h1>
+        <p className="text-sm text-text-muted mt-0.5">{t('analytics.subtitle')}</p>
+      </div>
 
-      <Paper sx={{ p: 3, mb: 3 }} elevation={2}>
-        <Typography variant="h6" gutterBottom>{t('analytics.dateRange')}</Typography>
-        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3, mt: 1 }}>
-          <Box sx={{ minWidth: 200, flex: '1 1 auto' }}>
-            <FormControl fullWidth required>
-              <InputLabel>{t('analytics.selectDevice')}</InputLabel>
-              <Select
-                value={filters.deviceId}
-                label={t('analytics.selectDevice')}
-                onChange={(e) => handleFilterChange('deviceId', e.target.value)}
-                disabled={deviceLoading}
-              >
-                {devices.map((device) => (
-                  <MenuItem key={device.id} value={device.id}>
-                    {device.device_id} - {device.name}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Box>
-          <Box sx={{ minWidth: 150, flex: '1 1 auto' }}>
-            <LocalizationProvider dateAdapter={AdapterDateFns}>
-              <DatePicker
-                label={t('analytics.startDate')}
-                value={filters.startDate}
-                onChange={(date) => handleFilterChange('startDate', date)}
-                slotProps={{
-                  textField: {
-                    fullWidth: true,
-                  },
-                }}
-              />
-            </LocalizationProvider>
-          </Box>
-          <Box sx={{ minWidth: 150, flex: '1 1 auto' }}>
-            <LocalizationProvider dateAdapter={AdapterDateFns}>
-              <DatePicker
-                label={t('analytics.endDate')}
-                value={filters.endDate}
-                onChange={(date) => handleFilterChange('endDate', date)}
-                slotProps={{
-                  textField: {
-                    fullWidth: true,
-                  },
-                }}
-              />
-            </LocalizationProvider>
-          </Box>
-          <Box sx={{ minWidth: 200, flex: '1 1 auto' }}>
-            <FormControl fullWidth>
-              <InputLabel>{t('analytics.reportType')}</InputLabel>
-              <Select
-                value={filters.reportType}
-                label={t('analytics.reportType')}
-                onChange={(e) => handleFilterChange('reportType', e.target.value)}
-              >
-                <MenuItem value="daily">{t('analytics.daily')}</MenuItem>
-                <MenuItem value="weekly">{t('analytics.weekly')}</MenuItem>
-                <MenuItem value="monthly">{t('analytics.monthly')}</MenuItem>
-              </Select>
-            </FormControl>
-          </Box>
-        </Box>
-        <Box sx={{ mt: 3 }}>
-          <Button
-            variant="contained"
-            onClick={generateReport}
-            disabled={loading}
-            sx={{ textTransform: 'none' }}
-          >
-            {loading ? <CircularProgress size={20} /> : t('analytics.generateReport')}
-          </Button>
-        </Box>
-      </Paper>
+      <div className="rounded-lg border border-border-default bg-surface-card p-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+          <div>
+            <label className="block text-xs font-medium text-text-secondary mb-1.5">{t('analytics.selectDevice')}</label>
+            <select value={selectedId} onChange={(e) => setSelectedId(e.target.value)} className="w-full px-3 py-2 rounded-lg bg-surface-base border border-border-default text-text-primary text-sm focus:outline-none focus:border-accent">
+              <option value="">{t('analytics.selectDevicePlaceholder')}</option>
+              {devices.map((d) => <option key={d.id} value={d.id}>{d.device_id} - {d.name}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-text-secondary mb-1.5">{t('analytics.startDate')}</label>
+            <input type="date" value={startDate.toISOString().split('T')[0]} onChange={(e) => setStartDate(new Date(e.target.value))} className="w-full px-3 py-2 rounded-lg bg-surface-base border border-border-default text-text-primary text-sm focus:outline-none focus:border-accent" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-text-secondary mb-1.5">{t('analytics.endDate')}</label>
+            <input type="date" value={endDate.toISOString().split('T')[0]} onChange={(e) => setEndDate(new Date(e.target.value))} className="w-full px-3 py-2 rounded-lg bg-surface-base border border-border-default text-text-primary text-sm focus:outline-none focus:border-accent" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-text-secondary mb-1.5">{t('analytics.reportType')}</label>
+            <select value={reportType} onChange={(e) => setReportType(e.target.value)} className="w-full px-3 py-2 rounded-lg bg-surface-base border border-border-default text-text-primary text-sm focus:outline-none focus:border-accent">
+              <option value="daily">{t('analytics.daily')}</option>
+              <option value="weekly">{t('analytics.weekly')}</option>
+              <option value="monthly">{t('analytics.monthly')}</option>
+            </select>
+          </div>
+          <div className="flex items-end">
+            <button onClick={generateReport} disabled={loading} className="w-full py-2 rounded-lg bg-accent hover:bg-accent-hover text-white text-sm font-medium transition-colors disabled:opacity-50">
+              {loading ? t('analytics.generating') : t('analytics.generateReport')}
+            </button>
+          </div>
+        </div>
+      </div>
 
-      {error && (
-        <Alert severity="error" sx={{ mb: 3 }}>
-          {error}
-        </Alert>
-      )}
+      {error && <div className="text-sm p-3 rounded-lg bg-critical-bg text-critical border border-critical/30">{error}</div>}
 
-      {reportData && (
+      {loading && <div className="space-y-4"><ChartSkeleton /><ChartSkeleton /></div>}
+
+      {report && !loading && (
         <>
-          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3, mb: 3 }}>
-            <Box sx={{ minWidth: 250, flex: '1 1 auto' }}>
-              <Card elevation={2}>
-                <CardContent>
-                  <Typography color="textSecondary" gutterBottom>
-                    Average Temperature
-                  </Typography>
-                  <Typography variant="h4">
-                    {calculateAverages(getSensorDataByType('temperature')).avg.toFixed(1)}°C
-                  </Typography>
-                  <Typography variant="body2" color="textSecondary">
-                    Min: {calculateAverages(getSensorDataByType('temperature')).min.toFixed(1)}°C •
-                    Max: {calculateAverages(getSensorDataByType('temperature')).max.toFixed(1)}°C
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Box>
-            <Box sx={{ minWidth: 250, flex: '1 1 auto' }}>
-              <Card elevation={2}>
-                <CardContent>
-                  <Typography color="textSecondary" gutterBottom>
-                    Average Humidity
-                  </Typography>
-                  <Typography variant="h4">
-                    {calculateAverages(getSensorDataByType('humidity')).avg.toFixed(1)}%
-                  </Typography>
-                  <Typography variant="body2" color="textSecondary">
-                    Min: {calculateAverages(getSensorDataByType('humidity')).min.toFixed(1)}% •
-                    Max: {calculateAverages(getSensorDataByType('humidity')).max.toFixed(1)}%
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Box>
-            <Box sx={{ minWidth: 250, flex: '1 1 auto' }}>
-              <Card elevation={2}>
-                <CardContent>
-                  <Typography color="textSecondary" gutterBottom>
-                    Device
-                  </Typography>
-                  <Typography variant="h6">
-                    {reportData.device_uid || reportData.device_id || 'Unknown'}
-                  </Typography>
-                  <Typography variant="body2" color="textSecondary">
-                    Period: {filters.startDate.toLocaleDateString()} - {filters.endDate.toLocaleDateString()}
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Box>
-            <Box sx={{ minWidth: 250, flex: '1 1 auto' }}>
-              <Card elevation={2}>
-                <CardContent>
-                  <Typography color="textSecondary" gutterBottom>
-                    Report Type
-                  </Typography>
-                  <Typography variant="h6" sx={{ textTransform: 'capitalize' }}>
-                    {filters.reportType}
-                  </Typography>
-                  <Typography variant="body2" color="textSecondary">
-                    Data points: {getSensorDataByType('temperature')?.data?.length || 0}
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Box>
-          </Box>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {metrics.map((m) => <StatusCard key={m.label} label={m.label} value={m.value !== null ? `${(m.value as number).toFixed(1)}${m.unit}` : m.unit} status="info" />)}
+          </div>
 
-          {reportData.sensor_reports && reportData.sensor_reports.length > 0 && (
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-              <Box sx={{ width: '100%' }}>
-                <Paper sx={{ p: 3 }} elevation={2}>
-                  <Typography variant="h6" gutterBottom>Temperature Trend</Typography>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <LineChart data={formatChartData('temperature')}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="date" />
-                      <YAxis unit="°C" />
-                      <Tooltip />
-                      <Line
-                        type="monotone"
-                        dataKey="avg"
-                        stroke="#2E7D32"
-                        strokeWidth={2}
-                        dot={false}
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </Paper>
-              </Box>
-              <Box sx={{ flex: '1 1 50%', minWidth: 300 }}>
-                <Paper sx={{ p: 3 }} elevation={2}>
-                  <Typography variant="h6" gutterBottom>Humidity Trend</Typography>
-                  <ResponsiveContainer width="100%" height={250}>
-                    <BarChart data={formatChartData('humidity')}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="date" />
-                      <YAxis unit="%" />
-                      <Tooltip />
-                      <Bar dataKey="avg" fill="#1976D2" />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </Paper>
-              </Box>
-              <Box sx={{ flex: '1 1 50%', minWidth: 300 }}>
-                <Paper sx={{ p: 3 }} elevation={2}>
-                  <Typography variant="h6" gutterBottom>Soil Moisture Trend</Typography>
-                  <ResponsiveContainer width="100%" height={250}>
-                    <LineChart data={formatChartData('soil_moisture')}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="date" />
-                      <YAxis unit="%" />
-                      <Tooltip />
-                      <Line
-                        type="monotone"
-                        dataKey="avg"
-                        stroke="#ED6C02"
-                        strokeWidth={2}
-                        dot={false}
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </Paper>
-              </Box>
-            </Box>
+          {getSensorData('temperature') && (
+            <div className="rounded-lg border border-border-default bg-surface-card p-4">
+              <h3 className="text-sm font-semibold text-text-primary mb-4">{t('analytics.temperatureTrend')}</h3>
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart data={fmt('temperature')}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#2a2e3e" />
+                  <XAxis dataKey="date" stroke="#6b7280" fontSize={12} />
+                  <YAxis unit="°C" stroke="#6b7280" fontSize={12} />
+                  <Tooltip contentStyle={{ background: '#1e2130', border: '1px solid #2a2e3e', borderRadius: 8, fontSize: 13 }} labelStyle={{ color: '#e8eaed' }} />
+                  <Line type="monotone" dataKey="value" stroke="#2E7D32" strokeWidth={2} dot={false} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+
+          {getSensorData('humidity') && (
+            <div className="rounded-lg border border-border-default bg-surface-card p-4">
+              <h3 className="text-sm font-semibold text-text-primary mb-4">{t('analytics.humidityTrend')}</h3>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={fmt('humidity')}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#2a2e3e" />
+                  <XAxis dataKey="date" stroke="#6b7280" fontSize={12} />
+                  <YAxis unit="%" stroke="#6b7280" fontSize={12} />
+                  <Tooltip contentStyle={{ background: '#1e2130', border: '1px solid #2a2e3e', borderRadius: 8, fontSize: 13 }} labelStyle={{ color: '#e8eaed' }} />
+                  <Bar dataKey="value" fill="#64748b" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+
+          {getSensorData('soil_moisture') && (
+            <div className="rounded-lg border border-border-default bg-surface-card p-4">
+              <h3 className="text-sm font-semibold text-text-primary mb-4">{t('analytics.soilMoistureTrend')}</h3>
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart data={fmt('soil_moisture')}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#2a2e3e" />
+                  <XAxis dataKey="date" stroke="#6b7280" fontSize={12} />
+                  <YAxis unit="%" stroke="#6b7280" fontSize={12} />
+                  <Tooltip contentStyle={{ background: '#1e2130', border: '1px solid #2a2e3e', borderRadius: 8, fontSize: 13 }} labelStyle={{ color: '#e8eaed' }} />
+                  <Line type="monotone" dataKey="value" stroke="#f59e0b" strokeWidth={2} dot={false} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
           )}
         </>
       )}
-    </Container>
+    </div>
   );
-};
-
-export default Analytics;
+}

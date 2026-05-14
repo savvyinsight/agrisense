@@ -88,22 +88,49 @@ func (h *DeviceHandler) Update(c *gin.Context) {
 		return
 	}
 
-	var device Device
-	if err := c.ShouldBindJSON(&device); err != nil {
+	existing, err := h.deviceRepo.GetByID(id)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "device not found"})
+		return
+	}
+
+	var updates map[string]interface{}
+	if err := c.ShouldBindJSON(&updates); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	device.ID = id
 
-	// Set default status - always offline until device connects
-	device.Status = DeviceStatusOffline
+	if v, ok := updates["name"]; ok { existing.Name = v.(string) }
+	if v, ok := updates["device_id"]; ok { existing.DeviceID = v.(string) }
+	if v, ok := updates["type"]; ok { existing.Type = DeviceType(v.(string)) }
+	if v, ok := updates["location"]; ok {
+		s := v.(string)
+		existing.Location = &s
+	}
+	if v, ok := updates["latitude"]; ok {
+		f := v.(float64)
+		existing.Latitude = &f
+	}
+	if v, ok := updates["longitude"]; ok {
+		f := v.(float64)
+		existing.Longitude = &f
+	}
+	if v, ok := updates["firmware_version"]; ok {
+		s := v.(string)
+		existing.FirmwareVersion = &s
+	}
+	if v, ok := updates["config"]; ok { existing.Config = v.(map[string]interface{}) }
+	if v, ok := updates["field_id"]; ok {
+		f := int(v.(float64))
+		existing.FieldID = &f
+	}
 
-	if err := h.deviceRepo.Update(&device); err != nil {
+	if err := h.deviceRepo.Update(existing); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, device)
+	c.JSON(http.StatusOK, existing)
 }
 
 func (h *DeviceHandler) Delete(c *gin.Context) {

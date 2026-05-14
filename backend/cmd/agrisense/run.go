@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -23,7 +24,10 @@ import (
 	"github.com/savvyinsight/agrisense/internal/control"
 	"github.com/savvyinsight/agrisense/internal/data"
 	"github.com/savvyinsight/agrisense/internal/device"
+	"github.com/savvyinsight/agrisense/internal/field"
 	"github.com/savvyinsight/agrisense/internal/infra/postgres"
+	"github.com/savvyinsight/agrisense/internal/irrigation"
+	"github.com/savvyinsight/agrisense/internal/weather"
 	"github.com/savvyinsight/agrisense/internal/infra/redis"
 	"github.com/savvyinsight/agrisense/internal/middleware"
 	"github.com/savvyinsight/agrisense/internal/mqtt"
@@ -87,6 +91,9 @@ func runServer(cliCtx *cli.Context) error {
 	cmdRepo := &control.PostgresCommandRepository{DB: pgDB}
 	alertRuleRepo := &alert.PostgresAlertRuleRepository{DB: pgDB}
 	alertRepo := &alert.PostgresAlertRepository{DB: pgDB}
+	fieldRepo := &field.PostgresFieldRepository{DB: pgDB}
+	irrigationRepo := &irrigation.PostgresIrrigationZoneRepository{DB: pgDB}
+	weatherRepo := &weather.PostgresWeatherRepository{DB: pgDB}
 	cacheRepo := redis.NewCacheRepository(redisClient)
 
 	// ── 4. Create services ─────────────────────────────────────────
@@ -175,12 +182,19 @@ func runServer(cliCtx *cli.Context) error {
 	alertHandler := alert.NewAlertHandler(alertService)
 	controlHandler := control.NewControlHandler(controlService)
 	automationHandler := automation.NewAutomationHandler(automationService)
+	fieldHandler := field.NewFieldHandler(fieldRepo)
+	irrigationHandler := irrigation.NewIrrigationHandler(irrigationRepo)
+	weatherHandler := weather.NewWeatherHandler(weatherRepo)
 	analyticsHandler := analytics.NewAnalyticsHandler(analyticsService)
 
 	// ── 7. Setup HTTP router ──────────────────────────────────────
 	r := gin.Default()
 	r.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://localhost:5173", "https://agrisense-frontend-bice.vercel.app"},
+		AllowOriginFunc: func(origin string) bool {
+			return origin == "" ||
+				strings.HasPrefix(origin, "http://localhost:") ||
+				origin == "https://agrisense-frontend-bice.vercel.app"
+		},
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
 		ExposeHeaders:    []string{"Content-Length"},
@@ -256,6 +270,28 @@ func runServer(cliCtx *cli.Context) error {
 			automation.PUT("/rules/:id", automationHandler.UpdateRule)
 			automation.DELETE("/rules/:id", automationHandler.DeleteRule)
 		}
+
+		// Field routes
+		fields := api.Group("/fields")
+		{
+			fields.POST("", fieldHandler.Create)
+			fields.GET("", fieldHandler.List)
+			fields.GET("/:id", fieldHandler.GetByID)
+			fields.PUT("/:id", fieldHandler.Update)
+			fields.DELETE("/:id", fieldHandler.Delete)
+		}
+
+		// Irrigation routes
+		irrigationRoutes := api.Group("/irrigation/zones")
+		{
+			irrigationRoutes.GET("", irrigationHandler.List)
+			irrigationRoutes.POST("/:id/start", irrigationHandler.Start)
+			irrigationRoutes.POST("/:id/stop", irrigationHandler.Stop)
+			irrigationRoutes.POST("/:id/retry", irrigationHandler.Retry)
+		}
+
+		// Weather routes
+		api.GET("/weather/current", weatherHandler.GetCurrent)
 
 		// Analytics routes
 		analyticsGroup := api.Group("/analytics")

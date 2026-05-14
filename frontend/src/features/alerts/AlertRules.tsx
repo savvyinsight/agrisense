@@ -1,393 +1,151 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  Container,
-  Typography,
-  Paper,
-  Box,
-  Button,
-  IconButton,
-  Tooltip,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
-  Snackbar,
-  Alert,
-  CircularProgress,
-  Chip,
-} from '@mui/material';
-import EditIcon from '@mui/icons-material/Edit';
-import DeleteIcon from '@mui/icons-material/Delete';
-import AddCircleIcon from '@mui/icons-material/AddCircle';
+import { DataTable } from '@/shared/components/DataTable';
+import { Modal } from '@/shared/components/Modal';
+import { toast } from '@/shared/components/Toast';
 import { getAlertRules, createAlertRule, deleteAlertRule } from '@/features/alerts/api';
 import { getDevices } from '@/features/devices/api';
 import type { AlertRule, Device } from '@/shared/types/api';
 
+const sensorTypes = [
+  { id: 1, nameKey: 'alertRules.temperature' as const },
+  { id: 2, nameKey: 'alertRules.humidity' as const },
+  { id: 3, nameKey: 'alertRules.soilMoisture' as const },
+  { id: 4, nameKey: 'alertRules.light' as const },
+];
+
 const emptyRule = {
-  name: '',
-  device_id: null as number | null,
-  sensor_type_id: 1, // temperature
-  condition: '>',
-  threshold_value: '',
-  duration_seconds: 300,
-  severity: 'warning' as 'info' | 'warning' | 'critical',
-  enabled: true,
+  name: '', device_id: null as number | null, sensor_type_id: 1,
+  condition: '>', threshold_value: '', duration_seconds: 300,
+  severity: 'warning' as 'info' | 'warning' | 'critical', enabled: true,
 };
 
-const AlertRules = () => {
+export default function AlertRules() {
   const { t } = useTranslation();
-
-  const sensorTypes = [
-    { id: 1, name: t('alertRules.temperature') },
-    { id: 2, name: t('alertRules.humidity') },
-    { id: 3, name: t('alertRules.soilMoisture') },
-    { id: 4, name: t('alertRules.light') },
-  ];
-
-  const getSensorName = (id: number) => {
-    return sensorTypes.find(s => s.id === id)?.name || 'Unknown';
-  };
-
   const [rules, setRules] = useState<AlertRule[]>([]);
+  const [devices, setDevices] = useState<Device[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
-  const [openDialog, setOpenDialog] = useState(false);
-  const [isEditMode, setIsEditMode] = useState(false);
+  const [open, setOpen] = useState(false);
   const [form, setForm] = useState(emptyRule);
-  const [devices, setDevices] = useState<Device[]>([]);
-  const [deviceLoading, setDeviceLoading] = useState(true);
 
-  const loadRules = async () => {
+  const load = async () => {
     setLoading(true);
-    const res = await getAlertRules();
-    if (res.success && res.data) {
-      setRules(res.data.rules || []);
-      setError('');
-    } else {
-      setError(res.error || 'Unable to load alert rules');
-    }
+    const [r, d] = await Promise.all([getAlertRules(), getDevices()]);
+    if (r.success && r.data) setRules(r.data.rules || []);
+    if (d.success && d.data) setDevices(d.data.devices || []);
     setLoading(false);
   };
 
-  const loadDevices = async () => {
-    setDeviceLoading(true);
-    const res = await getDevices();
-    if (res.success && res.data) {
-      setDevices(res.data.devices || []);
-    } else {
-      setError(res.error || 'Unable to load devices');
-    }
-    setDeviceLoading(false);
-  };
+  useEffect(() => { load(); }, []);
 
-  useEffect(() => {
-    loadRules();
-    loadDevices();
-  }, []);
-
-  const openNew = () => {
-    setIsEditMode(false);
-    setForm(emptyRule);
-    setOpenDialog(true);
-  };
-
-  const openEdit = (rule: AlertRule) => {
-    setIsEditMode(true);
-    setForm({
-      name: rule.name,
-      device_id: rule.device_id,
-      sensor_type_id: rule.sensor_type_id,
-      condition: rule.condition,
-      threshold_value: rule.threshold_value.toString(),
-      duration_seconds: rule.duration_seconds,
-      severity: rule.severity,
-      enabled: rule.enabled,
-    });
-    setOpenDialog(true);
-  };
-
-  const closeDialog = () => {
-    setOpenDialog(false);
+  const save = async () => {
+    if (!form.name || !form.threshold_value) { setError(t('alertRules.nameAndThresholdRequired')); return; }
     setError('');
+    const res = await createAlertRule({ ...form, threshold_value: parseFloat(form.threshold_value), duration_seconds: Number(form.duration_seconds), device_id: form.device_id });
+    if (res.success) { toast('success', t('alertRules.saved')); setOpen(false); setForm(emptyRule); load(); }
+    else setError(res.error || t('common.failedToSave'));
   };
 
-  const setField = (name: string, value: any) => {
-    setForm((prev) => ({ ...prev, [name]: value }));
+  const remove = async (rule: AlertRule) => {
+    if (!rule.id) return;
+    const res = await deleteAlertRule(rule.id);
+    if (res.success) { toast('success', t('alertRules.deleted')); load(); }
+    else setError(res.error || t('common.failedToDelete'));
   };
 
-  const saveRule = async () => {
-    if (!form.name || !form.threshold_value) {
-      setError('Name and Threshold Value are required');
-      return;
-    }
-
-    const payload = {
-      name: form.name,
-      device_id: form.device_id,
-      sensor_type_id: form.sensor_type_id,
-      condition: form.condition,
-      threshold_value: parseFloat(form.threshold_value),
-      duration_seconds: parseInt(form.duration_seconds.toString()),
-      severity: form.severity,
-      enabled: form.enabled,
-    };
-
-    const result = await createAlertRule(payload);
-
-    if (result.success) {
-      setSuccess(`Alert rule ${isEditMode ? 'updated' : 'created'} successfully`);
-      closeDialog();
-      loadRules();
-    } else {
-      setError(result.error || 'Failed to save alert rule');
-    }
-  };
-
-  const deleteRule = async (ruleId: number) => {
-    if (!window.confirm(t('common.confirm') + ' ' + t('alertRules.deleteRule') + '?')) {
-      return;
-    }
-
-    const result = await deleteAlertRule(ruleId);
-    if (result.success) {
-      setSuccess(t('alertRules.deleteRule') + ' ' + t('common.success'));
-      loadRules();
-    } else {
-      setError(result.error || t('alertRules.deleteRule') + ' ' + t('common.error'));
-    }
-  };
-
-  const getSeverityColor = (severity: string) => {
-    switch (severity) {
-      case 'critical': return 'error';
-      case 'warning': return 'warning';
-      default: return 'info';
+  const severityColor = (s: string) => {
+    switch (s) {
+      case 'critical': return 'bg-critical-bg text-critical border-critical/30';
+      case 'warning': return 'bg-warning-bg text-warning border-warning/30';
+      default: return 'bg-info-bg text-info-bright border-info/30';
     }
   };
 
   return (
-    <Container maxWidth="lg">
-      <Box
-        sx={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          mb: 3,
-        }}
-      >
-        <Typography variant="h4" fontWeight={700}>{t('alertRules.title')}</Typography>
-        <Button
-          sx={{ textTransform: 'none' }}
-          variant="contained"
-          startIcon={<AddCircleIcon />}
-          onClick={openNew}
-        >
-          {t('alerts.addRule')}
-        </Button>
-      </Box>
+    <div className="max-w-5xl mx-auto space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-lg font-bold text-text-primary">{t('alertRules.title')}</h1>
+          <p className="text-sm text-text-muted mt-0.5">{t('alertRules.subtitle')}</p>
+        </div>
+        <button onClick={() => { setForm(emptyRule); setOpen(true); }} className="px-3 py-2 rounded-lg bg-accent hover:bg-accent-hover text-white text-sm font-medium transition-colors">+ {t('alertRules.addRule')}</button>
+      </div>
 
-      <Paper sx={{ p: 2, mb: 3 }} elevation={2}>
-        <Typography variant="body2" color="text.secondary">
-          {t('alerts.subtitle')}
-        </Typography>
-      </Paper>
+      {error && <div className="text-sm p-3 rounded-lg bg-critical-bg text-critical border border-critical/30">{error}</div>}
 
       {loading ? (
-        <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
-          <CircularProgress />
-        </Box>
+        <div className="space-y-2">{[1, 2, 3].map((i) => <div key={i} className="h-12 rounded-lg bg-surface-card border border-border-default animate-pulse" />)}</div>
       ) : (
-        <TableContainer component={Paper} elevation={2} sx={{ mb: 3 }}>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>{t('alertRules.ruleName')}</TableCell>
-                <TableCell>{t('devices.deviceId')}</TableCell>
-                <TableCell>{t('alertRules.temperature')}</TableCell>
-                <TableCell>{t('alertRules.condition')}</TableCell>
-                <TableCell>{t('alertRules.severity')}</TableCell>
-                <TableCell>{t('alertRules.active')}</TableCell>
-                <TableCell align="right">{t('devices.actions')}</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {rules.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7} align="center" sx={{ py: 5 }}>
-                    {t('common.error')}. {t('common.add')} "{t('alertRules.addRule')}" {t('common.view').toLowerCase()} {t('common.add')} {t('alertRules.ruleName').toLowerCase()}.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                rules.map((rule) => (
-                  <TableRow key={rule.id} hover>
-                    <TableCell>{rule.name}</TableCell>
-                    <TableCell>{getSensorName(rule.sensor_type_id)}</TableCell>
-                    <TableCell>
-                      {rule.condition} {rule.threshold_value} for {rule.duration_seconds}s
-                    </TableCell>
-                    <TableCell>
-                      <Chip
-                        label={rule.severity}
-                        size="small"
-                        color={getSeverityColor(rule.severity)}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Chip
-                        label={rule.enabled ? 'Enabled' : 'Disabled'}
-                        size="small"
-                        color={rule.enabled ? 'success' : 'default'}
-                      />
-                    </TableCell>
-                    <TableCell align="right">
-                      <Tooltip title="Edit">
-                        <IconButton onClick={() => openEdit(rule)} size="small">
-                          <EditIcon />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="Delete">
-                        <IconButton onClick={() => deleteRule(rule.id!)} size="small" color="error">
-                          <DeleteIcon />
-                        </IconButton>
-                      </Tooltip>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
+        <DataTable
+          columns={[
+            { key: 'name', header: t('alertRules.ruleName') },
+            { key: 'sensor', header: t('alertRules.sensorType'), render: (r: AlertRule) => t(sensorTypes.find((s) => s.id === r.sensor_type_id)?.nameKey || 'alertRules.unknown') },
+            { key: 'condition', header: t('alertRules.condition'), render: (r: AlertRule) => `${r.condition} ${r.threshold_value} / ${r.duration_seconds}s` },
+            { key: 'severity', header: t('alertRules.severity'), render: (r: AlertRule) => <span className={`text-xs font-medium px-2 py-0.5 rounded-full border ${severityColor(r.severity)}`}>{t(`alertRules.${r.severity}`)}</span> },
+            { key: 'enabled', header: t('alertRules.active'), render: (r: AlertRule) => <span className={`text-xs font-medium px-2 py-0.5 rounded-full border ${r.enabled ? 'bg-success-bg text-success border-success/30' : 'bg-surface-hover text-text-muted border-border-default'}`}>{r.enabled ? t('alertRules.enabled') : t('alertRules.disabled')}</span> },
+          ]}
+          data={rules}
+          keyExtractor={(r) => r.id ?? r.name}
+          onDelete={remove}
+          emptyMessage={t('alertRules.noRules')}
+        />
       )}
 
-      <Dialog open={openDialog} fullWidth maxWidth="sm" onClose={closeDialog}>
-        <DialogTitle>{isEditMode ? t('alertRules.editRule') : t('alertRules.addRule')}</DialogTitle>
-        <DialogContent sx={{ display: 'grid', gap: 16, mt: 1 }}>
-          <TextField
-            label={t('alertRules.ruleName')}
-            value={form.name}
-            onChange={(e) => setField('name', e.target.value)}
-            required
-            fullWidth
-          />
-          <FormControl fullWidth>
-            <InputLabel>{t('devices.deviceId')}</InputLabel>
-            <Select
-              value={form.device_id?.toString() || ''}
-              label={t('devices.deviceId')}
-              onChange={(e) => setField('device_id', e.target.value === '' ? null : Number(e.target.value))}
-              disabled={deviceLoading}
-            >
-              <MenuItem value="">{t('devices.allDevices')}</MenuItem>
-              {devices.map((device) => (
-                <MenuItem key={device.id} value={device.id.toString()}>
-                  {device.device_id} - {device.name}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-
-          <FormControl fullWidth>
-            <InputLabel>{t('alertRules.temperature')}</InputLabel>
-            <Select
-              value={form.sensor_type_id}
-              label={t('alertRules.temperature')}
-              onChange={(e) => setField('sensor_type_id', e.target.value)}
-            >
-              {sensorTypes.map((sensor) => (
-                <MenuItem key={sensor.id} value={sensor.id}>
-                  {sensor.name}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-
-          <Box sx={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: 2, alignItems: 'center' }}>
-            <FormControl sx={{ minWidth: 80 }}>
-              <InputLabel>{t('alertRules.condition')}</InputLabel>
-              <Select
-                value={form.condition}
-                label={t('alertRules.condition')}
-                onChange={(e) => setField('condition', e.target.value)}
-              >
-                <MenuItem value=">">{t('alertRules.greaterThan')}</MenuItem>
-                <MenuItem value="<">{t('alertRules.lessThan')}</MenuItem>
-                <MenuItem value="=">{t('alertRules.equals')}</MenuItem>
-              </Select>
-            </FormControl>
-            <TextField
-              label={t('alertRules.threshold')}
-              type="number"
-              value={form.threshold_value}
-              onChange={(e) => setField('threshold_value', e.target.value)}
-              required
-              fullWidth
-            />
-          </Box>
-
-          <TextField
-            label={`${t('common.refresh')} (${t('common.view').toLowerCase()})`}
-            type="number"
-            value={form.duration_seconds}
-            onChange={(e) => setField('duration_seconds', e.target.value)}
-            fullWidth
-            helperText={t('alertRules.condition')}
-          />
-
-          <FormControl fullWidth>
-            <InputLabel>{t('alertRules.severity')}</InputLabel>
-            <Select
-              value={form.severity}
-              label={t('alertRules.severity')}
-              onChange={(e) => setField('severity', e.target.value)}
-            >
-              <MenuItem value="info">{t('alertRules.low')}</MenuItem>
-              <MenuItem value="warning">{t('alertRules.medium')}</MenuItem>
-              <MenuItem value="critical">{t('alertRules.high')}</MenuItem>
-            </Select>
-          </FormControl>
-
-          <FormControl fullWidth>
-            <InputLabel>{t('common.view')}</InputLabel>
-            <Select
-              value={form.enabled}
-              label={t('common.view')}
-              onChange={(e) => setField('enabled', e.target.value === 'true')}
-            >
-              <MenuItem value={true as any}>{t('alertRules.active')}</MenuItem>
-              <MenuItem value={false as any}>{t('alertRules.inactive')}</MenuItem>
-            </Select>
-          </FormControl>
-
-          {error && <Alert severity="error">{error}</Alert>}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={closeDialog}>{t('common.cancel')}</Button>
-          <Button variant="contained" onClick={saveRule}>
-            {isEditMode ? t('common.edit') : t('common.add')}
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      <Snackbar open={!!success} autoHideDuration={3500} onClose={() => setSuccess('')}>
-        <Alert onClose={() => setSuccess('')} severity="success" sx={{ width: '100%' }}>
-          {success}
-        </Alert>
-      </Snackbar>
-    </Container>
+      <Modal open={open} onClose={() => setOpen(false)} title={t('alertRules.alertRule')} actions={
+        <><button onClick={() => setOpen(false)} className="px-4 py-2 rounded-lg text-sm text-text-secondary hover:text-text-primary hover:bg-surface-hover transition-colors">{t('alertRules.cancel')}</button><button onClick={save} className="px-4 py-2 rounded-lg bg-accent hover:bg-accent-hover text-white text-sm font-medium transition-colors">{t('alertRules.save')}</button></>
+      }>
+        <div>
+          <label className="block text-xs font-medium text-text-secondary mb-1.5">{t('alertRules.ruleName')}</label>
+          <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="w-full px-3 py-2 rounded-lg bg-surface-base border border-border-default text-text-primary text-sm focus:outline-none focus:border-accent" />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-text-secondary mb-1.5">{t('alertRules.device')}</label>
+          <select value={form.device_id?.toString() || ''} onChange={(e) => setForm({ ...form, device_id: e.target.value ? Number(e.target.value) : null })} className="w-full px-3 py-2 rounded-lg bg-surface-base border border-border-default text-text-primary text-sm focus:outline-none focus:border-accent">
+            <option value="">{t('alertRules.allDevices')}</option>
+            {devices.map((d) => <option key={d.id} value={d.id}>{d.device_id} - {d.name}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-text-secondary mb-1.5">{t('alertRules.sensorType')}</label>
+          <select value={form.sensor_type_id} onChange={(e) => setForm({ ...form, sensor_type_id: Number(e.target.value) })} className="w-full px-3 py-2 rounded-lg bg-surface-base border border-border-default text-text-primary text-sm focus:outline-none focus:border-accent">
+            {sensorTypes.map((s) => <option key={s.id} value={s.id}>{t(s.nameKey)}</option>)}
+          </select>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-xs font-medium text-text-secondary mb-1.5">{t('alertRules.condition')}</label>
+            <select value={form.condition} onChange={(e) => setForm({ ...form, condition: e.target.value })} className="w-full px-3 py-2 rounded-lg bg-surface-base border border-border-default text-text-primary text-sm focus:outline-none focus:border-accent">
+              <option value=">">&gt;</option>
+              <option value="<">&lt;</option>
+              <option value="=">=</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-text-secondary mb-1.5">{t('alertRules.threshold')}</label>
+            <input type="number" value={form.threshold_value} onChange={(e) => setForm({ ...form, threshold_value: e.target.value })} className="w-full px-3 py-2 rounded-lg bg-surface-base border border-border-default text-text-primary text-sm focus:outline-none focus:border-accent" />
+          </div>
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-text-secondary mb-1.5">{t('alertRules.durationSeconds')}</label>
+          <input type="number" value={form.duration_seconds} onChange={(e) => setForm({ ...form, duration_seconds: Number(e.target.value) })} className="w-full px-3 py-2 rounded-lg bg-surface-base border border-border-default text-text-primary text-sm focus:outline-none focus:border-accent" />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-text-secondary mb-1.5">{t('alertRules.severity')}</label>
+          <select value={form.severity} onChange={(e) => setForm({ ...form, severity: e.target.value as 'info' | 'warning' | 'critical' })} className="w-full px-3 py-2 rounded-lg bg-surface-base border border-border-default text-text-primary text-sm focus:outline-none focus:border-accent">
+            <option value="info">{t('alertRules.low')}</option>
+            <option value="warning">{t('alertRules.medium')}</option>
+            <option value="critical">{t('alertRules.high')}</option>
+          </select>
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-text-secondary mb-1.5">{t('alertRules.status')}</label>
+          <select value={String(form.enabled)} onChange={(e) => setForm({ ...form, enabled: e.target.value === 'true' })} className="w-full px-3 py-2 rounded-lg bg-surface-base border border-border-default text-text-primary text-sm focus:outline-none focus:border-accent">
+            <option value="true">{t('alertRules.enabled')}</option>
+            <option value="false">{t('alertRules.disabled')}</option>
+          </select>
+        </div>
+      </Modal>
+    </div>
   );
-};
-
-export default AlertRules;
+}

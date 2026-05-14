@@ -1,5 +1,6 @@
-import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useEffect, ReactNode } from 'react';
 import type { User } from '@/shared/types/api';
+import { useAuthStore } from '@/shared/stores/authStore';
 
 type AuthContextType = {
   user: User | null;
@@ -13,36 +14,41 @@ const AuthContext = createContext<AuthContextType | null>(null);
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
+  if (!context) throw new Error('useAuth must be used within an AuthProvider');
   return context;
 };
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { user, loading, setAuth, clearAuth, setLoading } = useAuthStore();
 
   useEffect(() => {
     const token = localStorage.getItem('token');
     const userData = localStorage.getItem('user');
     if (token && userData) {
-      setUser(JSON.parse(userData) as User);
+      const parsed = JSON.parse(userData) as User;
+      useAuthStore.getState().setAuth(parsed, token);
+    } else {
+      setLoading(false);
     }
-    setLoading(false);
-  }, []);
+  }, [setLoading]);
 
-  const isAdmin = () => user?.role === 'admin';
-  const isViewer = () => user?.role === 'viewer';
+  const setUser = (u: React.SetStateAction<User | null>) => {
+    const resolved = typeof u === 'function' ? u(user) : u;
+    if (resolved) {
+      const token = localStorage.getItem('token') || '';
+      setAuth(resolved, token);
+    } else {
+      clearAuth();
+    }
+  };
 
   const value: AuthContextType = {
     user,
     setUser,
     loading,
-    isAdmin,
-    isViewer,
+    isAdmin: () => user?.role === 'admin',
+    isViewer: () => user?.role === 'viewer',
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-
 };
