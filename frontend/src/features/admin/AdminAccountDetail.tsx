@@ -74,6 +74,20 @@ export default function AdminAccountDetail() {
   const [removeTarget, setRemoveTarget] = useState<{ id: number; name: string } | null>(null);
   const [removeSaving, setRemoveSaving] = useState(false);
 
+  const [unclaimDeviceId, setUnclaimDeviceId] = useState<string | null>(null);
+
+  const handleUnclaimDevice = async () => {
+    if (!unclaimDeviceId) return;
+    try {
+      const res = await fetch(`/api/v1/devices/${unclaimDeviceId}/unclaim`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      setUnclaimDeviceId(null);
+      if (res.ok) await loadDetail();
+    } catch { setUnclaimDeviceId(null); }
+  };
+
   const token = localStorage.getItem('token');
 
   useEffect(() => { loadDetail(); }, [id]);
@@ -279,6 +293,7 @@ export default function AdminAccountDetail() {
                 <th className="px-4 py-3 text-text-muted font-medium">Name</th>
                 <th className="px-4 py-3 text-text-muted font-medium">Type</th>
                 <th className="px-4 py-3 text-text-muted font-medium">Status</th>
+                <th className="px-4 py-3 text-text-muted font-medium">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -289,6 +304,9 @@ export default function AdminAccountDetail() {
                   <td className="px-4 py-3 text-text-secondary">{d.type}</td>
                   <td className="px-4 py-3">
                     <span className={`text-xs font-medium ${d.status === 'online' ? 'text-green-600' : 'text-red-600'}`}>{d.status}</span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <button onClick={() => setUnclaimDeviceId(d.device_id)} className="text-xs text-warning hover:text-warning-muted transition-colors">Unclaim</button>
                   </td>
                 </tr>
               ))}
@@ -345,6 +363,20 @@ export default function AdminAccountDetail() {
               <button onClick={handleRemoveUser} disabled={removeSaving} className="px-4 py-2 text-sm rounded-lg bg-red-600 text-white hover:bg-red-700 disabled:opacity-50">
                 {removeSaving ? 'Removing...' : 'Remove'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Unclaim confirmation */}
+      {unclaimDeviceId && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setUnclaimDeviceId(null)}>
+          <div className="bg-surface-card rounded-xl shadow-xl w-full max-w-sm p-6 space-y-4" onClick={e => e.stopPropagation()}>
+            <h2 className="text-base font-bold text-text-primary">Unclaim Device</h2>
+            <p className="text-sm text-text-secondary">Release device <strong>{unclaimDeviceId}</strong>? It will be available for others to claim.</p>
+            <div className="flex justify-end gap-2 pt-2">
+              <button onClick={() => setUnclaimDeviceId(null)} className="px-4 py-2 text-sm rounded-lg border border-border-default text-text-secondary hover:bg-surface-hover">Cancel</button>
+              <button onClick={handleUnclaimDevice} className="px-4 py-2 text-sm rounded-lg bg-warning text-white hover:bg-warning-muted">Unclaim</button>
             </div>
           </div>
         </div>

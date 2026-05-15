@@ -32,6 +32,7 @@ export default function DeviceManagement() {
   const [editId, setEditId] = useState<number | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [deleteTarget, setDeleteTarget] = useState<Device | null>(null);
+  const [unclaimTarget, setUnclaimTarget] = useState<Device | null>(null);
   const [showClaim, setShowClaim] = useState(false);
   const [claimDeviceId, setClaimDeviceId] = useState('');
   const [claimError, setClaimError] = useState('');
@@ -89,9 +90,13 @@ export default function DeviceManagement() {
     setClaiming(false);
   };
 
-  const handleUnclaim = async (device: Device) => {
-    const dId = device.device_id;
+  const confirmUnclaim = (device: Device) => setUnclaimTarget(device);
+
+  const handleUnclaim = async () => {
+    if (!unclaimTarget) return;
+    const dId = unclaimTarget.device_id;
     const res = await unclaimDevice(dId);
+    setUnclaimTarget(null);
     if (res.success) {
       toast('success', 'Device unclaimed');
       load();
@@ -139,8 +144,8 @@ export default function DeviceManagement() {
           onEdit={openEdit}
           onDelete={confirmRemove}
           renderActions={(d: Device) =>
-            user?.role === 'admin' ? (
-              <button onClick={() => handleUnclaim(d)} className="p-3 md:p-1.5 min-h-[44px] min-w-[44px] flex items-center justify-center text-text-muted hover:text-warning rounded-md hover:bg-warning-bg transition-colors" title="Unclaim">
+            (user?.role === 'admin' || d.user_id === user?.id) ? (
+              <button onClick={() => confirmUnclaim(d)} className="p-3 md:p-1.5 min-h-[44px] min-w-[44px] flex items-center justify-center text-text-muted hover:text-warning rounded-md hover:bg-warning-bg transition-colors" title="Unclaim">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
                 </svg>
@@ -196,6 +201,17 @@ export default function DeviceManagement() {
               <option value="fahrenheit">{t('devices.fahrenheit')}</option>
             </select>
           </div>
+        </div>
+      </Modal>
+
+      {/* Unclaim confirmation modal */}
+      <Modal open={unclaimTarget !== null} onClose={() => setUnclaimTarget(null)} title="Unclaim Device" actions={
+        <><button onClick={() => setUnclaimTarget(null)} className="px-4 py-2 rounded-lg text-sm text-text-secondary hover:text-text-primary hover:bg-surface-hover transition-colors">Cancel</button><button onClick={handleUnclaim} className="px-4 py-2 rounded-lg bg-warning hover:bg-warning-muted text-white text-sm font-medium transition-colors">Unclaim</button></>
+      }>
+        <div className="text-center py-2">
+          <span className="text-3xl block mb-3">⚠️</span>
+          <p className="text-sm text-text-primary font-medium mb-1">Unclaim {unclaimTarget?.name || unclaimTarget?.device_id}?</p>
+          <p className="text-xs text-text-muted">This device will be released and available for others to claim.</p>
         </div>
       </Modal>
 

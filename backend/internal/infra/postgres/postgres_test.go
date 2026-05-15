@@ -264,7 +264,7 @@ func TestDeviceRepository(t *testing.T) {
 		Status:          device.DeviceStatusOffline,
 		FirmwareVersion: ptrString("1.0.0"),
 		Config:          map[string]interface{}{"interval": 30},
-		UserID:          user.ID,
+		UserID:          &user.ID,
 	}
 
 	err = repo.Create(device)
@@ -407,7 +407,7 @@ func TestAlertRuleRepository(t *testing.T) {
 		DeviceID: "alert-device",
 		Name:     "Alert Device",
 		Type:     device.DeviceTypeSensor,
-		UserID:   user.ID,
+		UserID:   &user.ID,
 	}
 	if err := deviceRepo.Create(device); err != nil {
 		t.Fatalf("Failed to create device: %v", err)
@@ -521,7 +521,7 @@ func TestAlertRepository(t *testing.T) {
 		DeviceID: "history-device",
 		Name:     "History Device",
 		Type:     device.DeviceTypeSensor,
-		UserID:   user.ID,
+		UserID:   &user.ID,
 	}
 	if err := deviceRepo.Create(device); err != nil {
 		t.Fatalf("Failed to create device: %v", err)
@@ -536,7 +536,7 @@ func TestAlertRepository(t *testing.T) {
 		ThresholdValue: ptrFloat64(30.0),
 		Severity:       alert.SeverityWarning,
 		Enabled:        true,
-		UserID:         user.ID,
+		UserID:          user.ID,
 	}
 	if err := ruleRepo.Create(rule); err != nil {
 		t.Fatalf("Failed to create rule: %v", err)
@@ -637,7 +637,7 @@ func TestCommandRepository(t *testing.T) {
 		DeviceID: "cmd-device",
 		Name:     "Command Device",
 		Type:     device.DeviceTypeController,
-		UserID:   user.ID,
+		UserID:   &user.ID,
 	}
 	if err := deviceRepo.Create(device); err != nil {
 		t.Fatalf("Failed to create device: %v", err)

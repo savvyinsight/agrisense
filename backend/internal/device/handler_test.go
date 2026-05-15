@@ -55,8 +55,8 @@ func (m *mockDeviceRepo) List(userID int, limit, offset int) ([]Device, int64, e
 	args := m.Called(userID, limit, offset)
 	return args.Get(0).([]Device), args.Get(1).(int64), args.Error(2)
 }
-func (m *mockDeviceRepo) FindOrCreate(deviceID string, userID int) (*Device, error) {
-	args := m.Called(deviceID, userID)
+func (m *mockDeviceRepo) FindOrCreate(deviceID string) (*Device, error) {
+	args := m.Called(deviceID)
 	if d, ok := args.Get(0).(*Device); ok {
 		return d, args.Error(1)
 	}
@@ -99,7 +99,7 @@ func TestCreate_SetsOfflineStatusAndReturnsCreatedDevice(t *testing.T) {
 	assert.NoError(t, json.Unmarshal(w.Body.Bytes(), &created))
 	assert.Equal(t, "device-123", created.DeviceID)
 	assert.Equal(t, DeviceStatusOffline, created.Status)
-	assert.Equal(t, 42, created.UserID)
+	assert.Equal(t, 42, *created.UserID)
 	repo.AssertExpectations(t)
 }
 
@@ -108,7 +108,8 @@ func TestList_ReturnsPaginatedDevices(t *testing.T) {
 	repo := new(mockDeviceRepo)
 	handler := NewDeviceHandler(repo)
 
-	devices := []Device{{ID: 1, DeviceID: "device-abc", Name: "Sensor", Type: DeviceTypeSensor, Status: DeviceStatusOffline, UserID: 5}}
+	uid5 := 5
+	devices := []Device{{ID: 1, DeviceID: "device-abc", Name: "Sensor", Type: DeviceTypeSensor, Status: DeviceStatusOffline, UserID: &uid5}}
 	repo.On("List", 5, 20, 0).Return(devices, int64(1), nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/devices", nil)

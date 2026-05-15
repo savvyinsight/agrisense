@@ -30,7 +30,7 @@ func HandleTelemetry(deviceID string, payload []byte) {
 
 	// Auto-register device if it doesn't exist yet
 	if deviceRepo != nil {
-		if _, err := deviceRepo.FindOrCreate(deviceID, 1); err != nil {
+		if _, err := deviceRepo.FindOrCreate(deviceID); err != nil {
 			log.Printf("Failed to find/create device %s: %v", deviceID, err)
 		}
 		if err := deviceRepo.UpdateStatus(deviceID, device.DeviceStatusOnline); err != nil {

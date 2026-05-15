@@ -29,7 +29,7 @@ type Device struct {
 	FirmwareVersion *string                `json:"firmware_version,omitempty"`
 	Config          map[string]interface{} `json:"config,omitempty"`
 	FieldID         *int                   `json:"field_id,omitempty"`
-	UserID          int                    `json:"user_id"`
+	UserID          *int                   `json:"user_id,omitempty"`
 	AccountID       *int                   `json:"account_id,omitempty"`
 	CreatedAt       time.Time              `json:"created_at"`
 	UpdatedAt       time.Time              `json:"updated_at"`
@@ -45,7 +45,7 @@ type DeviceRepository interface {
 	UpdateHeartbeat(deviceID string) error
 	Delete(id int) error
 	List(userID int, limit, offset int) ([]Device, int64, error)
-	FindOrCreate(deviceID string, userID int) (*Device, error)
+	FindOrCreate(deviceID string) (*Device, error)
 	ClaimDevice(deviceID string, userID, accountID int) error
 	UnclaimDevice(deviceID string) error
 }

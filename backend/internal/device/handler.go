@@ -30,7 +30,8 @@ func (h *DeviceHandler) Create(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 		return
 	}
-	device.UserID = userID.(int)
+	v := userID.(int)
+	device.UserID = &v
 
 	// Set default status - always offline until device connects
 	device.Status = DeviceStatusOffline
@@ -61,13 +62,19 @@ func (h *DeviceHandler) GetByID(c *gin.Context) {
 
 func (h *DeviceHandler) List(c *gin.Context) {
 	userID, _ := c.Get("user_id")
+	role, _ := c.Get("user_role")
+
+	listUserID := userID.(int)
+	if role == "admin" {
+		listUserID = 0 // admin sees all devices (including unclaimed)
+	}
 
 	// Parse pagination
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
 	offset := (page - 1) * limit
 
-	devices, total, err := h.deviceRepo.List(userID.(int), limit, offset)
+	devices, total, err := h.deviceRepo.List(listUserID, limit, offset)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -171,7 +178,7 @@ func (h *DeviceHandler) ClaimDeviceHandler(c *gin.Context) {
 			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
 			return
 		}
-		c.JSON(http.StatusNotFound, gin.H{"error": "Device not found"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Device not found"})
 		return
 	}
 

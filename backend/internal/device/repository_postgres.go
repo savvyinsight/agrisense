@@ -146,7 +146,7 @@ func (r *PostgresDeviceRepository) GetByDeviceID(deviceID string) (*Device, erro
 	return &device, nil
 }
 
-func (r *PostgresDeviceRepository) FindOrCreate(deviceID string, userID int) (*Device, error) {
+func (r *PostgresDeviceRepository) FindOrCreate(deviceID string) (*Device, error) {
 	existing, err := r.GetByDeviceID(deviceID)
 	if err == nil {
 		return existing, nil
@@ -157,7 +157,6 @@ func (r *PostgresDeviceRepository) FindOrCreate(deviceID string, userID int) (*D
 		Name:     "Device " + deviceID,
 		Type:     DeviceTypeSensor,
 		Status:   DeviceStatusOnline,
-		UserID:   userID,
 	}
 
 	if err := r.Create(device); err != nil {
@@ -169,7 +168,7 @@ func (r *PostgresDeviceRepository) FindOrCreate(deviceID string, userID int) (*D
 func (r *PostgresDeviceRepository) ClaimDevice(deviceID string, userID, accountID int) error {
 	result, err := r.DB.Exec(`
 		UPDATE devices SET user_id = $1, account_id = $2, updated_at = NOW()
-		WHERE device_id = $3 AND (user_id = 1 OR account_id IS NULL)
+		WHERE device_id = $3 AND (user_id IS NULL OR account_id IS NULL)
 	`, userID, accountID, deviceID)
 	if err != nil {
 		return err
@@ -183,7 +182,7 @@ func (r *PostgresDeviceRepository) ClaimDevice(deviceID string, userID, accountI
 
 func (r *PostgresDeviceRepository) UnclaimDevice(deviceID string) error {
 	_, err := r.DB.Exec(`
-		UPDATE devices SET user_id = 1, account_id = NULL, updated_at = NOW()
+		UPDATE devices SET user_id = NULL, account_id = NULL, updated_at = NOW()
 		WHERE device_id = $1
 	`, deviceID)
 	return err
@@ -300,7 +299,7 @@ func (r *PostgresDeviceRepository) List(userID int, limit, offset int) ([]Device
         SELECT id, device_id, name, type, location, latitude, longitude, status, last_heartbeat, 
                firmware_version, config, field_id, user_id, created_at, updated_at
         FROM devices 
-        WHERE user_id = $1 OR $1 = 0
+        WHERE user_id = $1 OR (user_id IS NULL AND $1 = 0)
         ORDER BY id 
         LIMIT $2 OFFSET $3
     `
