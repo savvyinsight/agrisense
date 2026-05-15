@@ -103,7 +103,7 @@ func runServer(cliCtx *cli.Context) error {
 	auditRepo := &user.PostgresAuditLogRepository{DB: pgDB}
 
 	// ── 4. Create services ─────────────────────────────────────────
-	authService := user.NewService(userRepo, cfg.JWTSecret, 24*time.Hour)
+	authService := user.NewService(userRepo, accountRepo, cfg.JWTSecret, 24*time.Hour)
 	wsHandler := websocket.NewHander(authService)
 
 	// Rule engine

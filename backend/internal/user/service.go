@@ -9,16 +9,17 @@ import (
 )
 
 type Service struct {
-	userRepo    UserRepository
-	jwtSecret   []byte
-	tokenExpiry time.Duration
+	userRepo       UserRepository
+	accountRepo    AccountRepository
+	jwtSecret      []byte
+	tokenExpiry    time.Duration
 }
 
 type Claims struct {
-	UserID    int    `json:"user_id"`
+	UserID    int   `json:"user_id"`
 	Email     string `json:"email"`
 	Role      string `json:"role"`
-	AccountID int    `json:"account_id"`
+	AccountID *int  `json:"account_id"`
 	jwt.RegisteredClaims
 }
 
@@ -38,11 +39,12 @@ type LoginResponse struct {
 	User  User   `json:"user"`
 }
 
-func NewService(userRepo UserRepository, jwtSecret string, tokenExpiry time.Duration) *Service {
+func NewService(userRepo UserRepository, accountRepo AccountRepository, jwtSecret string, tokenExpiry time.Duration) *Service {
 	return &Service{
-		userRepo:    userRepo,
-		jwtSecret:   []byte(jwtSecret),
-		tokenExpiry: tokenExpiry,
+		userRepo:       userRepo,
+		accountRepo:    accountRepo,
+		jwtSecret:      []byte(jwtSecret),
+		tokenExpiry:    tokenExpiry,
 	}
 }
 
@@ -59,16 +61,40 @@ func (s *Service) Register(req RegisterRequest) (*User, error) {
 		return nil, err
 	}
 
-	// Create user
+	// Create user (initially without account_id = NULL)
 	user := &User{
-		Username: req.Username,
-		Email:    req.Email,
-		Password: string(hashedPassword),
-		Role:     "viewer", // Default role
+		Username:  req.Username,
+		Email:     req.Email,
+		Password:  string(hashedPassword),
+		Role:      "admin", // First user created is account admin
+		AccountID: nil,     // Will be set after account creation
 	}
 
 	err = s.userRepo.Create(user)
 	if err != nil {
+		return nil, err
+	}
+
+	// Create account with this user as owner
+	account := &Account{
+		Name:              req.Username + "'s Farm",
+		SubscriptionTier:  "basic",
+		OwnerID:           user.ID,
+		IsActive:          true,
+	}
+
+	err = s.accountRepo.CreateAccount(account)
+	if err != nil {
+		// If account creation fails, delete the user
+		_ = s.userRepo.Delete(user.ID)
+		return nil, err
+	}
+
+	// Update user with account_id
+	user.AccountID = &account.ID
+	err = s.userRepo.Update(user)
+	if err != nil {
+		// If update fails, still return the user (account is created)
 		return nil, err
 	}
 
