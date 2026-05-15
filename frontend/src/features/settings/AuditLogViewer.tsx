@@ -188,7 +188,7 @@ export const AuditLogViewer: React.FC = () => {
             <TableContainer>
               <Table>
                 <TableHead>
-                  <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
+                  <TableRow sx={{ backgroundColor: '#262a3a' }}>
                     <TableCell>Action</TableCell>
                     <TableCell>Resource Type</TableCell>
                     <TableCell>Resource Name</TableCell>

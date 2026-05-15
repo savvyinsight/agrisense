@@ -2,6 +2,7 @@ package user
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"time"
 )
@@ -12,32 +13,113 @@ type PostgresAccountRepository struct {
 }
 
 func (r *PostgresAccountRepository) CreateAccount(account *Account) error {
-	query := `INSERT INTO accounts (name, subscription_tier, owner_id, is_active, created_at, updated_at)
-	          VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`
+	if account.MaxUsers == nil {
+		defaultMax := tierDefaultMaxUsers(account.SubscriptionTier)
+		account.MaxUsers = &defaultMax
+	}
+	if account.MaxDevices == nil {
+		defaultMax := tierDefaultMaxDevices(account.SubscriptionTier)
+		account.MaxDevices = &defaultMax
+	}
+
+	query := `INSERT INTO accounts (name, subscription_tier, owner_id, is_active, max_users, max_devices, created_at, updated_at)
+	          VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`
 	
 	now := time.Now()
-	err := r.DB.QueryRow(query, account.Name, account.SubscriptionTier, account.OwnerID, true, now, now).
-		Scan(&account.ID)
+	err := r.DB.QueryRow(query, account.Name, account.SubscriptionTier, account.OwnerID, true,
+		account.MaxUsers, account.MaxDevices, now, now).Scan(&account.ID)
 	return err
 }
 
+func tierDefaultMaxUsers(tier string) int {
+	switch tier {
+	case "professional":
+		return 10
+	case "enterprise":
+		return 999
+	default:
+		return 1
+	}
+}
+
+func tierDefaultMaxDevices(tier string) int {
+	switch tier {
+	case "professional":
+		return 50
+	case "enterprise":
+		return 999
+	default:
+		return 10
+	}
+}
+
+// CheckUserQuota returns an error if the account has reached its user limit
+func (r *PostgresAccountRepository) CheckUserQuota(accountID int) error {
+	account, err := r.GetAccountByID(accountID)
+	if err != nil {
+		return err
+	}
+	if !account.IsActive {
+		return fmt.Errorf("account is inactive")
+	}
+	current, err := r.GetUserCountByAccount(accountID)
+	if err != nil {
+		return err
+	}
+	limit := 1
+	if account.MaxUsers != nil {
+		limit = *account.MaxUsers
+	}
+	if current >= int64(limit) {
+		return fmt.Errorf("user limit reached (%d/%d)", current, limit)
+	}
+	return nil
+}
+
+// CheckDeviceQuota returns an error if the account has reached its device limit
+func (r *PostgresAccountRepository) CheckDeviceQuota(accountID int) error {
+	account, err := r.GetAccountByID(accountID)
+	if err != nil {
+		return err
+	}
+	if !account.IsActive {
+		return fmt.Errorf("account is inactive")
+	}
+	current, err := r.GetDeviceCountByAccount(accountID)
+	if err != nil {
+		return err
+	}
+	limit := 10
+	if account.MaxDevices != nil {
+		limit = *account.MaxDevices
+	}
+	if current >= int64(limit) {
+		return fmt.Errorf("device limit reached (%d/%d)", current, limit)
+	}
+	return nil
+}
+
 func (r *PostgresAccountRepository) GetAccountByID(accountID int) (*Account, error) {
-	query := `SELECT id, name, subscription_tier, owner_id, is_active, created_at, updated_at 
+	query := `SELECT id, name, subscription_tier, owner_id, is_active, max_users, max_devices, created_at, updated_at 
 	          FROM accounts WHERE id = $1`
 	
 	var account Account
+	var oid, mu, md sql.NullInt64
 	err := r.DB.QueryRow(query, accountID).Scan(
-		&account.ID, &account.Name, &account.SubscriptionTier, &account.OwnerID, 
-		&account.IsActive, &account.CreatedAt, &account.UpdatedAt,
+		&account.ID, &account.Name, &account.SubscriptionTier, &oid,
+		&account.IsActive, &mu, &md, &account.CreatedAt, &account.UpdatedAt,
 	)
 	if err != nil {
 		return nil, err
 	}
+	if oid.Valid { v := int(oid.Int64); account.OwnerID = &v }
+	if mu.Valid { v := int(mu.Int64); account.MaxUsers = &v }
+	if md.Valid { v := int(md.Int64); account.MaxDevices = &v }
 	return &account, nil
 }
 
 func (r *PostgresAccountRepository) GetAccountsByOwnerID(ownerID int) ([]Account, error) {
-	query := `SELECT id, name, subscription_tier, owner_id, is_active, created_at, updated_at 
+	query := `SELECT id, name, subscription_tier, owner_id, is_active, max_users, max_devices, created_at, updated_at 
 	          FROM accounts WHERE owner_id = $1 ORDER BY created_at DESC`
 	
 	rows, err := r.DB.Query(query, ownerID)
@@ -49,23 +131,27 @@ func (r *PostgresAccountRepository) GetAccountsByOwnerID(ownerID int) ([]Account
 	var accounts []Account
 	for rows.Next() {
 		var account Account
+		var oid, mu, md sql.NullInt64
 		err := rows.Scan(
-			&account.ID, &account.Name, &account.SubscriptionTier, &account.OwnerID, 
-			&account.IsActive, &account.CreatedAt, &account.UpdatedAt,
+			&account.ID, &account.Name, &account.SubscriptionTier, &oid,
+			&account.IsActive, &mu, &md, &account.CreatedAt, &account.UpdatedAt,
 		)
 		if err != nil {
 			return nil, err
 		}
+		if oid.Valid { v := int(oid.Int64); account.OwnerID = &v }
+		if mu.Valid { v := int(mu.Int64); account.MaxUsers = &v }
+		if md.Valid { v := int(md.Int64); account.MaxDevices = &v }
 		accounts = append(accounts, account)
 	}
 	return accounts, rows.Err()
 }
 
 func (r *PostgresAccountRepository) UpdateAccount(account *Account) error {
-	query := `UPDATE accounts SET name = $1, subscription_tier = $2, is_active = $3, updated_at = $4 
-	          WHERE id = $5`
+	query := `UPDATE accounts SET name = $1, subscription_tier = $2, is_active = $3, max_users = $4, max_devices = $5, updated_at = $6 
+	          WHERE id = $7`
 	
-	_, err := r.DB.Exec(query, account.Name, account.SubscriptionTier, account.IsActive, time.Now(), account.ID)
+	_, err := r.DB.Exec(query, account.Name, account.SubscriptionTier, account.IsActive, account.MaxUsers, account.MaxDevices, time.Now(), account.ID)
 	return err
 }
 
@@ -78,9 +164,9 @@ func (r *PostgresAccountRepository) ListAllAccounts(limit, offset int) ([]Accoun
 		return nil, 0, err
 	}
 	
-	// Get paginated results
-	query := `SELECT id, name, subscription_tier, owner_id, is_active, created_at, updated_at 
-	          FROM accounts WHERE is_active = TRUE ORDER BY created_at DESC LIMIT $1 OFFSET $2`
+	// Get paginated results (include inactive for admin view)
+	query := `SELECT id, name, subscription_tier, owner_id, is_active, max_users, max_devices, created_at, updated_at 
+	          FROM accounts ORDER BY created_at DESC LIMIT $1 OFFSET $2`
 	
 	rows, err := r.DB.Query(query, limit, offset)
 	if err != nil {
@@ -91,13 +177,17 @@ func (r *PostgresAccountRepository) ListAllAccounts(limit, offset int) ([]Accoun
 	var accounts []Account
 	for rows.Next() {
 		var account Account
+		var oid, mu, md sql.NullInt64
 		err := rows.Scan(
-			&account.ID, &account.Name, &account.SubscriptionTier, &account.OwnerID,
-			&account.IsActive, &account.CreatedAt, &account.UpdatedAt,
+			&account.ID, &account.Name, &account.SubscriptionTier, &oid,
+			&account.IsActive, &mu, &md, &account.CreatedAt, &account.UpdatedAt,
 		)
 		if err != nil {
 			return nil, 0, err
 		}
+		if oid.Valid { v := int(oid.Int64); account.OwnerID = &v }
+		if mu.Valid { v := int(mu.Int64); account.MaxUsers = &v }
+		if md.Valid { v := int(md.Int64); account.MaxDevices = &v }
 		accounts = append(accounts, account)
 	}
 	return accounts, count, rows.Err()
@@ -310,9 +400,17 @@ func (r *PostgresAuditLogRepository) LogAction(log *AuditLog) error {
 	query := `INSERT INTO audit_logs 
 	          (account_id, user_id, action, resource_type, resource_id, resource_name, old_values, new_values, ip_address, user_agent, status, error_message, created_at)
 	          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING id`
-	
+
+	var oldB, newB []byte
+	if log.OldValues != nil {
+		oldB, _ = json.Marshal(log.OldValues)
+	}
+	if log.NewValues != nil {
+		newB, _ = json.Marshal(log.NewValues)
+	}
+
 	err := r.DB.QueryRow(query, log.AccountID, log.UserID, log.Action, log.ResourceType, log.ResourceID, log.ResourceName,
-		log.OldValues, log.NewValues, log.IPAddress, log.UserAgent, log.Status, log.ErrorMessage, time.Now()).Scan(&log.ID)
+		oldB, newB, log.IPAddress, log.UserAgent, log.Status, log.ErrorMessage, time.Now()).Scan(&log.ID)
 	return err
 }
 
@@ -335,9 +433,9 @@ func (r *PostgresAuditLogRepository) GetAuditLogs(accountID int, filters map[str
 	}
 	
 	// Get count
-	countQuery := query
+	countQuery := `SELECT COUNT(*) FROM (` + query + `) cnt`
 	var count int64
-	err := r.DB.QueryRow(countQuery, args[:len(args)]...).Scan(&count)
+	err := r.DB.QueryRow(countQuery, args...).Scan(&count)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -355,42 +453,123 @@ func (r *PostgresAuditLogRepository) GetAuditLogs(accountID int, filters map[str
 	var logs []AuditLog
 	for rows.Next() {
 		var log AuditLog
-		err := rows.Scan(&log.ID, &log.AccountID, &log.UserID, &log.Action, &log.ResourceType, &log.ResourceID, &log.ResourceName,
-			&log.OldValues, &log.NewValues, &log.IPAddress, &log.UserAgent, &log.Status, &log.ErrorMessage, &log.CreatedAt)
+		var uid sql.NullInt64
+		var oldB, newB []byte
+		var ip, ua, em sql.NullString
+		err := rows.Scan(&log.ID, &log.AccountID, &uid, &log.Action, &log.ResourceType, &log.ResourceID, &log.ResourceName,
+			&oldB, &newB, &ip, &ua, &log.Status, &em, &log.CreatedAt)
 		if err != nil {
 			return nil, 0, err
 		}
+		if uid.Valid { v := int(uid.Int64); log.UserID = &v }
+		if ip.Valid { log.IPAddress = ip.String }
+		if ua.Valid { log.UserAgent = ua.String }
+		if em.Valid { log.ErrorMessage = em.String }
+		json.Unmarshal(oldB, &log.OldValues)
+		json.Unmarshal(newB, &log.NewValues)
+		logs = append(logs, log)
+	}
+	return logs, count, rows.Err()
+}
+
+func (r *PostgresAuditLogRepository) GetAllAuditLogs(filters map[string]interface{}, limit, offset int) ([]AuditLog, int64, error) {
+	query := `SELECT al.id, al.account_id, al.user_id, al.action, al.resource_type, al.resource_id, al.resource_name, al.old_values, al.new_values, al.ip_address, al.user_agent, al.status, al.error_message, al.created_at 
+	          FROM audit_logs al`
+	args := []interface{}{}
+	argIndex := 1
+	whereAdded := false
+
+	if resourceType, ok := filters["resource_type"]; ok {
+		if !whereAdded { query += ` WHERE`; whereAdded = true } else { query += ` AND` }
+		query += fmt.Sprintf(` al.resource_type = $%d`, argIndex)
+		args = append(args, resourceType)
+		argIndex++
+	}
+	if action, ok := filters["action"]; ok {
+		if !whereAdded { query += ` WHERE`; whereAdded = true } else { query += ` AND` }
+		query += fmt.Sprintf(` al.action = $%d`, argIndex)
+		args = append(args, action)
+		argIndex++
+	}
+	if accountID, ok := filters["account_id"]; ok {
+		if !whereAdded { query += ` WHERE`; whereAdded = true } else { query += ` AND` }
+		query += fmt.Sprintf(` al.account_id = $%d`, argIndex)
+		args = append(args, accountID)
+		argIndex++
+	}
+
+	countQuery := `SELECT COUNT(*) FROM (` + query + `) cnt`
+	var count int64
+	err := r.DB.QueryRow(countQuery, args...).Scan(&count)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	query += fmt.Sprintf(` ORDER BY al.created_at DESC LIMIT $%d OFFSET $%d`, argIndex, argIndex+1)
+	args = append(args, limit, offset)
+
+	rows, err := r.DB.Query(query, args...)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+
+	var logs []AuditLog
+	for rows.Next() {
+		var log AuditLog
+		var uid sql.NullInt64
+		var oldB, newB []byte
+		var ip, ua, em sql.NullString
+		err := rows.Scan(&log.ID, &log.AccountID, &uid, &log.Action, &log.ResourceType, &log.ResourceID, &log.ResourceName,
+			&oldB, &newB, &ip, &ua, &log.Status, &em, &log.CreatedAt)
+		if err != nil {
+			return nil, 0, err
+		}
+		if uid.Valid { v := int(uid.Int64); log.UserID = &v }
+		if ip.Valid { log.IPAddress = ip.String }
+		if ua.Valid { log.UserAgent = ua.String }
+		if em.Valid { log.ErrorMessage = em.String }
+		json.Unmarshal(oldB, &log.OldValues)
+		json.Unmarshal(newB, &log.NewValues)
 		logs = append(logs, log)
 	}
 	return logs, count, rows.Err()
 }
 
 func (r *PostgresAuditLogRepository) GetUserAuditLogs(userID, accountID int, limit, offset int) ([]AuditLog, int64, error) {
-	// Get count
 	var count int64
 	countQuery := `SELECT COUNT(*) FROM audit_logs WHERE account_id = $1 AND user_id = $2`
 	err := r.DB.QueryRow(countQuery, accountID, userID).Scan(&count)
 	if err != nil {
 		return nil, 0, err
 	}
-	
-	query := `SELECT id, account_id, user_id, action, resource_type, resource_id, resource_name, old_values, new_values, ip_address, user_agent, status, error_message, created_at 
+
+	query := `SELECT id, account_id, user_id, action, resource_type, resource_id, resource_name, old_values, new_values, ip_address, user_agent, status, error_message, created_at
 	          FROM audit_logs WHERE account_id = $1 AND user_id = $2 ORDER BY created_at DESC LIMIT $3 OFFSET $4`
-	
+
 	rows, err := r.DB.Query(query, accountID, userID, limit, offset)
 	if err != nil {
 		return nil, 0, err
 	}
 	defer rows.Close()
-	
+
 	var logs []AuditLog
 	for rows.Next() {
 		var log AuditLog
-		err := rows.Scan(&log.ID, &log.AccountID, &log.UserID, &log.Action, &log.ResourceType, &log.ResourceID, &log.ResourceName,
-			&log.OldValues, &log.NewValues, &log.IPAddress, &log.UserAgent, &log.Status, &log.ErrorMessage, &log.CreatedAt)
+		var uid sql.NullInt64
+		var oldB, newB []byte
+		var ip, ua, em sql.NullString
+		err := rows.Scan(&log.ID, &log.AccountID, &uid, &log.Action, &log.ResourceType, &log.ResourceID, &log.ResourceName,
+			&oldB, &newB, &ip, &ua, &log.Status, &em, &log.CreatedAt)
 		if err != nil {
 			return nil, 0, err
 		}
+		if uid.Valid { v := int(uid.Int64); log.UserID = &v }
+		if ip.Valid { log.IPAddress = ip.String }
+		if ua.Valid { log.UserAgent = ua.String }
+		if em.Valid { log.ErrorMessage = em.String }
+		json.Unmarshal(oldB, &log.OldValues)
+		json.Unmarshal(newB, &log.NewValues)
 		logs = append(logs, log)
 	}
 	return logs, count, rows.Err()

@@ -26,10 +26,12 @@ ALTER TABLE users ADD CONSTRAINT users_role_check
 -- Add account_id to devices table
 ALTER TABLE devices ADD COLUMN account_id INTEGER REFERENCES accounts(id) ON DELETE CASCADE;
 CREATE INDEX idx_devices_account_id ON devices(account_id);
+UPDATE devices d SET account_id = u.account_id FROM users u WHERE d.user_id = u.id AND d.account_id IS NULL AND u.account_id IS NOT NULL;
 
 -- Add account_id to alert_rules table
 ALTER TABLE alert_rules ADD COLUMN account_id INTEGER REFERENCES accounts(id) ON DELETE CASCADE;
 CREATE INDEX idx_alert_rules_account_id ON alert_rules(account_id);
+UPDATE alert_rules ar SET account_id = u.account_id FROM users u WHERE ar.user_id = u.id AND ar.account_id IS NULL AND u.account_id IS NOT NULL;
 
 -- Add account_id to alerts table
 ALTER TABLE alerts ADD COLUMN account_id INTEGER REFERENCES accounts(id) ON DELETE CASCADE;
@@ -37,10 +39,11 @@ CREATE INDEX idx_alerts_account_id ON alerts(account_id);
 
 -- Add account_id to automation_rules table
 ALTER TABLE automation_rules ADD COLUMN account_id INTEGER REFERENCES accounts(id) ON DELETE CASCADE;
-CREATE INDEX idx_automation_rules_account_id ON automation_rules(account_id);
+UPDATE automation_rules ar SET account_id = u.account_id FROM users u WHERE ar.user_id = u.id AND ar.account_id IS NULL AND u.account_id IS NOT NULL;
 
 -- Add account_id to control_commands table
 ALTER TABLE control_commands ADD COLUMN account_id INTEGER REFERENCES accounts(id) ON DELETE CASCADE;
+UPDATE control_commands cc SET account_id = u.account_id FROM users u WHERE cc.user_id = u.id AND cc.account_id IS NULL AND u.account_id IS NOT NULL;
 CREATE INDEX idx_control_commands_account_id ON control_commands(account_id);
 
 -- User Permissions table (replaces global role with context-specific role)

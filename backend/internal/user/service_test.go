@@ -80,6 +80,38 @@ func (m *mockAccountRepo) UpdateAccount(account *Account) error {
 	args := m.Called(account)
 	return args.Error(0)
 }
+type mockInvitationRepo struct{ mock.Mock }
+
+func (m *mockInvitationRepo) CreateInvitation(inv *UserInvitation) error {
+	args := m.Called(inv)
+	return args.Error(0)
+}
+func (m *mockInvitationRepo) GetInvitationByToken(token string) (*UserInvitation, error) {
+	args := m.Called(token)
+	if inv, ok := args.Get(0).(*UserInvitation); ok {
+		return inv, args.Error(1)
+	}
+	return nil, args.Error(1)
+}
+func (m *mockInvitationRepo) GetPendingInvitationsByEmail(email string) ([]UserInvitation, error) {
+	args := m.Called(email)
+	inv, _ := args.Get(0).([]UserInvitation)
+	return inv, args.Error(1)
+}
+func (m *mockInvitationRepo) AcceptInvitation(invitationID, userID int) error {
+	args := m.Called(invitationID, userID)
+	return args.Error(0)
+}
+func (m *mockInvitationRepo) ListPendingInvitations(accountID int) ([]UserInvitation, error) {
+	args := m.Called(accountID)
+	inv, _ := args.Get(0).([]UserInvitation)
+	return inv, args.Error(1)
+}
+func (m *mockInvitationRepo) DeleteExpiredInvitations() error {
+	args := m.Called()
+	return args.Error(0)
+}
+
 func (m *mockAccountRepo) ListAllAccounts(limit, offset int) ([]Account, int64, error) {
 	args := m.Called(limit, offset)
 	accounts, _ := args.Get(0).([]Account)
@@ -128,7 +160,8 @@ func TestRegister_Success(t *testing.T) {
 	repo := new(mockUserRepo)
 	accountRepo := new(mockAccountRepo)
 	permRepo := new(mockPermissionRepo)
-	service := NewService(repo, accountRepo, permRepo, "secret-key", time.Hour)
+	invRepo := new(mockInvitationRepo)
+	service := NewService(repo, accountRepo, permRepo, invRepo, "secret-key", time.Hour)
 
 	req := RegisterRequest{
 		Username: "tester",
@@ -166,7 +199,8 @@ func TestRegister_DuplicateEmail(t *testing.T) {
 	repo := new(mockUserRepo)
 	accountRepo := new(mockAccountRepo)
 	permRepo := new(mockPermissionRepo)
-	service := NewService(repo, accountRepo, permRepo, "secret-key", time.Hour)
+	invRepo := new(mockInvitationRepo)
+	service := NewService(repo, accountRepo, permRepo, invRepo, "secret-key", time.Hour)
 
 	repo.On("GetByEmail", "tester@example.com").Return(&User{ID: 5, Email: "tester@example.com"}, nil)
 
@@ -183,7 +217,8 @@ func TestLogin_Success(t *testing.T) {
 	repo := new(mockUserRepo)
 	accountRepo := new(mockAccountRepo)
 	permRepo := new(mockPermissionRepo)
-	service := NewService(repo, accountRepo, permRepo, "secret-key", time.Hour)
+	invRepo := new(mockInvitationRepo)
+	service := NewService(repo, accountRepo, permRepo, invRepo, "secret-key", time.Hour)
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte("strong-password"), bcrypt.DefaultCost)
 	assert.NoError(t, err)
@@ -210,7 +245,8 @@ func TestLogin_InvalidPassword(t *testing.T) {
 	repo := new(mockUserRepo)
 	accountRepo := new(mockAccountRepo)
 	permRepo := new(mockPermissionRepo)
-	service := NewService(repo, accountRepo, permRepo, "secret-key", time.Hour)
+	invRepo := new(mockInvitationRepo)
+	service := NewService(repo, accountRepo, permRepo, invRepo, "secret-key", time.Hour)
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte("strong-password"), bcrypt.DefaultCost)
 	assert.NoError(t, err)

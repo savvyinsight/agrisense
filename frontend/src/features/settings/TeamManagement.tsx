@@ -29,6 +29,7 @@ import {
   Edit as EditIcon,
   Delete as DeleteIcon,
   Mail as MailIcon,
+  Check as CheckIcon,
 } from '@mui/icons-material';
 import { useAuth } from '@/features/auth/AuthContext';
 import usePermission from '@/hooks/usePermission';
@@ -69,6 +70,7 @@ interface Invitation {
   email: string;
   role: string;
   farm_id?: number;
+  invitation_token: string;
   created_at: string;
   expires_at: string;
 }
@@ -81,6 +83,7 @@ export const TeamManagement: React.FC = () => {
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [invitations, setInvitations] = useState<Invitation[]>([]);
   const [loading, setLoading] = useState(false);
+  const [copiedId, setCopiedId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   // Invite modal state
@@ -126,6 +129,13 @@ export const TeamManagement: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const copyInviteLink = (inv: Invitation) => {
+    const link = `${window.location.origin}/accept-invitation?token=${inv.invitation_token}`;
+    navigator.clipboard.writeText(link);
+    setCopiedId(inv.id);
+    setTimeout(() => setCopiedId(null), 2000);
   };
 
   const handleInviteUser = async () => {
@@ -273,7 +283,7 @@ export const TeamManagement: React.FC = () => {
               <TableContainer>
                 <Table>
                   <TableHead>
-                    <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
+                    <TableRow sx={{ backgroundColor: '#262a3a' }}>
                       <TableCell>Email</TableCell>
                       <TableCell>Username</TableCell>
                       <TableCell>Roles</TableCell>
@@ -340,7 +350,7 @@ export const TeamManagement: React.FC = () => {
               <TableContainer>
                 <Table>
                   <TableHead>
-                    <TableRow sx={{ backgroundColor: '#f5f5f5' }}>
+                    <TableRow sx={{ backgroundColor: '#262a3a' }}>
                       <TableCell>Email</TableCell>
                       <TableCell>Role</TableCell>
                       <TableCell>Sent</TableCell>
@@ -367,8 +377,8 @@ export const TeamManagement: React.FC = () => {
                           {new Date(inv.expires_at).toLocaleDateString()}
                         </TableCell>
                         <TableCell align="right">
-                          <IconButton size="small">
-                            <MailIcon fontSize="small" />
+                          <IconButton size="small" onClick={() => copyInviteLink(inv)}>
+                            {copiedId === inv.id ? <CheckIcon fontSize="small" color="success" /> : <MailIcon fontSize="small" />}
                           </IconButton>
                         </TableCell>
                       </TableRow>

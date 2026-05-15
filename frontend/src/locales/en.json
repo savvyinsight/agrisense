@@ -3,7 +3,7 @@
     "dashboard": "Dashboard", "fields": "Fields", "alerts": "Alerts", "irrigation": "Irrigation",
     "weather": "Weather", "analytics": "Analytics", "devices": "Devices", "alertRules": "Alert Rules",
     "automation": "Automation", "map": "Map View", "reports": "Reports", "settings": "Settings",
-    "team": "Team", "audit": "Audit Log", "adminAccounts": "Accounts"
+    "team": "Team", "audit": "Audit Log",     "adminAccounts": "Accounts", "adminAudit": "Global Audit", "adminPreferences": "Preferences"
   },
   "user": { "profile": "Profile", "logout": "Logout" },
   "common": {

@@ -16,6 +16,8 @@ const navItems: NavItem[] = [
   { label: 'nav.team', path: '/settings/team', icon: '👥' },
   { label: 'nav.audit', path: '/settings/audit', icon: '📋', adminOnly: true },
   { label: 'nav.adminAccounts', path: '/admin/accounts', icon: '🏛', platformOnly: true },
+  { label: 'nav.adminAudit', path: '/admin/audit', icon: '📋', platformOnly: true },
+  { label: 'nav.adminPreferences', path: '/admin/preferences', icon: '⚙', platformOnly: true },
   { label: 'nav.devices', path: '/devices', icon: '📡', adminOnly: true },
   { label: 'nav.alertRules', path: '/alert-rules', icon: '⚙', adminOnly: true },
   { label: 'nav.automation', path: '/automation', icon: '🔄', adminOnly: true },
@@ -31,8 +33,20 @@ export function Sidebar({ open, onClose, isAdmin }: SidebarProps) {
   const { user } = useAuthStore();
 
   const isPlatformAdmin = user?.role === 'admin';
-  const visible = (item: NavItem) =>
-    (!item.adminOnly || isAdmin) && (!item.platformOnly || isPlatformAdmin);
+
+  // Load admin-hidden pages from localStorage
+  const hiddenPages: string[] = (() => {
+    try { return JSON.parse(localStorage.getItem('admin_hidden_pages') || '[]'); }
+    catch { return []; }
+  })();
+
+  const visible = (item: NavItem) => {
+    if (item.platformOnly && !isPlatformAdmin) return false;
+    if (item.adminOnly && !isAdmin) return false;
+    // Platform admin can hide pages via preferences
+    if (isPlatformAdmin && hiddenPages.includes(item.path)) return false;
+    return true;
+  };
 
   const bottom = navItems.filter((item) => item.bottom && visible(item));
   const main = navItems.filter((item) => !item.bottom && visible(item));

@@ -103,7 +103,7 @@ func runServer(cliCtx *cli.Context) error {
 	auditRepo := &user.PostgresAuditLogRepository{DB: pgDB}
 
 	// ── 4. Create services ─────────────────────────────────────────
-	authService := user.NewService(userRepo, accountRepo, permissionRepo, cfg.JWTSecret, 24*time.Hour)
+	authService := user.NewService(userRepo, accountRepo, permissionRepo, invitationRepo, cfg.JWTSecret, 24*time.Hour)
 	wsHandler := websocket.NewHander(authService)
 
 	// Rule engine
@@ -207,6 +207,7 @@ func runServer(cliCtx *cli.Context) error {
 		UserRepo:       userRepo,
 		AccountRepo:    accountRepo,
 		PermissionRepo: permissionRepo,
+		AuditRepo:      auditRepo,
 		DB:             pgDB,
 	}
 
@@ -244,6 +245,9 @@ func runServer(cliCtx *cli.Context) error {
 		authGroup.POST("/register", authHandler.Register)
 		authGroup.POST("/login", authHandler.Login)
 	}
+
+	// Public invitation lookup (no auth required)
+	r.GET("/api/v1/invitations/:token", user.GetInvitationHandler(invitationRepo, accountRepo))
 
 	// Protected routes
 	api := r.Group("/api/v1")
@@ -346,8 +350,12 @@ func runServer(cliCtx *cli.Context) error {
 		// Platform admin routes (admin role only — no tenant isolation)
 		admin := api.Group("/admin", middleware.PlatformAdminMiddleware())
 		{
-			admin.GET("/accounts", adminHandler.ListAccountsHandler)
+		admin.GET("/accounts", adminHandler.ListAccountsHandler)
 			admin.GET("/accounts/:id", adminHandler.GetAccountDetailHandler)
+			admin.PATCH("/accounts/:id", adminHandler.UpdateAccountHandler)
+			admin.POST("/accounts/:id/users", adminHandler.CreateUserInAccountHandler)
+			admin.DELETE("/accounts/:id/users/:uid", adminHandler.RemoveUserFromAccountHandler)
+			admin.GET("/audit", adminHandler.GetGlobalAuditLogHandler)
 			admin.GET("/stats", adminHandler.GetPlatformStatsHandler)
 		}
 	}

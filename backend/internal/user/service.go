@@ -12,6 +12,7 @@ type Service struct {
 	userRepo       UserRepository
 	accountRepo    AccountRepository
 	permissionRepo PermissionRepository
+	invitationRepo InvitationRepository
 	jwtSecret      []byte
 	tokenExpiry    time.Duration
 }
@@ -30,9 +31,10 @@ type LoginRequest struct {
 }
 
 type RegisterRequest struct {
-	Username string `json:"username" binding:"required"`
-	Email    string `json:"email" binding:"required,email"`
-	Password string `json:"password" binding:"required,min=6"`
+	Username         string `json:"username" binding:"required"`
+	Email            string `json:"email" binding:"required,email"`
+	Password         string `json:"password" binding:"required,min=6"`
+	InvitationToken  string `json:"invitation_token"`
 }
 
 type LoginResponse struct {
@@ -42,11 +44,12 @@ type LoginResponse struct {
 	Permissions []UserPermission `json:"permissions,omitempty"`
 }
 
-func NewService(userRepo UserRepository, accountRepo AccountRepository, permissionRepo PermissionRepository, jwtSecret string, tokenExpiry time.Duration) *Service {
+func NewService(userRepo UserRepository, accountRepo AccountRepository, permissionRepo PermissionRepository, invitationRepo InvitationRepository, jwtSecret string, tokenExpiry time.Duration) *Service {
 	return &Service{
 		userRepo:       userRepo,
 		accountRepo:    accountRepo,
 		permissionRepo: permissionRepo,
+		invitationRepo: invitationRepo,
 		jwtSecret:      []byte(jwtSecret),
 		tokenExpiry:    tokenExpiry,
 	}
@@ -65,13 +68,54 @@ func (s *Service) Register(req RegisterRequest) (*User, error) {
 		return nil, err
 	}
 
-	// Create user (initially without account_id = NULL)
+	// — Invitation flow —
+	if req.InvitationToken != "" {
+		inv, err := s.invitationRepo.GetInvitationByToken(req.InvitationToken)
+		if err != nil {
+			return nil, errors.New("invalid or expired invitation token")
+		}
+		if inv.Email != req.Email {
+			return nil, errors.New("email does not match invitation")
+		}
+		if time.Now().After(inv.ExpiresAt) {
+			return nil, errors.New("invitation has expired")
+		}
+
+		user := &User{
+			Username:  req.Username,
+			Email:     req.Email,
+			Password:  string(hashedPassword),
+			Role:      inv.Role,
+			AccountID: &inv.AccountID,
+		}
+
+		err = s.userRepo.Create(user)
+		if err != nil {
+			return nil, err
+		}
+
+		perm := &UserPermission{
+			UserID:    user.ID,
+			AccountID: inv.AccountID,
+			FarmID:    inv.FarmID,
+			Role:      inv.Role,
+			GrantedBy: inv.InvitedByID,
+		}
+		_ = s.permissionRepo.CreatePermission(perm)
+
+		_ = s.invitationRepo.AcceptInvitation(inv.ID, user.ID)
+
+		user.Password = ""
+		return user, nil
+	}
+
+	// — Normal registration flow (new standalone account) —
 	user := &User{
 		Username:  req.Username,
 		Email:     req.Email,
 		Password:  string(hashedPassword),
-		Role:      "account_owner", // New user is account owner
-		AccountID: nil,     // Will be set after account creation
+		Role:      "account_owner",
+		AccountID: nil,
 	}
 
 	err = s.userRepo.Create(user)
@@ -79,39 +123,34 @@ func (s *Service) Register(req RegisterRequest) (*User, error) {
 		return nil, err
 	}
 
-	// Create account with this user as owner
 	account := &Account{
-		Name:              req.Username + "'s Farm",
-		SubscriptionTier:  "basic",
-		OwnerID:           user.ID,
-		IsActive:          true,
+		Name:             req.Username + "'s Farm",
+		SubscriptionTier: "basic",
+		OwnerID:          &user.ID,
+		IsActive:         true,
 	}
 
 	err = s.accountRepo.CreateAccount(account)
 	if err != nil {
-		// If account creation fails, delete the user
 		_ = s.userRepo.Delete(user.ID)
 		return nil, err
 	}
 
-	// Update user with account_id
 	user.AccountID = &account.ID
 	err = s.userRepo.Update(user)
 	if err != nil {
 		return nil, err
 	}
 
-	// Create account_owner permission for this user
 	ownerPerm := &UserPermission{
 		UserID:    user.ID,
 		AccountID: account.ID,
-		FarmID:    nil, // applies to all farms
+		FarmID:    nil,
 		Role:      RoleAccountOwner,
-		GrantedBy: user.ID, // self-granted on registration
+		GrantedBy: user.ID,
 	}
-	_ = s.permissionRepo.CreatePermission(ownerPerm) // non-fatal on failure
+	_ = s.permissionRepo.CreatePermission(ownerPerm)
 
-	// Don't return password hash
 	user.Password = ""
 	return user, nil
 }

@@ -31,9 +31,12 @@ export const register = async (
   username: string,
   email: string,
   password: string,
+  invitationToken?: string,
 ): Promise<RegisterResponse> => {
   try {
-    const response = await api.post('/auth/register', { username, email, password });
+    const body: Record<string, string> = { username, email, password };
+    if (invitationToken) body.invitation_token = invitationToken;
+    const response = await api.post('/auth/register', body);
     return { success: true, data: response.data };
   } catch (error) {
     return {

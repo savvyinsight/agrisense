@@ -1,21 +1,29 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { login, register } from '@/features/auth/api';
 import { useAuthStore } from '@/shared/stores/authStore';
 import { useAuth } from '@/features/auth/AuthContext';
 
 export default function Login() {
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { setAuth } = useAuthStore();
   const { setAccount, setPermissions } = useAuth();
   const [tab, setTab] = useState<0 | 1>(0);
+  // Redirect to accept-invitation if token is in URL
+  const urlToken = searchParams.get('token');
+  if (urlToken) {
+    navigate(`/accept-invitation?token=${urlToken}`, { replace: true });
+  }
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [username, setUsername] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const invited = searchParams.get('accepted') === '1';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,6 +59,7 @@ export default function Login() {
             <button onClick={() => setTab(1)} className={`flex-1 py-2 text-sm font-medium rounded-md transition-colors ${tab === 1 ? 'bg-accent text-white' : 'text-text-secondary hover:text-text-primary'}`}>{t('auth.createAccount')}</button>
           </div>
 
+          {invited && <div className="text-sm p-3 rounded-lg mb-4 bg-success-bg text-success">Invitation accepted! Please log in with your new account.</div>}
           {error && <div className={`text-sm p-3 rounded-lg mb-4 ${error.includes('successful') ? 'bg-success-bg text-success' : 'bg-critical-bg text-critical'}`}>{error}</div>}
 
           <form onSubmit={handleSubmit} className="space-y-4">

@@ -9,8 +9,10 @@ type Account struct {
 	ID                int       `json:"id"`
 	Name              string    `json:"name"`
 	SubscriptionTier  string    `json:"subscription_tier"` // basic, professional, enterprise
-	OwnerID           int       `json:"owner_id"`
+	OwnerID           *int      `json:"owner_id"`          // NULL = legacy account
 	IsActive          bool      `json:"is_active"`
+	MaxUsers          *int      `json:"max_users"`   // NULL = tier default
+	MaxDevices        *int      `json:"max_devices"` // NULL = tier default
 	CreatedAt         time.Time `json:"created_at"`
 	UpdatedAt         time.Time `json:"updated_at"`
 }
@@ -132,4 +134,5 @@ type AuditLogRepository interface {
 	LogAction(log *AuditLog) error
 	GetAuditLogs(accountID int, filters map[string]interface{}, limit, offset int) ([]AuditLog, int64, error)
 	GetUserAuditLogs(userID, accountID int, limit, offset int) ([]AuditLog, int64, error)
+	GetAllAuditLogs(filters map[string]interface{}, limit, offset int) ([]AuditLog, int64, error)
 }
