@@ -20,6 +20,8 @@ type IrrigationZone struct {
 	Status         ZoneStatus `json:"status"`
 	RuntimeMinutes int        `json:"runtime_minutes"`
 	FlowRateLPM    float64    `json:"flow_rate_lpm"`
+	Latitude       *float64   `json:"latitude,omitempty"`
+	Longitude      *float64   `json:"longitude,omitempty"`
 	UserID         int        `json:"user_id"`
 	CreatedAt      time.Time  `json:"created_at"`
 	UpdatedAt      time.Time  `json:"updated_at"`

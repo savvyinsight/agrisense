@@ -1,7 +1,7 @@
 import { useRef, useState, useEffect, useCallback } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { MapContainer, TileLayer, GeoJSON, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, GeoJSON, Marker, Popup, useMap, useMapEvents } from 'react-leaflet';
 import { cn } from '@/shared/lib/cn';
 
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -19,12 +19,24 @@ interface FieldGeo {
   zoneCount?: number; alerts?: number;
 }
 
+interface DeviceMarker {
+  id: number | string;
+  device_id: string;
+  name: string;
+  latitude: number;
+  longitude: number;
+  status: string;
+  latestTemp?: number | null;
+}
+
 interface FarmMapProps {
   fields: FieldGeo[];
+  devices?: DeviceMarker[];
   center?: [number, number];
   zoom?: number;
   height?: number;
   onFieldClick?: (field: FieldGeo) => void;
+  onMapClick?: (latlng: { lat: number; lng: number }) => void;
   focusedAlertId?: number | null;
   className?: string;
 }
@@ -44,6 +56,15 @@ const healthFill: Record<string, string> = {
   healthy: '#4caf5020', warning: '#f59e0b20', critical: '#ef444420',
 };
 
+function MapClickHandler({ onClick }: { onClick?: (latlng: { lat: number; lng: number }) => void }) {
+  useMapEvents({
+    click(e) {
+      onClick?.({ lat: e.latlng.lat, lng: e.latlng.lng });
+    },
+  });
+  return null;
+}
+
 function MapController({ focusedAlertId, fields }: { focusedAlertId?: number | null; fields: FieldGeo[] }) {
   const map = useMap();
   useEffect(() => {
@@ -59,7 +80,8 @@ function MapController({ focusedAlertId, fields }: { focusedAlertId?: number | n
   return null;
 }
 
-export function FarmMap({ fields, center = [30.5, 114.3], zoom = 12, height = 400, onFieldClick, focusedAlertId, className }: FarmMapProps) {
+export function FarmMap({ fields, devices = [], center = [30.5, 114.3], zoom = 12, height = 400, 
+  onFieldClick, onMapClick, focusedAlertId, className }: FarmMapProps) {
   const [mode, setMode] = useState<MapMode>('health');
   const [selectedField, setSelectedField] = useState<FieldGeo | null>(null);
   const mapRef = useRef<L.Map | null>(null);
@@ -129,7 +151,8 @@ export function FarmMap({ fields, center = [30.5, 114.3], zoom = 12, height = 40
         </div>
 
         <MapContainer center={center} zoom={zoom} style={{ height: '100%', width: '100%' }} ref={mapRef} zoomControl={false}>
-          <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' />
+          <TileLayer url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}" attribution='&copy; <a href="https://www.esri.com/">Esri</a>' />
+          <MapClickHandler onClick={onMapClick} />
           <MapController focusedAlertId={focusedAlertId} fields={fields} />
           {fields.map((field) => (
             <GeoJSON
@@ -138,6 +161,18 @@ export function FarmMap({ fields, center = [30.5, 114.3], zoom = 12, height = 40
               style={() => colorByMode(field)}
               onEachFeature={(_, layer) => onEachFeature(field, layer as L.Path)}
             />
+          ))}
+          {devices.filter(d => d.latitude && d.longitude).map((d) => (
+            <Marker key={d.id} position={[d.latitude, d.longitude]}>
+              <Popup>
+                <div className="text-sm">
+                  <strong>{d.name}</strong><br />
+                  <span className="text-xs">{d.device_id}</span><br />
+                  <span className={d.status === 'online' ? 'text-green-600' : 'text-red-600'}>{d.status}</span>
+                  {d.latestTemp != null && <><br />{d.latestTemp}°C</>}
+                </div>
+              </Popup>
+            </Marker>
           ))}
         </MapContainer>
       </div>

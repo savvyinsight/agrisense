@@ -155,19 +155,23 @@ export default function Dashboard() {
   }, [setAlerts]);
 
   // Generate field geometry with real coordinates if available, else use location-based fallback
-  const fieldGeo = useMemo(() => fields.map((f, i) => {
-    // Try to use real coordinates from backend; fallback to generated if missing
-    const hasRealGeo = f.latitude && f.longitude;
-    const coordinates = hasRealGeo 
-      ? [[f.longitude!, f.latitude!, 0], [f.longitude! + 0.01, f.latitude!, 0], [f.longitude! + 0.01, f.latitude! + 0.01, 0], [f.longitude!, f.latitude! + 0.01, 0], [f.longitude!, f.latitude!, 0]]
-      : [[114.3 + (i % 3) * 0.04 - 0.02, 30.5 + i * 0.03 - 0.015], [114.3 + (i % 3) * 0.04 + 0.02, 30.5 + i * 0.03 - 0.015], [114.3 + (i % 3) * 0.04 + 0.025, 30.5 + i * 0.03 + 0.015], [114.3 + (i % 3) * 0.04 - 0.015, 30.5 + i * 0.03 + 0.02], [114.3 + (i % 3) * 0.04 - 0.02, 30.5 + i * 0.03 - 0.015]];
+  const fieldGeo = useMemo(() => fields
+    .filter(f => f.latitude && f.longitude)
+    .map((f) => {
+    const size = 0.015;
     return {
       id: f.id, name: f.name, health: f.health, soil_moisture: f.soil_moisture,
       alerts: f.health === 'critical' ? 1 : f.health === 'warning' ? 1 : undefined,
       zoneCount: f.zones?.length || 0,
       geometry: {
         type: 'Polygon' as const,
-        coordinates: [coordinates],
+        coordinates: [[
+          [f.longitude! - size, f.latitude! - size],
+          [f.longitude! + size, f.latitude! - size],
+          [f.longitude! + size * 1.3, f.latitude! + size],
+          [f.longitude! - size * 0.8, f.latitude! + size * 1.3],
+          [f.longitude! - size, f.latitude! - size],
+        ]],
       },
     };
   }), [fields]);
@@ -243,12 +247,21 @@ export default function Dashboard() {
       {/* ─── MAIN: Map + Priority Feed ─── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
         <div className="lg:col-span-2 order-2 lg:order-1">
-          <FarmMap
-            fields={fieldGeo}
-            height={typeof window !== 'undefined' && window.innerWidth < 768 ? 250 : 340}
-            onFieldClick={(f) => navigate(`/fields/${f.id}`)}
-            className="shadow-elevated"
-          />
+        <FarmMap
+          fields={fieldGeo}
+          devices={devices.map(d => ({
+            id: d.id ?? d.device_id,
+            device_id: d.device_id,
+            name: d.name,
+            latitude: d.latitude ?? 0,
+            longitude: d.longitude ?? 0,
+            status: d.status,
+            latestTemp: d.latestTemp,
+          })).filter(d => d.latitude && d.longitude)}
+          height={typeof window !== 'undefined' && window.innerWidth < 768 ? 250 : 340}
+          onFieldClick={(f) => navigate(`/fields/${f.id}`)}
+          className="shadow-elevated"
+        />
           {fieldsNeedingAttention.length > 0 && (
             <div className="mt-4">
               <h3 className="text-sm font-semibold text-text-primary mb-3 flex items-center gap-2">

@@ -111,6 +111,14 @@ func (h *FieldHandler) Update(c *gin.Context) {
 		f := v.(float64)
 		existing.Humidity = &f
 	}
+	if v, ok := updates["latitude"]; ok {
+		f := v.(float64)
+		existing.Latitude = &f
+	}
+	if v, ok := updates["longitude"]; ok {
+		f := v.(float64)
+		existing.Longitude = &f
+	}
 
 	if err := h.repo.Update(existing); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})

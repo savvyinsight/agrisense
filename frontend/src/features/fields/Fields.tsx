@@ -17,6 +17,8 @@ export default function Fields() {
   const [deleteTarget, setDeleteTarget] = useState<Field | null>(null);
   const [newName, setNewName] = useState('');
   const [newCrop, setNewCrop] = useState('');
+  const [newLat, setNewLat] = useState('');
+  const [newLng, setNewLng] = useState('');
 
   const load = async () => {
     setLoading(true);
@@ -29,9 +31,13 @@ export default function Fields() {
 
   const handleCreate = async () => {
     if (!newName) return;
-    const res = await createField({ name: newName, crop: newCrop || undefined });
+    const res = await createField({
+      name: newName, crop: newCrop || undefined,
+      latitude: parseFloat(newLat) || undefined,
+      longitude: parseFloat(newLng) || undefined,
+    });
     if (res.success) toast('success', t('fields.addField'));
-    setNewName(''); setNewCrop(''); setModalOpen(false);
+    setNewName(''); setNewCrop(''); setNewLat(''); setNewLng(''); setModalOpen(false);
     load();
   };
 
@@ -133,6 +139,16 @@ export default function Fields() {
         <div>
           <label className="block text-xs font-medium text-text-secondary mb-1.5">{t('fields.cropType')}</label>
           <input value={newCrop} onChange={(e) => setNewCrop(e.target.value)} className="w-full px-3 py-2 rounded-lg bg-surface-base border border-border-default text-text-primary text-sm focus:outline-none focus:border-accent" />
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-xs font-medium text-text-secondary mb-1.5">Latitude</label>
+            <input value={newLat} onChange={(e) => setNewLat(e.target.value)} placeholder="40.7128" className="w-full px-3 py-2 rounded-lg bg-surface-base border border-border-default text-text-primary text-sm font-mono focus:outline-none focus:border-accent" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-text-secondary mb-1.5">Longitude</label>
+            <input value={newLng} onChange={(e) => setNewLng(e.target.value)} placeholder="-74.0060" className="w-full px-3 py-2 rounded-lg bg-surface-base border border-border-default text-text-primary text-sm font-mono focus:outline-none focus:border-accent" />
+          </div>
         </div>
       </Modal>
     </div>

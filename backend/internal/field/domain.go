@@ -20,6 +20,8 @@ type Field struct {
 	Temperature    *float64    `json:"temperature,omitempty"`
 	Humidity       *float64    `json:"humidity,omitempty"`
 	LastIrrigation *time.Time  `json:"last_irrigation,omitempty"`
+	Latitude       *float64    `json:"latitude,omitempty"`
+	Longitude      *float64    `json:"longitude,omitempty"`
 	UserID         int         `json:"user_id"`
 	CreatedAt      time.Time   `json:"created_at"`
 	UpdatedAt      time.Time   `json:"updated_at"`

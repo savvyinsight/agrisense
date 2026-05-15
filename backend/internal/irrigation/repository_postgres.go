@@ -13,23 +13,16 @@ func (r *PostgresIrrigationZoneRepository) ListByFieldID(fieldID int, userID int
 	var rows *sql.Rows
 	var err error
 
+	selectCols := `id, name, field_id, moisture, target_moisture, status,
+	       runtime_minutes, flow_rate_lpm, latitude, longitude, user_id, created_at, updated_at`
+
 	if fieldID > 0 {
-		query := `
-			SELECT id, name, field_id, moisture, target_moisture, status,
-			       runtime_minutes, flow_rate_lpm, user_id, created_at, updated_at
-			FROM irrigation_zones
-			WHERE field_id = $1 AND (user_id = $2 OR $2 = 0)
-			ORDER BY id
-		`
+		query := `SELECT ` + selectCols + ` FROM irrigation_zones
+			WHERE field_id = $1 AND (user_id = $2 OR $2 = 0) ORDER BY id`
 		rows, err = r.DB.Query(query, fieldID, userID)
 	} else {
-		query := `
-			SELECT id, name, field_id, moisture, target_moisture, status,
-			       runtime_minutes, flow_rate_lpm, user_id, created_at, updated_at
-			FROM irrigation_zones
-			WHERE user_id = $1 OR $1 = 0
-			ORDER BY id
-		`
+		query := `SELECT ` + selectCols + ` FROM irrigation_zones
+			WHERE user_id = $1 OR $1 = 0 ORDER BY id`
 		rows, err = r.DB.Query(query, userID)
 	}
 
@@ -41,13 +34,17 @@ func (r *PostgresIrrigationZoneRepository) ListByFieldID(fieldID int, userID int
 	var zones []IrrigationZone
 	for rows.Next() {
 		var z IrrigationZone
+		var lat, lng sql.NullFloat64
 		err := rows.Scan(
 			&z.ID, &z.Name, &z.FieldID, &z.Moisture, &z.TargetMoisture, &z.Status,
-			&z.RuntimeMinutes, &z.FlowRateLPM, &z.UserID, &z.CreatedAt, &z.UpdatedAt,
+			&z.RuntimeMinutes, &z.FlowRateLPM, &lat, &lng,
+			&z.UserID, &z.CreatedAt, &z.UpdatedAt,
 		)
 		if err != nil {
 			return nil, err
 		}
+		if lat.Valid { z.Latitude = &lat.Float64 }
+		if lng.Valid { z.Longitude = &lng.Float64 }
 		zones = append(zones, z)
 	}
 
@@ -55,17 +52,19 @@ func (r *PostgresIrrigationZoneRepository) ListByFieldID(fieldID int, userID int
 }
 
 func (r *PostgresIrrigationZoneRepository) GetByID(id int) (*IrrigationZone, error) {
-	query := `
-		SELECT id, name, field_id, moisture, target_moisture, status,
-		       runtime_minutes, flow_rate_lpm, user_id, created_at, updated_at
-		FROM irrigation_zones WHERE id = $1
-	`
+	query := `SELECT id, name, field_id, moisture, target_moisture, status,
+	       runtime_minutes, flow_rate_lpm, latitude, longitude, user_id, created_at, updated_at
+		FROM irrigation_zones WHERE id = $1`
 
 	var z IrrigationZone
+	var lat, lng sql.NullFloat64
 	err := r.DB.QueryRow(query, id).Scan(
 		&z.ID, &z.Name, &z.FieldID, &z.Moisture, &z.TargetMoisture, &z.Status,
-		&z.RuntimeMinutes, &z.FlowRateLPM, &z.UserID, &z.CreatedAt, &z.UpdatedAt,
+		&z.RuntimeMinutes, &z.FlowRateLPM, &lat, &lng,
+		&z.UserID, &z.CreatedAt, &z.UpdatedAt,
 	)
+	if lat.Valid { z.Latitude = &lat.Float64 }
+	if lng.Valid { z.Longitude = &lng.Float64 }
 
 	if err == sql.ErrNoRows {
 		return nil, fmt.Errorf("zone not found")
