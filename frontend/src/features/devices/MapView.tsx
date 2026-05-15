@@ -32,7 +32,7 @@ export default function MapView() {
   const [placeType, setPlaceType] = useState('sensor');
   const [placing, setPlacing] = useState(false);
   const [showPlaceDialog, setShowPlaceDialog] = useState(false);
-  const placeDeviceId = generateDeviceId();
+  const [placeDeviceId, setPlaceDeviceId] = useState(generateDeviceId());
 
   useEffect(() => {
     (async () => {
@@ -48,6 +48,7 @@ export default function MapView() {
     setPlaceLng(latlng.lng);
     setPlaceName('');
     setPlaceType('sensor');
+    setPlaceDeviceId(generateDeviceId());
     setShowPlaceDialog(true);
   };
 

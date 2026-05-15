@@ -1,7 +1,7 @@
 import { useRef, useState, useEffect, useCallback } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { MapContainer, TileLayer, GeoJSON, Marker, Popup, useMap, useMapEvents } from 'react-leaflet';
+import { MapContainer, TileLayer, GeoJSON, Marker, Popup, useMap } from 'react-leaflet';
 import { cn } from '@/shared/lib/cn';
 
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -56,15 +56,6 @@ const healthFill: Record<string, string> = {
   healthy: '#4caf5020', warning: '#f59e0b20', critical: '#ef444420',
 };
 
-function MapClickHandler({ onClick }: { onClick?: (latlng: { lat: number; lng: number }) => void }) {
-  useMapEvents({
-    click(e) {
-      onClick?.({ lat: e.latlng.lat, lng: e.latlng.lng });
-    },
-  });
-  return null;
-}
-
 function MapController({ focusedAlertId, fields }: { focusedAlertId?: number | null; fields: FieldGeo[] }) {
   const map = useMap();
   useEffect(() => {
@@ -90,6 +81,10 @@ export function FarmMap({ fields, devices = [], center = [30.5, 114.3], zoom = 1
     setSelectedField(field);
     onFieldClick?.(field);
   }, [onFieldClick]);
+
+  // Map click → place device (bound in whenReady via ref to always use latest callback)
+  const onClickRef = useRef(onMapClick);
+  onClickRef.current = onMapClick;
 
   const colorByMode = (field: FieldGeo) => {
     if (mode === 'health') {
@@ -150,9 +145,14 @@ export function FarmMap({ fields, devices = [], center = [30.5, 114.3], zoom = 1
           })}
         </div>
 
-        <MapContainer center={center} zoom={zoom} style={{ height: '100%', width: '100%' }} ref={mapRef} zoomControl={false}>
+        <MapContainer center={center} zoom={zoom} style={{ height: '100%', width: '100%' }} ref={mapRef} zoomControl={false} whenReady={(m) => {
+          const leafletMap = m.target;
+          mapRef.current = leafletMap;
+          leafletMap.on('click', (e: L.LeafletMouseEvent) => {
+            onClickRef.current?.({ lat: e.latlng.lat, lng: e.latlng.lng });
+          });
+        }}>
           <TileLayer url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}" attribution='&copy; <a href="https://www.esri.com/">Esri</a>' />
-          <MapClickHandler onClick={onMapClick} />
           <MapController focusedAlertId={focusedAlertId} fields={fields} />
           {fields.map((field) => (
             <GeoJSON
