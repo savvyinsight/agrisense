@@ -256,11 +256,13 @@ func runServer(cliCtx *cli.Context) error {
 		// Device routes
 		devices := api.Group("/devices")
 		{
-			devices.POST("", deviceHandler.Create)
-			devices.GET("", deviceHandler.List)
-			devices.GET("/:id", deviceHandler.GetByID)
-			devices.PUT("/:id", deviceHandler.Update)
-			devices.DELETE("/:id", deviceHandler.Delete)
+	devices.POST("", deviceHandler.Create)
+		devices.GET("", deviceHandler.List)
+		devices.POST("/claim", deviceHandler.ClaimDeviceHandler)
+		devices.GET("/:id", deviceHandler.GetByID)
+		devices.PUT("/:id", deviceHandler.Update)
+		devices.DELETE("/:id", deviceHandler.Delete)
+		devices.POST("/:id/unclaim", deviceHandler.UnclaimDeviceHandler)
 		}
 
 		// Data routes

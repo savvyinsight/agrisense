@@ -30,6 +30,7 @@ type Device struct {
 	Config          map[string]interface{} `json:"config,omitempty"`
 	FieldID         *int                   `json:"field_id,omitempty"`
 	UserID          int                    `json:"user_id"`
+	AccountID       *int                   `json:"account_id,omitempty"`
 	CreatedAt       time.Time              `json:"created_at"`
 	UpdatedAt       time.Time              `json:"updated_at"`
 }
@@ -44,4 +45,7 @@ type DeviceRepository interface {
 	UpdateHeartbeat(deviceID string) error
 	Delete(id int) error
 	List(userID int, limit, offset int) ([]Device, int64, error)
+	FindOrCreate(deviceID string, userID int) (*Device, error)
+	ClaimDevice(deviceID string, userID, accountID int) error
+	UnclaimDevice(deviceID string) error
 }

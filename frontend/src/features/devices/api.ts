@@ -102,6 +102,24 @@ export const sendCommand = async (
   }
 };
 
+export const claimDevice = async (deviceId: string): Promise<ApiResponse<Device>> => {
+  try {
+    const response = await api.post('/devices/claim', { device_id: deviceId });
+    return { success: true, data: response.data };
+  } catch (error) {
+    return { success: false, error: handleError(error) };
+  }
+};
+
+export const unclaimDevice = async (deviceId: string): Promise<ApiResponse<null>> => {
+  try {
+    await api.post(`/devices/${deviceId}/unclaim`);
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: handleError(error) };
+  }
+};
+
 export const getCommandStatus = async (
   deviceId: string,
   commandId: string | number,

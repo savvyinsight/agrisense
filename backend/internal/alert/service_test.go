@@ -97,6 +97,9 @@ func (m *mockDeviceRepo) UpdateStatus(deviceID string, status device.DeviceStatu
 func (m *mockDeviceRepo) UpdateHeartbeat(deviceID string) error { return nil }
 func (m *mockDeviceRepo) Delete(id int) error { return nil }
 func (m *mockDeviceRepo) List(userID int, limit, offset int) ([]device.Device, int64, error) { return nil, 0, nil }
+func (m *mockDeviceRepo) FindOrCreate(deviceID string, userID int) (*device.Device, error) { return nil, nil }
+func (m *mockDeviceRepo) ClaimDevice(deviceID string, userID, accountID int) error { return nil }
+func (m *mockDeviceRepo) UnclaimDevice(deviceID string) error { return nil }
 
 func TestCreateRule_ForwardsToRuleRepo(t *testing.T) {
 	rule := &AlertRule{Name: "High humidity", UserID: 10}

@@ -28,8 +28,11 @@ func HandleTelemetry(deviceID string, payload []byte) {
 	// Record message for metrics
 	middleware.RecordMessage()
 
-	// Mark device as online when telemetry is received
+	// Auto-register device if it doesn't exist yet
 	if deviceRepo != nil {
+		if _, err := deviceRepo.FindOrCreate(deviceID, 1); err != nil {
+			log.Printf("Failed to find/create device %s: %v", deviceID, err)
+		}
 		if err := deviceRepo.UpdateStatus(deviceID, device.DeviceStatusOnline); err != nil {
 			log.Printf("Failed to update device status to online for %s: %v", deviceID, err)
 		}

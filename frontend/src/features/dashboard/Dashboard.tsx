@@ -320,22 +320,27 @@ export default function Dashboard() {
         <div className="rounded-lg border border-border-default bg-surface-card p-4">
           <h3 className="text-sm font-semibold text-text-primary mb-4">{t('dashboard.irrigationToday')}</h3>
           <div className="space-y-2.5">
-            {[{ id: 'north', zone: 'North Field', status: t('irrigation.active'), time: 'Running 60m', water: '5,700 L', urgent: true },
-              { id: 'central', zone: 'Central Field', status: t('irrigation.active'), time: 'Running 45m', water: '5,400 L', urgent: false },
-              { id: 'south', zone: 'South Field', status: t('irrigation.failed'), time: 'Failed 15m ago', water: '0 L', urgent: true },
-            ].map((item) => (
-              <div key={item.id} className={cn('flex items-center justify-between py-2 px-3 rounded-md', item.urgent ? 'bg-critical-bg' : '')}>
-                <div className="flex items-center gap-2">
-                  <span className={cn('w-2 h-2 rounded-full', item.urgent ? 'bg-critical' : 'bg-info-bright')} />
-                  <span className="text-sm text-text-primary">{item.zone}</span>
+            {zones.length === 0 ? (
+              <div className="text-center py-6 text-sm text-text-muted">No irrigation today</div>
+            ) : zones.map((zone) => {
+              const isUrgent = zone.status === 'failed' || zone.moisture < zone.target_moisture * 0.5;
+              const statusLabel = zone.status === 'active' ? t('irrigation.active') : zone.status === 'failed' ? t('irrigation.failed') : zone.status === 'scheduled' ? 'Scheduled' : 'Idle';
+              const timeLabel = zone.status === 'active' ? `Running ${zone.runtime_minutes}m` : statusLabel;
+              const waterLabel = zone.status !== 'idle' ? `${Math.round(zone.runtime_minutes * zone.flow_rate_lpm).toLocaleString()} L` : '-';
+              return (
+                <div key={zone.id} className={cn('flex items-center justify-between py-2 px-3 rounded-md', isUrgent ? 'bg-critical-bg' : '')}>
+                  <div className="flex items-center gap-2">
+                    <span className={cn('w-2 h-2 rounded-full', isUrgent ? 'bg-critical' : 'bg-info-bright')} />
+                    <span className="text-sm text-text-primary">{zone.name}</span>
+                  </div>
+                  <div className="flex items-center gap-3 text-xs">
+                    <span className={zone.status === 'failed' ? 'text-critical font-medium' : 'text-info-bright'}>{statusLabel}</span>
+                    <span className="text-text-muted hidden sm:inline">{timeLabel}</span>
+                    <span className="text-text-muted w-16 text-right">{waterLabel}</span>
+                  </div>
                 </div>
-                <div className="flex items-center gap-3 text-xs">
-                  <span className={item.status === t('irrigation.failed') ? 'text-critical font-medium' : 'text-info-bright'}>{item.status}</span>
-                  <span className="text-text-muted hidden sm:inline">{item.time}</span>
-                  <span className="text-text-muted w-16 text-right">{item.water}</span>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </div>

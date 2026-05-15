@@ -147,3 +147,47 @@ func (h *DeviceHandler) Delete(c *gin.Context) {
 
 	c.JSON(http.StatusNoContent, nil)
 }
+
+// ClaimDeviceHandler claims an unclaimed device for the current user
+// POST /api/v1/devices/claim
+func (h *DeviceHandler) ClaimDeviceHandler(c *gin.Context) {
+	var req struct {
+		DeviceID string `json:"device_id"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "device_id required"})
+		return
+	}
+
+	userID, _ := c.Get("user_id")
+	accountID, exists := c.Get("account_id")
+	if !exists {
+		c.JSON(http.StatusForbidden, gin.H{"error": "No account found"})
+		return
+	}
+
+	if err := h.deviceRepo.ClaimDevice(req.DeviceID, userID.(int), accountID.(int)); err != nil {
+		if err.Error() == "device already claimed by another user" {
+			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusNotFound, gin.H{"error": "Device not found"})
+		return
+	}
+
+	claimed, _ := h.deviceRepo.GetByDeviceID(req.DeviceID)
+	c.JSON(http.StatusOK, claimed)
+}
+
+// UnclaimDeviceHandler resets a device to unclaimed state (admin only)
+// POST /api/v1/devices/:id/unclaim
+func (h *DeviceHandler) UnclaimDeviceHandler(c *gin.Context) {
+	deviceID := c.Param("id")
+
+	if err := h.deviceRepo.UnclaimDevice(deviceID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to unclaim device"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"status": "unclaimed"})
+}

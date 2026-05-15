@@ -24,8 +24,11 @@ func HandleHeartbeat(deviceID string, payload []byte) {
 		return
 	}
 
-	// Update device status if deviceRepo is initialized
+	// Auto-register device if it doesn't exist yet
 	if deviceRepo != nil {
+		if _, err := deviceRepo.FindOrCreate(deviceID, 1); err != nil {
+			log.Printf("Failed to find/create device %s: %v", deviceID, err)
+		}
 		// Update last heartbeat timestamp
 		if err := deviceRepo.UpdateHeartbeat(deviceID); err != nil {
 			log.Printf("Failed to update heartbeat for device %s: %v", deviceID, err)

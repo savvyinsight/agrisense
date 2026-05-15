@@ -14,10 +14,11 @@ interface DataTableProps<T> {
   keyExtractor: (_item: T) => string | number;
   onEdit?: (_item: T) => void;
   onDelete?: (_item: T) => void;
+  renderActions?: (_item: T) => React.ReactNode;
   emptyMessage?: string;
 }
 
-export function DataTable<T>({ columns, data, keyExtractor, onEdit, onDelete, emptyMessage }: DataTableProps<T>) {
+export function DataTable<T>({ columns, data, keyExtractor, onEdit, onDelete, renderActions, emptyMessage }: DataTableProps<T>) {
   const { t } = useTranslation();
 
   if (data.length === 0) {
@@ -53,9 +54,10 @@ export function DataTable<T>({ columns, data, keyExtractor, onEdit, onDelete, em
                     {col.render ? col.render(item) : String((item as any)[col.key] ?? '')}
                   </td>
                 ))}
-                {(onEdit || onDelete) && (
+                {(onEdit || onDelete || renderActions) && (
                   <td className="px-4 py-3 text-right">
                     <div className="flex items-center justify-end gap-1">
+                      {renderActions && renderActions(item)}
                       {onEdit && (
                         <button onClick={() => onEdit(item)} className="p-3 md:p-1.5 min-h-[44px] min-w-[44px] flex items-center justify-center text-text-muted hover:text-text-primary rounded-md hover:bg-surface-hover transition-colors" title={t('component.edit')}>
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

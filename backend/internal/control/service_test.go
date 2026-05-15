@@ -96,6 +96,11 @@ func (f *fakeDeviceRepo) Delete(id int) error {
 func (f *fakeDeviceRepo) List(userID int, limit, offset int) ([]device.Device, int64, error) {
 	return nil, 0, nil
 }
+func (f *fakeDeviceRepo) FindOrCreate(deviceID string, userID int) (*device.Device, error) {
+	return nil, nil
+}
+func (f *fakeDeviceRepo) ClaimDevice(deviceID string, userID, accountID int) error { return nil }
+func (f *fakeDeviceRepo) UnclaimDevice(deviceID string) error { return nil }
 
 func TestExecuteCommand_SendsPayloadAndUpdatesDelivery(t *testing.T) {
 	deviceRepo := &fakeDeviceRepo{

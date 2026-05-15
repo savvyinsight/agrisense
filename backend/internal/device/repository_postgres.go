@@ -13,8 +13,8 @@ type PostgresDeviceRepository struct {
 
 func (r *PostgresDeviceRepository) Create(device *Device) error {
 	query := `
-        INSERT INTO devices (device_id, name, type, location, latitude, longitude, status, firmware_version, config, field_id, user_id, created_at, updated_at)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+        INSERT INTO devices (device_id, name, type, location, latitude, longitude, status, firmware_version, config, field_id, user_id, account_id, created_at, updated_at)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
         RETURNING id
     `
 
@@ -36,6 +36,7 @@ func (r *PostgresDeviceRepository) Create(device *Device) error {
 		configJSON,
 		device.FieldID,
 		device.UserID,
+		device.AccountID,
 		time.Now(),
 		time.Now(),
 	).Scan(&device.ID)
@@ -143,6 +144,49 @@ func (r *PostgresDeviceRepository) GetByDeviceID(deviceID string) (*Device, erro
 	}
 
 	return &device, nil
+}
+
+func (r *PostgresDeviceRepository) FindOrCreate(deviceID string, userID int) (*Device, error) {
+	existing, err := r.GetByDeviceID(deviceID)
+	if err == nil {
+		return existing, nil
+	}
+
+	device := &Device{
+		DeviceID: deviceID,
+		Name:     "Device " + deviceID,
+		Type:     DeviceTypeSensor,
+		Status:   DeviceStatusOnline,
+		UserID:   userID,
+	}
+
+	if err := r.Create(device); err != nil {
+		return nil, err
+	}
+	return device, nil
+}
+
+func (r *PostgresDeviceRepository) ClaimDevice(deviceID string, userID, accountID int) error {
+	result, err := r.DB.Exec(`
+		UPDATE devices SET user_id = $1, account_id = $2, updated_at = NOW()
+		WHERE device_id = $3 AND (user_id = 1 OR account_id IS NULL)
+	`, userID, accountID, deviceID)
+	if err != nil {
+		return err
+	}
+	rows, _ := result.RowsAffected()
+	if rows == 0 {
+		return fmt.Errorf("device already claimed by another user")
+	}
+	return nil
+}
+
+func (r *PostgresDeviceRepository) UnclaimDevice(deviceID string) error {
+	_, err := r.DB.Exec(`
+		UPDATE devices SET user_id = 1, account_id = NULL, updated_at = NOW()
+		WHERE device_id = $1
+	`, deviceID)
+	return err
 }
 
 func (r *PostgresDeviceRepository) GetByUserID(userID int) ([]Device, error) {

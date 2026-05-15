@@ -55,6 +55,21 @@ func (m *mockDeviceRepo) List(userID int, limit, offset int) ([]Device, int64, e
 	args := m.Called(userID, limit, offset)
 	return args.Get(0).([]Device), args.Get(1).(int64), args.Error(2)
 }
+func (m *mockDeviceRepo) FindOrCreate(deviceID string, userID int) (*Device, error) {
+	args := m.Called(deviceID, userID)
+	if d, ok := args.Get(0).(*Device); ok {
+		return d, args.Error(1)
+	}
+	return nil, args.Error(1)
+}
+func (m *mockDeviceRepo) ClaimDevice(deviceID string, userID, accountID int) error {
+	args := m.Called(deviceID, userID, accountID)
+	return args.Error(0)
+}
+func (m *mockDeviceRepo) UnclaimDevice(deviceID string) error {
+	args := m.Called(deviceID)
+	return args.Error(0)
+}
 
 func TestCreate_SetsOfflineStatusAndReturnsCreatedDevice(t *testing.T) {
 	gin.SetMode(gin.TestMode)
