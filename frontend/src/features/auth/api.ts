@@ -11,6 +11,12 @@ export const login = async (email: string, password: string): Promise<LoginRespo
     if (response.data.token) {
       localStorage.setItem('token', response.data.token);
       localStorage.setItem('user', JSON.stringify(response.data.user));
+      if (response.data.account) {
+        localStorage.setItem('account', JSON.stringify(response.data.account));
+      }
+      if (response.data.permissions) {
+        localStorage.setItem('permissions', JSON.stringify(response.data.permissions));
+      }
     }
     return { success: true, data: response.data };
   } catch (error) {
@@ -40,4 +46,6 @@ export const register = async (
 export const logout = (): void => {
   localStorage.removeItem('token');
   localStorage.removeItem('user');
+  localStorage.removeItem('account');
+  localStorage.removeItem('permissions');
 };

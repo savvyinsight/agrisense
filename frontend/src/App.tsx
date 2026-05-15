@@ -16,6 +16,11 @@ import Weather from '@/features/weather/Weather';
 import DeviceManagement from '@/features/devices/DeviceManagement';
 import MapView from '@/features/devices/MapView';
 import Settings from '@/features/settings/Settings';
+import TeamManagement from '@/features/settings/TeamManagement';
+import AuditLogViewer from '@/features/settings/AuditLogViewer';
+import AdminAccounts from '@/features/admin/AdminAccounts';
+import AdminAccountDetail from '@/features/admin/AdminAccountDetail';
+import { ProtectedRoute } from '@/shared/components/ProtectedRoute';
 import Reports from '@/features/reports/Reports';
 
 const queryClient = new QueryClient();
@@ -31,6 +36,13 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
   if (loading) return null;
   if (!user) return <Navigate to="/login" replace />;
   return isAdmin() ? <>{children}</> : <Navigate to="/dashboard" replace />;
+}
+
+function PlatformAdminRoute({ children }: { children: React.ReactNode }) {
+  const { user, loading } = useAuth();
+  if (loading) return null;
+  if (!user) return <Navigate to="/login" replace />;
+  return user.role === 'admin' ? <>{children}</> : <Navigate to="/dashboard" replace />;
 }
 
 export default function App() {
@@ -55,7 +67,11 @@ export default function App() {
                       <Route path="map" element={<MapView />} />
                       <Route path="irrigation" element={<Irrigation />} />
                       <Route path="weather" element={<Weather />} />
+                      <Route path="settings/team" element={<ProtectedRoute requiredRoles={['account_owner', 'farm_manager']} component={TeamManagement} />} />
+                      <Route path="settings/audit" element={<ProtectedRoute requiredRoles={['account_owner']} component={AuditLogViewer} />} />
                       <Route path="settings" element={<Settings />} />
+                      <Route path="admin/accounts" element={<PlatformAdminRoute><AdminAccounts /></PlatformAdminRoute>} />
+                      <Route path="admin/accounts/:id" element={<PlatformAdminRoute><AdminAccountDetail /></PlatformAdminRoute>} />
                       <Route path="devices" element={<AdminRoute><DeviceManagement /></AdminRoute>} />
                       <Route path="alert-rules" element={<AdminRoute><AlertRules /></AdminRoute>} />
                       <Route path="automation" element={<AdminRoute><AutomationRules /></AdminRoute>} />

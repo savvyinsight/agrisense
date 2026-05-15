@@ -102,6 +102,8 @@ type AccountRepository interface {
 	GetAccountsByOwnerID(ownerID int) ([]Account, error)
 	UpdateAccount(account *Account) error
 	ListAllAccounts(limit, offset int) ([]Account, int64, error)
+	GetUserCountByAccount(accountID int) (int64, error)
+	GetDeviceCountByAccount(accountID int) (int64, error)
 }
 
 // PermissionRepository interface

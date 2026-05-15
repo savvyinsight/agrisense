@@ -3,11 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { login, register } from '@/features/auth/api';
 import { useAuthStore } from '@/shared/stores/authStore';
+import { useAuth } from '@/features/auth/AuthContext';
 
 export default function Login() {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { setAuth } = useAuthStore();
+  const { setAccount, setPermissions } = useAuth();
   const [tab, setTab] = useState<0 | 1>(0);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -21,8 +23,12 @@ export default function Login() {
     setLoading(true);
     if (tab === 0) {
       const result = await login(email, password);
-      if (result.success && result.data) { setAuth(result.data.user, result.data.token); navigate('/dashboard'); }
-      else setError(result.error || t('auth.loginFailed'));
+      if (result.success && result.data) {
+        setAuth(result.data.user, result.data.token);
+        if (result.data.account) setAccount(result.data.account);
+        if (result.data.permissions) setPermissions(result.data.permissions);
+        navigate('/dashboard');
+      } else setError(result.error || t('auth.loginFailed'));
     } else {
       const result = await register(username, email, password);
       if (result.success) { setTab(0); setError(t('auth.registerSuccess')); }

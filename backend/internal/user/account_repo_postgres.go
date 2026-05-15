@@ -103,6 +103,18 @@ func (r *PostgresAccountRepository) ListAllAccounts(limit, offset int) ([]Accoun
 	return accounts, count, rows.Err()
 }
 
+func (r *PostgresAccountRepository) GetUserCountByAccount(accountID int) (int64, error) {
+	var count int64
+	err := r.DB.QueryRow(`SELECT COUNT(*) FROM users WHERE account_id = $1`, accountID).Scan(&count)
+	return count, err
+}
+
+func (r *PostgresAccountRepository) GetDeviceCountByAccount(accountID int) (int64, error) {
+	var count int64
+	err := r.DB.QueryRow(`SELECT COUNT(*) FROM devices WHERE account_id = $1`, accountID).Scan(&count)
+	return count, err
+}
+
 // PostgresPermissionRepository implements PermissionRepository
 type PostgresPermissionRepository struct {
 	DB *sql.DB

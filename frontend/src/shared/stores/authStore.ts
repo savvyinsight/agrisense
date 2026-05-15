@@ -24,9 +24,11 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
   clearAuth: () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    localStorage.removeItem('account');
+    localStorage.removeItem('permissions');
     set({ user: null, token: null, loading: false });
   },
   setLoading: (loading) => set({ loading }),
-  isAdmin: () => get().user?.role === 'admin',
-  isViewer: () => get().user?.role === 'viewer',
+  isAdmin: () => { const r = get().user?.role; return r === 'admin' || r === 'account_owner'; },
+  isViewer: () => { const r = get().user?.role; return r === 'viewer' || r === 'operator' || r === 'technician'; },
 }));

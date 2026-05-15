@@ -18,6 +18,11 @@ CREATE INDEX idx_accounts_owner_id ON accounts(owner_id);
 ALTER TABLE users ADD COLUMN account_id INTEGER REFERENCES accounts(id) ON DELETE RESTRICT;
 CREATE INDEX idx_users_account_id ON users(account_id);
 
+-- Update users.role CHECK constraint to accept new RBAC roles
+ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check;
+ALTER TABLE users ADD CONSTRAINT users_role_check
+  CHECK (role IN ('admin', 'viewer', 'account_owner', 'farm_manager', 'operator', 'technician'));
+
 -- Add account_id to devices table
 ALTER TABLE devices ADD COLUMN account_id INTEGER REFERENCES accounts(id) ON DELETE CASCADE;
 CREATE INDEX idx_devices_account_id ON devices(account_id);

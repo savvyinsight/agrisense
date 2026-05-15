@@ -9,6 +9,8 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+func intPtr(i int) *int { return &i }
+
 type mockUserRepo struct {
 	mock.Mock
 }
@@ -49,10 +51,84 @@ func (m *mockUserRepo) List(limit, offset int) ([]User, int64, error) {
 	users, _ := args.Get(0).([]User)
 	return users, args.Get(1).(int64), args.Error(2)
 }
+func (m *mockUserRepo) GetByAccountID(accountID int, limit, offset int) ([]User, int64, error) {
+	args := m.Called(accountID, limit, offset)
+	users, _ := args.Get(0).([]User)
+	return users, args.Get(1).(int64), args.Error(2)
+}
+
+// Mock AccountRepository
+type mockAccountRepo struct{ mock.Mock }
+
+func (m *mockAccountRepo) CreateAccount(account *Account) error {
+	args := m.Called(account)
+	return args.Error(0)
+}
+func (m *mockAccountRepo) GetAccountByID(accountID int) (*Account, error) {
+	args := m.Called(accountID)
+	if a, ok := args.Get(0).(*Account); ok {
+		return a, args.Error(1)
+	}
+	return nil, args.Error(1)
+}
+func (m *mockAccountRepo) GetAccountsByOwnerID(ownerID int) ([]Account, error) {
+	args := m.Called(ownerID)
+	accounts, _ := args.Get(0).([]Account)
+	return accounts, args.Error(1)
+}
+func (m *mockAccountRepo) UpdateAccount(account *Account) error {
+	args := m.Called(account)
+	return args.Error(0)
+}
+func (m *mockAccountRepo) ListAllAccounts(limit, offset int) ([]Account, int64, error) {
+	args := m.Called(limit, offset)
+	accounts, _ := args.Get(0).([]Account)
+	return accounts, args.Get(1).(int64), args.Error(2)
+}
+func (m *mockAccountRepo) GetUserCountByAccount(accountID int) (int64, error) {
+	args := m.Called(accountID)
+	return args.Get(0).(int64), args.Error(1)
+}
+func (m *mockAccountRepo) GetDeviceCountByAccount(accountID int) (int64, error) {
+	args := m.Called(accountID)
+	return args.Get(0).(int64), args.Error(1)
+}
+
+// Mock PermissionRepository
+type mockPermissionRepo struct{ mock.Mock }
+
+func (m *mockPermissionRepo) CreatePermission(perm *UserPermission) error {
+	args := m.Called(perm)
+	return args.Error(0)
+}
+func (m *mockPermissionRepo) GetPermissionsByUserID(userID, accountID int) ([]UserPermission, error) {
+	args := m.Called(userID, accountID)
+	perms, _ := args.Get(0).([]UserPermission)
+	return perms, args.Error(1)
+}
+func (m *mockPermissionRepo) GetPermissionsByFarmID(farmID, accountID int) ([]UserPermission, error) {
+	args := m.Called(farmID, accountID)
+	perms, _ := args.Get(0).([]UserPermission)
+	return perms, args.Error(1)
+}
+func (m *mockPermissionRepo) RevokePermission(id int) error {
+	args := m.Called(id)
+	return args.Error(0)
+}
+func (m *mockPermissionRepo) UpdatePermission(perm *UserPermission) error {
+	args := m.Called(perm)
+	return args.Error(0)
+}
+func (m *mockPermissionRepo) HasPermission(userID, accountID int, farmID *int, role string) (bool, error) {
+	args := m.Called(userID, accountID, farmID, role)
+	return args.Bool(0), args.Error(1)
+}
 
 func TestRegister_Success(t *testing.T) {
 	repo := new(mockUserRepo)
-	service := NewService(repo, "secret-key", time.Hour)
+	accountRepo := new(mockAccountRepo)
+	permRepo := new(mockPermissionRepo)
+	service := NewService(repo, accountRepo, permRepo, "secret-key", time.Hour)
 
 	req := RegisterRequest{
 		Username: "tester",
@@ -65,6 +141,12 @@ func TestRegister_Success(t *testing.T) {
 		userArg := args.Get(0).(*User)
 		userArg.ID = 1
 	})
+	accountRepo.On("CreateAccount", mock.AnythingOfType("*user.Account")).Return(nil).Run(func(args mock.Arguments) {
+		accArg := args.Get(0).(*Account)
+		accArg.ID = 10
+	})
+	repo.On("Update", mock.AnythingOfType("*user.User")).Return(nil)
+	permRepo.On("CreatePermission", mock.AnythingOfType("*user.UserPermission")).Return(nil)
 
 	user, err := service.Register(req)
 
@@ -76,11 +158,15 @@ func TestRegister_Success(t *testing.T) {
 	assert.Empty(t, user.Password)
 
 	repo.AssertExpectations(t)
+	accountRepo.AssertExpectations(t)
+	permRepo.AssertExpectations(t)
 }
 
 func TestRegister_DuplicateEmail(t *testing.T) {
 	repo := new(mockUserRepo)
-	service := NewService(repo, "secret-key", time.Hour)
+	accountRepo := new(mockAccountRepo)
+	permRepo := new(mockPermissionRepo)
+	service := NewService(repo, accountRepo, permRepo, "secret-key", time.Hour)
 
 	repo.On("GetByEmail", "tester@example.com").Return(&User{ID: 5, Email: "tester@example.com"}, nil)
 
@@ -95,12 +181,16 @@ func TestRegister_DuplicateEmail(t *testing.T) {
 
 func TestLogin_Success(t *testing.T) {
 	repo := new(mockUserRepo)
-	service := NewService(repo, "secret-key", time.Hour)
+	accountRepo := new(mockAccountRepo)
+	permRepo := new(mockPermissionRepo)
+	service := NewService(repo, accountRepo, permRepo, "secret-key", time.Hour)
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte("strong-password"), bcrypt.DefaultCost)
 	assert.NoError(t, err)
 
-	repo.On("GetByEmail", "tester@example.com").Return(&User{ID: 1, Email: "tester@example.com", Password: string(hashedPassword), Role: "viewer"}, nil)
+	repo.On("GetByEmail", "tester@example.com").Return(&User{ID: 1, Email: "tester@example.com", Password: string(hashedPassword), Role: "viewer", AccountID: intPtr(1)}, nil)
+	accountRepo.On("GetAccountByID", 1).Return(&Account{ID: 1, Name: "Test Farm"}, nil)
+	permRepo.On("GetPermissionsByUserID", 1, 1).Return([]UserPermission{}, nil)
 
 	resp, err := service.Login(LoginRequest{Email: "tester@example.com", Password: "strong-password"})
 
@@ -118,7 +208,9 @@ func TestLogin_Success(t *testing.T) {
 
 func TestLogin_InvalidPassword(t *testing.T) {
 	repo := new(mockUserRepo)
-	service := NewService(repo, "secret-key", time.Hour)
+	accountRepo := new(mockAccountRepo)
+	permRepo := new(mockPermissionRepo)
+	service := NewService(repo, accountRepo, permRepo, "secret-key", time.Hour)
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte("strong-password"), bcrypt.DefaultCost)
 	assert.NoError(t, err)

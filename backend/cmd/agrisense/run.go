@@ -103,7 +103,7 @@ func runServer(cliCtx *cli.Context) error {
 	auditRepo := &user.PostgresAuditLogRepository{DB: pgDB}
 
 	// ── 4. Create services ─────────────────────────────────────────
-	authService := user.NewService(userRepo, accountRepo, cfg.JWTSecret, 24*time.Hour)
+	authService := user.NewService(userRepo, accountRepo, permissionRepo, cfg.JWTSecret, 24*time.Hour)
 	wsHandler := websocket.NewHander(authService)
 
 	// Rule engine
@@ -200,6 +200,14 @@ func runServer(cliCtx *cli.Context) error {
 		PermissionRepo: permissionRepo,
 		InvitationRepo: invitationRepo,
 		AuditRepo:      auditRepo,
+	}
+
+	// Platform admin handler
+	adminHandler := &user.AdminHandler{
+		UserRepo:       userRepo,
+		AccountRepo:    accountRepo,
+		PermissionRepo: permissionRepo,
+		DB:             pgDB,
 	}
 
 	// ── 7. Setup HTTP router ──────────────────────────────────────
@@ -322,8 +330,8 @@ func runServer(cliCtx *cli.Context) error {
 			deviceGroup.GET("/commands/:cmdId", controlHandler.GetCommandStatus)
 		}
 
-		// Multi-tenant RBAC routes
-		accounts := api.Group("/accounts/:id")
+		// Multi-tenant RBAC routes (with tenant isolation)
+		accounts := api.Group("/accounts/:id", middleware.GinTenantIsolationMiddleware())
 		{
 			// Team management
 			accounts.GET("/users", userHandler.ListTeamHandler)
@@ -333,6 +341,14 @@ func runServer(cliCtx *cli.Context) error {
 
 			// Audit log
 			accounts.GET("/audit", userHandler.GetAuditLogHandler)
+		}
+
+		// Platform admin routes (admin role only — no tenant isolation)
+		admin := api.Group("/admin", middleware.PlatformAdminMiddleware())
+		{
+			admin.GET("/accounts", adminHandler.ListAccountsHandler)
+			admin.GET("/accounts/:id", adminHandler.GetAccountDetailHandler)
+			admin.GET("/stats", adminHandler.GetPlatformStatsHandler)
 		}
 	}
 

@@ -1,8 +1,9 @@
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/shared/lib/cn';
+import { useAuthStore } from '@/shared/stores/authStore';
 
-interface NavItem { label: string; path: string; icon: string; adminOnly?: boolean; bottom?: boolean }
+interface NavItem { label: string; path: string; icon: string; adminOnly?: boolean; platformOnly?: boolean; bottom?: boolean }
 
 const navItems: NavItem[] = [
   { label: 'nav.dashboard', path: '/dashboard', icon: '⊞' },
@@ -12,6 +13,9 @@ const navItems: NavItem[] = [
   { label: 'nav.weather', path: '/weather', icon: '☀' },
   { label: 'nav.analytics', path: '/analytics', icon: '📊' },
   { label: 'nav.reports', path: '/reports', icon: '📋' },
+  { label: 'nav.team', path: '/settings/team', icon: '👥' },
+  { label: 'nav.audit', path: '/settings/audit', icon: '📋', adminOnly: true },
+  { label: 'nav.adminAccounts', path: '/admin/accounts', icon: '🏛', platformOnly: true },
   { label: 'nav.devices', path: '/devices', icon: '📡', adminOnly: true },
   { label: 'nav.alertRules', path: '/alert-rules', icon: '⚙', adminOnly: true },
   { label: 'nav.automation', path: '/automation', icon: '🔄', adminOnly: true },
@@ -24,9 +28,14 @@ export function Sidebar({ open, onClose, isAdmin }: SidebarProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const { t } = useTranslation();
+  const { user } = useAuthStore();
 
-  const bottom = navItems.filter((item) => item.bottom && (!item.adminOnly || isAdmin));
-  const main = navItems.filter((item) => !item.bottom && (!item.adminOnly || isAdmin));
+  const isPlatformAdmin = user?.role === 'admin';
+  const visible = (item: NavItem) =>
+    (!item.adminOnly || isAdmin) && (!item.platformOnly || isPlatformAdmin);
+
+  const bottom = navItems.filter((item) => item.bottom && visible(item));
+  const main = navItems.filter((item) => !item.bottom && visible(item));
 
   const handleNav = (path: string) => { navigate(path); onClose(); };
 

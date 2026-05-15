@@ -2,7 +2,8 @@
   "nav": {
     "dashboard": "Dashboard", "fields": "Fields", "alerts": "Alerts", "irrigation": "Irrigation",
     "weather": "Weather", "analytics": "Analytics", "devices": "Devices", "alertRules": "Alert Rules",
-    "automation": "Automation", "map": "Map View", "reports": "Reports", "settings": "Settings"
+    "automation": "Automation", "map": "Map View", "reports": "Reports", "settings": "Settings",
+    "team": "Team", "audit": "Audit Log", "adminAccounts": "Accounts"
   },
   "user": { "profile": "Profile", "logout": "Logout" },
   "common": {
@@ -204,6 +205,7 @@
   "settings": {
     "title": "Settings", "subtitle": "Manage your account and application preferences",
     "profile": "Profile", "preferences": "Preferences", "language": "Language",
+    "team": "Team Management", "auditLog": "Audit Log",
     "dangerZone": "Danger Zone", "dangerZoneDesc": "Once you log out, you will need to re-enter your credentials.",
     "logOut": "Log Out", "role": "Role", "userId": "User ID",
     "english": "English", "chinese": "中文"

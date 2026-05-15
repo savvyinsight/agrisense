@@ -11,6 +11,7 @@ import (
 type Service struct {
 	userRepo       UserRepository
 	accountRepo    AccountRepository
+	permissionRepo PermissionRepository
 	jwtSecret      []byte
 	tokenExpiry    time.Duration
 }
@@ -35,14 +36,17 @@ type RegisterRequest struct {
 }
 
 type LoginResponse struct {
-	Token string `json:"token"`
-	User  User   `json:"user"`
+	Token       string           `json:"token"`
+	User        User             `json:"user"`
+	Account     *Account         `json:"account,omitempty"`
+	Permissions []UserPermission `json:"permissions,omitempty"`
 }
 
-func NewService(userRepo UserRepository, accountRepo AccountRepository, jwtSecret string, tokenExpiry time.Duration) *Service {
+func NewService(userRepo UserRepository, accountRepo AccountRepository, permissionRepo PermissionRepository, jwtSecret string, tokenExpiry time.Duration) *Service {
 	return &Service{
 		userRepo:       userRepo,
 		accountRepo:    accountRepo,
+		permissionRepo: permissionRepo,
 		jwtSecret:      []byte(jwtSecret),
 		tokenExpiry:    tokenExpiry,
 	}
@@ -66,7 +70,7 @@ func (s *Service) Register(req RegisterRequest) (*User, error) {
 		Username:  req.Username,
 		Email:     req.Email,
 		Password:  string(hashedPassword),
-		Role:      "admin", // First user created is account admin
+		Role:      "account_owner", // New user is account owner
 		AccountID: nil,     // Will be set after account creation
 	}
 
@@ -94,9 +98,18 @@ func (s *Service) Register(req RegisterRequest) (*User, error) {
 	user.AccountID = &account.ID
 	err = s.userRepo.Update(user)
 	if err != nil {
-		// If update fails, still return the user (account is created)
 		return nil, err
 	}
+
+	// Create account_owner permission for this user
+	ownerPerm := &UserPermission{
+		UserID:    user.ID,
+		AccountID: account.ID,
+		FarmID:    nil, // applies to all farms
+		Role:      RoleAccountOwner,
+		GrantedBy: user.ID, // self-granted on registration
+	}
+	_ = s.permissionRepo.CreatePermission(ownerPerm) // non-fatal on failure
 
 	// Don't return password hash
 	user.Password = ""
@@ -122,12 +135,32 @@ func (s *Service) Login(req LoginRequest) (*LoginResponse, error) {
 		return nil, err
 	}
 
+	// Fetch account info
+	var account *Account
+	if user.AccountID != nil {
+		acc, err := s.accountRepo.GetAccountByID(*user.AccountID)
+		if err == nil {
+			account = acc
+		}
+	}
+
+	// Fetch permissions
+	var permissions []UserPermission
+	if user.AccountID != nil {
+		perms, err := s.permissionRepo.GetPermissionsByUserID(user.ID, *user.AccountID)
+		if err == nil {
+			permissions = perms
+		}
+	}
+
 	// Don't return password hash
 	user.Password = ""
 
 	return &LoginResponse{
-		Token: token,
-		User:  *user,
+		Token:       token,
+		User:        *user,
+		Account:     account,
+		Permissions: permissions,
 	}, nil
 }
 

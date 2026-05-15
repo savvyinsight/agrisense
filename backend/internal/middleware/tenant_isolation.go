@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/gin-gonic/gin"
 	"github.com/savvyinsight/agrisense/internal/user"
 )
 
@@ -118,6 +119,62 @@ func PermissionCheckMiddleware(requiredRoles []string) func(http.Handler) http.H
 
 			next.ServeHTTP(w, r)
 		})
+	}
+}
+
+// GinTenantIsolationMiddleware provides tenant isolation for Gin routes.
+// It checks that the URL param :id matches the user's account_id from JWT claims,
+// and rejects cross-account requests.
+func GinTenantIsolationMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// Get user info from Gin context (set by AuthMiddleware)
+		userID, _ := c.Get("user_id")
+		accountID, exists := c.Get("account_id")
+		if !exists || accountID == nil {
+			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "User account not found"})
+			return
+		}
+		_ = userID
+
+		// Get the account ID from the URL param
+		paramIDStr := c.Param("id")
+		paramID, err := strconv.Atoi(paramIDStr)
+		if err != nil {
+			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid account ID in URL"})
+			return
+		}
+
+		// Enforce tenant isolation: URL param must match JWT account_id
+		if paramID != accountID.(int) {
+			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Forbidden: Cannot access another account's data"})
+			return
+		}
+
+		// Also check query string account_id if present (frontend sometimes sends it)
+		queryAccountIDStr := c.Query("account_id")
+		if queryAccountIDStr != "" {
+			queryAccountID, err := strconv.Atoi(queryAccountIDStr)
+			if err == nil && queryAccountID != accountID.(int) {
+				c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Forbidden: account_id mismatch"})
+				return
+			}
+		}
+
+		c.Next()
+	}
+}
+
+// PlatformAdminMiddleware restricts access to users with role "admin" (platform operator).
+// Unlike GinTenantIsolationMiddleware, this does NOT check account_id
+// since the admin can see all accounts.
+func PlatformAdminMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		role, exists := c.Get("user_role")
+		if !exists || role != "admin" {
+			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Platform admin access required"})
+			return
+		}
+		c.Next()
 	}
 }
 

@@ -42,7 +42,10 @@ export interface ApiResponse<T> {
 
 export interface LoginResponse {
   success: boolean;
-  data?: AuthResponse;
+  data?: AuthResponse & {
+    account?: Account;
+    permissions?: UserPermission[];
+  };
   error?: string;
 }
 
