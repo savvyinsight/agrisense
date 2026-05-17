@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 
 interface AuditEntry {
   id: number;
@@ -19,6 +20,7 @@ const actionColors: Record<string, string> = {
 };
 
 export default function AdminAuditLog() {
+  const { t } = useTranslation();
   const [logs, setLogs] = useState<AuditEntry[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(0);
@@ -56,8 +58,8 @@ export default function AdminAuditLog() {
   return (
     <div className="max-w-6xl mx-auto space-y-6">
       <div>
-        <h1 className="text-lg font-bold text-text-primary">Global Audit Log</h1>
-        <p className="text-sm text-text-muted mt-0.5">All account activities across the platform</p>
+        <h1 className="text-lg font-bold text-text-primary">{t('auditLog.globalTitle')}</h1>
+        <p className="text-sm text-text-muted mt-0.5">{t('auditLog.globalSubtitle')}</p>
       </div>
 
       {/* Filters */}
@@ -67,31 +69,31 @@ export default function AdminAuditLog() {
           onChange={e => { setResourceType(e.target.value); setPage(0); }}
           className="px-3 py-1.5 text-xs rounded-lg border border-border-default bg-surface-card text-text-primary"
         >
-          <option value="">All Resources</option>
-          <option value="user">User</option>
-          <option value="device">Device</option>
-          <option value="alert">Alert</option>
-          <option value="farm">Farm</option>
-          <option value="user_invitation">Invitation</option>
-          <option value="user_permission">Permission</option>
+          <option value="">{t('auditLog.allResources')}</option>
+          <option value="user">{t('auditLog.resourceUser')}</option>
+          <option value="device">{t('auditLog.resourceDevice')}</option>
+          <option value="alert">{t('auditLog.resourceAlert')}</option>
+          <option value="farm">{t('auditLog.resourceFarm')}</option>
+          <option value="user_invitation">{t('auditLog.resourceInvitation')}</option>
+          <option value="user_permission">{t('auditLog.resourcePermission')}</option>
         </select>
         <select
           value={action}
           onChange={e => { setAction(e.target.value); setPage(0); }}
           className="px-3 py-1.5 text-xs rounded-lg border border-border-default bg-surface-card text-text-primary"
         >
-          <option value="">All Actions</option>
-          <option value="create">Create</option>
-          <option value="read">Read</option>
-          <option value="update">Update</option>
-          <option value="delete">Delete</option>
+          <option value="">{t('auditLog.allActions')}</option>
+          <option value="create">{t('auditLog.actionCreate')}</option>
+          <option value="read">{t('auditLog.actionRead')}</option>
+          <option value="update">{t('auditLog.actionUpdate')}</option>
+          <option value="delete">{t('auditLog.actionDelete')}</option>
         </select>
         {(resourceType || action) && (
           <button
             onClick={() => { setResourceType(''); setAction(''); setPage(0); }}
             className="px-3 py-1.5 text-xs rounded-lg border border-border-default text-text-secondary hover:bg-surface-hover transition-colors"
           >
-            Reset
+            {t('common.reset')}
           </button>
         )}
       </div>
@@ -99,21 +101,21 @@ export default function AdminAuditLog() {
       {/* Table */}
       <div className="rounded-lg border border-border-default bg-surface-card overflow-hidden">
         {loading ? (
-          <div className="p-8 text-center text-sm text-text-muted">Loading...</div>
+          <div className="p-8 text-center text-sm text-text-muted">{t('common.loading')}</div>
         ) : logs.length === 0 ? (
-          <div className="p-8 text-center text-sm text-text-muted">No audit logs found</div>
+          <div className="p-8 text-center text-sm text-text-muted">{t('auditLog.noLogs')}</div>
         ) : (
           <>
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-surface-base text-left">
-                  <th className="px-4 py-3 text-text-muted font-medium">Account</th>
-                  <th className="px-4 py-3 text-text-muted font-medium">User</th>
-                  <th className="px-4 py-3 text-text-muted font-medium">Action</th>
-                  <th className="px-4 py-3 text-text-muted font-medium">Resource</th>
-                  <th className="px-4 py-3 text-text-muted font-medium">Name</th>
-                  <th className="px-4 py-3 text-text-muted font-medium">Status</th>
-                  <th className="px-4 py-3 text-text-muted font-medium">Timestamp</th>
+                  <th className="px-4 py-3 text-text-muted font-medium">{t('auditLog.account')}</th>
+                  <th className="px-4 py-3 text-text-muted font-medium">{t('auditLog.user')}</th>
+                  <th className="px-4 py-3 text-text-muted font-medium">{t('auditLog.action')}</th>
+                  <th className="px-4 py-3 text-text-muted font-medium">{t('auditLog.resource')}</th>
+                  <th className="px-4 py-3 text-text-muted font-medium">{t('auditLog.name')}</th>
+                  <th className="px-4 py-3 text-text-muted font-medium">{t('common.status')}</th>
+                  <th className="px-4 py-3 text-text-muted font-medium">{t('auditLog.timestamp')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -142,12 +144,12 @@ export default function AdminAuditLog() {
             </table>
 
             <div className="flex items-center justify-between px-4 py-3 border-t border-border-default">
-              <span className="text-xs text-text-muted">Page {page + 1} of {totalPages || 1}</span>
+              <span className="text-xs text-text-muted">{t('auditLog.pagination', { current: page + 1, total: totalPages || 1 })}</span>
               <div className="flex gap-2">
                 <button onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page <= 0}
-                  className="px-3 py-1.5 text-xs font-medium rounded-md border border-border-default text-text-secondary hover:bg-surface-hover disabled:opacity-40 transition-colors">Previous</button>
+                  className="px-3 py-1.5 text-xs font-medium rounded-md border border-border-default text-text-secondary hover:bg-surface-hover disabled:opacity-40 transition-colors">{t('common.previous')}</button>
                 <button onClick={() => setPage(p => p + 1)} disabled={page >= totalPages - 1}
-                  className="px-3 py-1.5 text-xs font-medium rounded-md border border-border-default text-text-secondary hover:bg-surface-hover disabled:opacity-40 transition-colors">Next</button>
+                  className="px-3 py-1.5 text-xs font-medium rounded-md border border-border-default text-text-secondary hover:bg-surface-hover disabled:opacity-40 transition-colors">{t('common.next')}</button>
               </div>
             </div>
           </>

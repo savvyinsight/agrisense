@@ -168,7 +168,7 @@ export default function Irrigation() {
                     {actionLoadingId === zone.id ? <span className="flex items-center justify-center gap-2"><span className="w-3 h-3 border-2 border-accent border-t-transparent rounded-full animate-spin" /> {t('irrigation.starting')}</span> : t('irrigation.startNow')}
                   </button>
                 )}
-                {zone.status === 'idle' && needsAttention && (
+                {zone.status === 'idle' && zone.device_id && (
                   <button onClick={() => handleStart(zone.id)} disabled={actionLoadingId === zone.id} className="mt-3 w-full py-2 rounded-md bg-accent/20 text-accent text-xs font-medium hover:bg-accent/30 transition-colors min-h-[44px] disabled:opacity-50 disabled:cursor-not-allowed">
                     {actionLoadingId === zone.id ? <span className="flex items-center justify-center gap-2"><span className="w-3 h-3 border-2 border-accent border-t-transparent rounded-full animate-spin" /> {t('irrigation.starting')}</span> : t('irrigation.startNow')}
                   </button>

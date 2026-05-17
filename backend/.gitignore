@@ -42,3 +42,6 @@ config/local.yaml
 # Build outputs
 *.o
 *.a
+
+# Simulator logs
+simulator.log

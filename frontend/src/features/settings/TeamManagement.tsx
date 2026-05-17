@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   Card,
@@ -76,6 +77,7 @@ interface Invitation {
 }
 
 export const TeamManagement: React.FC = () => {
+  const { t } = useTranslation();
   const { account } = useAuth();
   const { canInviteUsers } = usePermission();
 
@@ -119,13 +121,13 @@ export const TeamManagement: React.FC = () => {
         }
       );
 
-      if (!response.ok) throw new Error('Failed to load team data');
+      if (!response.ok) throw new Error(t('teamManagement.failedToLoad'));
 
       const data = await response.json();
       setTeamMembers(data.users || []);
       setInvitations(data.invitations || []);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
+      setError(err instanceof Error ? err.message : t('common.error'));
     } finally {
       setLoading(false);
     }
@@ -140,7 +142,7 @@ export const TeamManagement: React.FC = () => {
 
   const handleInviteUser = async () => {
     if (!account?.id || !inviteEmail) {
-      setError('Email is required');
+      setError(t('teamManagement.emailRequired'));
       return;
     }
 
@@ -161,7 +163,7 @@ export const TeamManagement: React.FC = () => {
         }
       );
 
-      if (!response.ok) throw new Error('Failed to send invitation');
+      if (!response.ok) throw new Error(t('teamManagement.failedToInvite'));
 
       setOpenInviteDialog(false);
       setInviteEmail('');
@@ -191,19 +193,19 @@ export const TeamManagement: React.FC = () => {
         }
       );
 
-      if (!response.ok) throw new Error('Failed to update permission');
+      if (!response.ok) throw new Error(t('teamManagement.failedToUpdate'));
 
       setOpenEditDialog(false);
       setEditingPermission(null);
       setNewRole('');
       await loadTeamData();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
+      setError(err instanceof Error ? err.message : t('common.error'));
     }
   };
 
   const handleRevokeAccess = async (permissionId: number) => {
-    if (!account?.id || !window.confirm('Revoke this user access?')) return;
+    if (!account?.id || !window.confirm(t('teamManagement.revokeConfirm'))) return;
 
     try {
       const response = await fetch(
@@ -216,11 +218,11 @@ export const TeamManagement: React.FC = () => {
         }
       );
 
-      if (!response.ok) throw new Error('Failed to revoke access');
+      if (!response.ok) throw new Error(t('teamManagement.failedToRevoke'));
 
       await loadTeamData();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
+      setError(err instanceof Error ? err.message : t('common.error'));
     }
   };
 
@@ -237,7 +239,7 @@ export const TeamManagement: React.FC = () => {
   if (!canInviteUsers()) {
     return (
       <Alert severity="error">
-        You do not have permission to manage team members.
+        {t('teamManagement.noPermission')}
       </Alert>
     );
   }
@@ -246,14 +248,14 @@ export const TeamManagement: React.FC = () => {
     <Box sx={{ width: '100%' }}>
       <Card>
         <CardHeader
-          title="Team Management"
+          title={t('teamManagement.title')}
           action={
             <Button
               variant="contained"
               color="primary"
               onClick={() => setOpenInviteDialog(true)}
             >
-              Invite User
+              {t('teamManagement.inviteUser')}
             </Button>
           }
         />
@@ -270,25 +272,25 @@ export const TeamManagement: React.FC = () => {
             onChange={(_e, newValue) => setTabValue(newValue)}
             sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}
           >
-            <Tab label={`Team Members (${teamMembers.length})`} />
-            <Tab label={`Pending Invitations (${invitations.length})`} />
+            <Tab label={t('teamManagement.teamMembers', { count: teamMembers.length })} />
+            <Tab label={t('teamManagement.pendingInvitations', { count: invitations.length })} />
           </Tabs>
 
           <TabPanel value={tabValue} index={0}>
             {loading ? (
               <CircularProgress />
             ) : teamMembers.length === 0 ? (
-              <Alert severity="info">No team members yet</Alert>
+              <Alert severity="info">{t('teamManagement.noMembers')}</Alert>
             ) : (
               <TableContainer>
                 <Table>
                   <TableHead>
                     <TableRow sx={{ backgroundColor: '#262a3a' }}>
-                      <TableCell>Email</TableCell>
-                      <TableCell>Username</TableCell>
-                      <TableCell>Roles</TableCell>
-                      <TableCell>Joined</TableCell>
-                      <TableCell align="right">Actions</TableCell>
+                      <TableCell>{t('teamManagement.email')}</TableCell>
+                      <TableCell>{t('auth.username')}</TableCell>
+                      <TableCell>{t('teamManagement.roles')}</TableCell>
+                      <TableCell>{t('teamManagement.joined')}</TableCell>
+                      <TableCell align="right">{t('common.actions')}</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -345,17 +347,17 @@ export const TeamManagement: React.FC = () => {
 
           <TabPanel value={tabValue} index={1}>
             {invitations.length === 0 ? (
-              <Alert severity="info">No pending invitations</Alert>
+              <Alert severity="info">{t('teamManagement.noInvitations')}</Alert>
             ) : (
               <TableContainer>
                 <Table>
                   <TableHead>
                     <TableRow sx={{ backgroundColor: '#262a3a' }}>
-                      <TableCell>Email</TableCell>
-                      <TableCell>Role</TableCell>
-                      <TableCell>Sent</TableCell>
-                      <TableCell>Expires</TableCell>
-                      <TableCell align="right">Actions</TableCell>
+                      <TableCell>{t('teamManagement.email')}</TableCell>
+                      <TableCell>{t('settings.role')}</TableCell>
+                      <TableCell>{t('teamManagement.sent')}</TableCell>
+                      <TableCell>{t('teamManagement.expires')}</TableCell>
+                      <TableCell align="right">{t('common.actions')}</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -393,48 +395,48 @@ export const TeamManagement: React.FC = () => {
 
       {/* Invite Dialog */}
       <Dialog open={openInviteDialog} onClose={() => setOpenInviteDialog(false)}>
-        <DialogTitle>Invite Team Member</DialogTitle>
+        <DialogTitle>{t('teamManagement.inviteTitle')}</DialogTitle>
         <DialogContent sx={{ minWidth: 400 }}>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 2 }}>
             <TextField
-              label="Email"
+              label={t('teamManagement.email')}
               type="email"
               value={inviteEmail}
               onChange={(e) => setInviteEmail(e.target.value)}
               fullWidth
             />
             <Select value={inviteRole} onChange={(e) => setInviteRole(e.target.value)} fullWidth>
-              <MenuItem value="account_owner">Account Owner</MenuItem>
-              <MenuItem value="farm_manager">Farm Manager</MenuItem>
-              <MenuItem value="operator">Operator</MenuItem>
-              <MenuItem value="technician">Technician</MenuItem>
+              <MenuItem value="account_owner">{t('teamManagement.accountOwner')}</MenuItem>
+              <MenuItem value="farm_manager">{t('teamManagement.farmManager')}</MenuItem>
+              <MenuItem value="operator">{t('teamManagement.operator')}</MenuItem>
+              <MenuItem value="technician">{t('teamManagement.technician')}</MenuItem>
             </Select>
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setOpenInviteDialog(false)}>Cancel</Button>
+          <Button onClick={() => setOpenInviteDialog(false)}>{t('common.cancel')}</Button>
           <Button onClick={handleInviteUser} variant="contained">
-            Send Invitation
+            {t('teamManagement.sendInvitation')}
           </Button>
         </DialogActions>
       </Dialog>
 
       {/* Edit Permission Dialog */}
       <Dialog open={openEditDialog} onClose={() => setOpenEditDialog(false)}>
-        <DialogTitle>Update Role</DialogTitle>
+        <DialogTitle>{t('teamManagement.updateRole')}</DialogTitle>
         <DialogContent sx={{ minWidth: 400 }}>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 2 }}>
             <Select value={newRole} onChange={(e) => setNewRole(e.target.value)} fullWidth>
-              <MenuItem value="farm_manager">Farm Manager</MenuItem>
-              <MenuItem value="operator">Operator</MenuItem>
-              <MenuItem value="technician">Technician</MenuItem>
+              <MenuItem value="farm_manager">{t('teamManagement.farmManager')}</MenuItem>
+              <MenuItem value="operator">{t('teamManagement.operator')}</MenuItem>
+              <MenuItem value="technician">{t('teamManagement.technician')}</MenuItem>
             </Select>
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setOpenEditDialog(false)}>Cancel</Button>
+          <Button onClick={() => setOpenEditDialog(false)}>{t('common.cancel')}</Button>
           <Button onClick={handleEditPermission} variant="contained">
-            Update
+            {t('teamManagement.update')}
           </Button>
         </DialogActions>
       </Dialog>

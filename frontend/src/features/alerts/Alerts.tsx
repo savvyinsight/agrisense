@@ -4,7 +4,7 @@ import { useAuthStore } from '@/shared/stores/authStore';
 import { useAlertsStore } from '@/shared/stores/alertsStore';
 import { useWebSocket } from '@/shared/hooks/useWebSocket';
 import { getActiveAlerts, getAlertHistory, acknowledgeAlert, getAlertRules } from '@/features/alerts/api';
-import { groupAlerts, getIssueTypeEmoji, getIssueTypeLabel } from '@/features/alerts/groupAlerts';
+import { groupAlerts, getIssueTypeEmoji } from '@/features/alerts/groupAlerts';
 import { alertNotificationService } from '@/features/alerts/NotificationService';
 import { AlertRuleDetail } from '@/features/alerts/AlertRuleDetail';
 import { cn } from '@/shared/lib/cn';
@@ -14,6 +14,20 @@ import type { Alert2, WebSocketMessage, SensorDataMessage, AlertRule } from '@/s
 const severityIcon: Record<string, string> = { critical: '🔴', high: '🟠', medium: '🟡', low: '🔵' };
 const severityBorder: Record<string, string> = { critical: 'border-l-critical', high: 'border-l-warning', medium: 'border-l-warning', low: 'border-l-info' };
 const severityBg: Record<string, string> = { critical: 'bg-critical-bg', high: 'bg-warning-bg', medium: '', low: '' };
+
+function issueTypeLabel(issueType: string, t: (k: string) => string): string {
+  const map: Record<string, string> = {
+    temperature: 'alerts.issueTypeTemperature',
+    moisture: 'alerts.issueTypeMoisture',
+    humidity: 'alerts.issueTypeHumidity',
+    irrigation: 'alerts.issueTypeIrrigation',
+    device: 'alerts.issueTypeDevice',
+    power: 'alerts.issueTypePower',
+    sensor: 'alerts.issueTypeSensor',
+    other: 'alerts.issueTypeOther',
+  };
+  return t(map[issueType] || 'alerts.issueTypeOther');
+}
 
 export default function Alerts() {
   const { t } = useTranslation();
@@ -31,10 +45,10 @@ export default function Alerts() {
     if (p.value > 30) {
       const newAlert: Alert2 = {
         id: Date.now(), device_id: p.device_id,
-        title: `High temperature detected on ${p.device_id}`,
-        message: `Temperature reached ${p.value.toFixed(1)}°C — above safe threshold of 30°C`,
+        title: t('alerts.wsHighTemp', { deviceId: p.device_id }),
+        message: t('alerts.wsTempMessage', { value: p.value.toFixed(1) }),
         severity: p.value > 35 ? 'critical' : 'high', status: 'active', triggered_at: new Date().toISOString(),
-        recommended_action: p.value > 35 ? 'Inspect field immediately. Check irrigation and shade coverage.' : 'Monitor temperature. Consider ventilation.',
+        recommended_action: p.value > 35 ? t('alerts.wsCriticalAction') : t('alerts.wsHighAction'),
         confidence: p.value > 35 ? 95 : 80,
       };
       addAlert(newAlert);
@@ -67,7 +81,7 @@ export default function Alerts() {
           severity: a.severity === 'critical' ? 'critical' : a.severity === 'warning' ? 'high' : 'medium',
           status: a.status === 'acknowledged' ? 'acknowledged' : a.status === 'resolved' ? 'resolved' : 'active',
           triggered_at: a.triggered_at, confidence: 85,
-          recommended_action: a.severity === 'critical' ? 'Inspect immediately. Check equipment and environmental conditions.' : 'Monitor situation. No immediate action required.',
+          recommended_action: a.severity === 'critical' ? t('alerts.defaultCriticalAction') : t('alerts.defaultMonitorAction'),
         }));
         if (tab === 'active') setAlerts(mapped);
         else setHistory(mapped);
@@ -79,7 +93,7 @@ export default function Alerts() {
 
       setLoading(false);
     })();
-  }, [tab, setAlerts]);
+  }, [tab, setAlerts, t]);
 
   const handleAcknowledge = async (id: number) => {
     const res = await acknowledgeAlert(id);
@@ -104,17 +118,17 @@ export default function Alerts() {
       {/* Tabs */}
       <div className="flex gap-1 rounded-lg bg-surface-card p-1 border border-border-default w-fit">
         <button onClick={() => setTab('active')} className={cn('px-4 py-2 text-sm font-medium rounded-md transition-colors', tab === 'active' ? 'bg-accent text-white' : 'text-text-secondary hover:text-text-primary')}>
-          Active ({activeCount})
+          {t('alerts.activeAlerts', { count: activeCount })}
         </button>
         <button onClick={() => setTab('grouped')} className={cn('px-4 py-2 text-sm font-medium rounded-md transition-colors', tab === 'grouped' ? 'bg-accent text-white' : 'text-text-secondary hover:text-text-primary')}>
-          Grouped ({grouped.length})
+          {t('alerts.tabGrouped')} ({grouped.length})
         </button>
         <button onClick={() => setTab('history')} className={cn('px-4 py-2 text-sm font-medium rounded-md transition-colors', tab === 'history' ? 'bg-accent text-white' : 'text-text-secondary hover:text-text-primary')}>
-          History ({history.length})
+          {t('alerts.alertHistory', { count: history.length })}
         </button>
         {!notificationEnabled && (
           <button onClick={() => alertNotificationService.requestPermission().then(setNotificationEnabled)} className={cn('px-4 py-2 text-sm font-medium rounded-md transition-colors ml-auto text-yellow-600 hover:text-yellow-700 bg-yellow-50')}>
-            🔔 Enable Notifications
+            🔔 {t('alerts.enableNotifications')}
           </button>
         )}
       </div>
@@ -124,8 +138,8 @@ export default function Alerts() {
       ) : display.length === 0 ? (
         <div className="rounded-lg border border-border-default bg-surface-card p-8 text-center">
           <span className="text-3xl block mb-3">✅</span>
-          <p className="text-sm text-text-primary font-medium">{tab === 'active' ? 'No active alerts' : 'No alert history'}</p>
-          <p className="text-xs text-text-muted mt-1">{tab === 'active' ? 'All systems operating normally' : 'Historical alerts will appear here'}</p>
+          <p className="text-sm text-text-primary font-medium">{tab === 'active' ? t('alerts.noActiveAlerts') : t('alerts.noAlertHistory')}</p>
+          <p className="text-xs text-text-muted mt-1">{tab === 'active' ? t('alerts.allClear') : t('alerts.historyWillAppear')}</p>
         </div>
       ) : (
         <div className="space-y-4">
@@ -150,7 +164,7 @@ export default function Alerts() {
                   )}
                   <div className="flex items-center gap-2 mt-3">
                     <button onClick={() => handleAcknowledge(a.id)} className="px-3 py-1.5 text-xs font-medium rounded-md bg-surface-hover text-text-secondary hover:text-text-primary hover:bg-border-default transition-colors">
-                      Acknowledge
+                      {t('alerts.acknowledge')}
                     </button>
                   </div>
                 </div>
@@ -205,7 +219,7 @@ export default function Alerts() {
               {grouped.length === 0 ? (
                 <div className="rounded-lg border border-border-default bg-surface-card p-8 text-center">
                   <span className="text-3xl block mb-3">✅</span>
-                  <p className="text-sm text-text-primary font-medium">No grouped alerts</p>
+                  <p className="text-sm text-text-primary font-medium">{t('alerts.noGroupedAlerts')}</p>
                 </div>
               ) : (
                 grouped.map((group) => (
@@ -225,7 +239,7 @@ export default function Alerts() {
                       <div className="flex-1">
                         <div className="flex items-center gap-2 flex-wrap mb-2">
                           <span className="text-sm font-bold text-text-primary">
-                            {group.field_name || 'Farm'} — {getIssueTypeLabel(group.issue_type)}
+                            {group.field_name || t('alerts.farm')} — {issueTypeLabel(group.issue_type, t)}
                           </span>
                           <span
                             className={cn(
@@ -237,7 +251,7 @@ export default function Alerts() {
                                   : 'bg-text-muted text-white'
                             )}
                           >
-                            {group.count} {group.count === 1 ? 'Alert' : 'Alerts'}
+                            {t('alerts.alert', { count: group.count })}
                           </span>
                         </div>
 
@@ -245,14 +259,14 @@ export default function Alerts() {
 
                         {group.latest.recommended_action && (
                           <div className="mb-3 text-sm bg-text-primary/5 rounded-md p-2.5 border border-text-primary/10">
-                            <span className="font-semibold text-text-primary text-xs uppercase">Recommendation</span>
+                            <span className="font-semibold text-text-primary text-xs uppercase">{t('component.recommendation')}</span>
                             <p className="text-text-secondary mt-0.5">{group.latest.recommended_action}</p>
                           </div>
                         )}
 
                         <div className="text-xs text-text-muted mb-3">
-                          <p>First triggered: {new Date(group.first_triggered).toLocaleString()}</p>
-                          <p>Last triggered: {new Date(group.last_triggered).toLocaleString()}</p>
+                          <p>{t('alerts.firstTriggered', { date: new Date(group.first_triggered).toLocaleString() })}</p>
+                          <p>{t('alerts.lastTriggered', { date: new Date(group.last_triggered).toLocaleString() })}</p>
                         </div>
 
                         {group.latest.rule_name && (
@@ -260,7 +274,7 @@ export default function Alerts() {
                         )}
 
                         <button onClick={() => handleAcknowledge(group.latest.id)} className="px-3 py-1.5 text-xs font-medium rounded-md bg-surface-hover text-text-secondary hover:text-text-primary hover:bg-border-default transition-colors">
-                          Acknowledge
+                          {t('alerts.acknowledge')}
                         </button>
                       </div>
                     </div>

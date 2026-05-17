@@ -24,6 +24,16 @@ test:
 tidy:
 	go mod tidy
 
+simulate:
+	@echo "Starting device simulators for irrigation controllers (bg)..."
+	nohup go run ./scripts/generate-device-simulator/main.go D260517-QSPO D260517-I25Q &>simulator.log &
+	@echo "Log: backend/simulator.log  |  tail -f simulator.log"
+
+simulate-all:
+	@echo "Starting all device simulators (bg)..."
+	nohup go run ./scripts/generate-device-simulator/main.go sim-device-01 sim-device-02 sim-device-03 D260517-QSPO D260517-I25Q &>simulator.log &
+	@echo "Log: backend/simulator.log  |  tail -f simulator.log"
+
 help:
 	@echo "Available commands:"
 	@echo "  make run         - Start the server"
@@ -33,3 +43,5 @@ help:
 	@echo "  make migrate-up  - Run database migrations"
 	@echo "  make test        - Run tests"
 	@echo "  make tidy        - Tidy go modules"
+	@echo "  make simulate    - Run device simulators for irrigation controllers"
+	@echo "  make simulate-all- Run all device simulators (sensors + controllers)"

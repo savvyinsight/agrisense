@@ -5,7 +5,7 @@ import type { TFunction } from 'i18next';
 import { TrendChart } from '@/shared/components/TrendChart';
 import { getField } from '@/features/fields/api';
 import { getDevices } from '@/features/devices/api';
-import { getZones, deleteZone, getIrrigationEvents } from '@/features/irrigation/api';
+import { getZones, deleteZone, getIrrigationEvents, startZone, stopZone, retryZone } from '@/features/irrigation/api';
 import type { IrrigationEvent } from '@/features/irrigation/api';
 import { IrrigationZoneFormModal } from '@/features/irrigation/IrrigationZoneFormModal';
 import { getActiveAlerts } from '@/features/alerts/api';
@@ -47,9 +47,18 @@ export default function FieldDetail() {
   const [events, setEvents] = useState<IrrigationEvent[]>([]);
   const [weather, setWeather] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [actionLoadingId, setActionLoadingId] = useState<number | null>(null);
   const [zoneFormOpen, setZoneFormOpen] = useState(false);
   const [editingZone, setEditingZone] = useState<IrrigationZone | null>(null);
   const [deletingZoneId, setDeletingZoneId] = useState<number | null>(null);
+
+  const zoneAction = async (id: number, action: () => Promise<any>, successMsg: string, errorMsg: string) => {
+    setActionLoadingId(id);
+    const r = await action();
+    if (r.success) toast('success', successMsg); else toast('error', errorMsg);
+    setActionLoadingId(null);
+    loadZones();
+  };
 
   const fieldId = Number(id);
 
@@ -193,8 +202,8 @@ export default function FieldDetail() {
               <div key={d.id} className="flex items-center gap-3 px-3 py-2 rounded-lg bg-surface-hover/50">
                 <span className="text-base">{typeIcon[d.type] ?? '🌡️'}</span>
                 <div className="flex-1 min-w-0">
-                  <div className="text-sm text-text-primary truncate">{d.name || d.device_id}</div>
-                  <div className="text-[10px] text-text-muted font-mono">{d.device_id}</div>
+                  <div className="text-sm text-text-primary truncate">{d.device_id} — {d.name}</div>
+                  <div className="text-[10px] text-text-muted font-mono">ID: {d.id}</div>
                 </div>
                 <div className="flex items-center gap-3 text-xs">
                   {d.latestTemp != null && <span className="text-text-secondary">{d.latestTemp}°C</span>}
@@ -262,21 +271,48 @@ export default function FieldDetail() {
                     </div>
                   )}
                 </div>
-                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button
-                    onClick={() => { setEditingZone(zone); setZoneFormOpen(true); }}
-                    className="text-text-muted hover:text-text-primary min-h-[44px] min-w-[44px] flex items-center justify-center"
-                    title={t('fields.editZone')}
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
-                  </button>
-                  <button
-                    onClick={() => setDeletingZoneId(zone.id)}
-                    className="text-text-muted hover:text-critical min-h-[44px] min-w-[44px] flex items-center justify-center"
-                    title={t('fields.deleteZone')}
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                  </button>
+                <div className="flex items-center gap-1 shrink-0">
+                  {zone.status === 'active' ? (
+                    <button
+                      onClick={() => zoneAction(zone.id, () => stopZone(zone.id), t('irrigation.stopped'), t('common.failedToSave'))}
+                      disabled={actionLoadingId === zone.id}
+                      className="px-2.5 py-1 rounded-md bg-critical/15 text-critical text-[11px] font-medium hover:bg-critical/25 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {actionLoadingId === zone.id ? <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 border-2 border-critical border-t-transparent rounded-full animate-spin" /> {t('irrigation.stopping')}</span> : t('irrigation.stopIrrigation')}
+                    </button>
+                  ) : zone.status === 'failed' ? (
+                    <button
+                      onClick={() => zoneAction(zone.id, () => retryZone(zone.id), t('irrigation.retryScheduled'), t('common.failedToSave'))}
+                      disabled={actionLoadingId === zone.id}
+                      className="px-2.5 py-1 rounded-md bg-warning/15 text-warning text-[11px] font-medium hover:bg-warning/25 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {actionLoadingId === zone.id ? <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 border-2 border-warning border-t-transparent rounded-full animate-spin" /> {t('irrigation.retrying')}</span> : t('irrigation.retry')}
+                    </button>
+                  ) : zone.device_id ? (
+                    <button
+                      onClick={() => zoneAction(zone.id, () => startZone(zone.id), t('irrigation.started'), t('common.failedToSave'))}
+                      disabled={actionLoadingId === zone.id}
+                      className="px-2.5 py-1 rounded-md bg-accent/15 text-accent text-[11px] font-medium hover:bg-accent/25 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {actionLoadingId === zone.id ? <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 border-2 border-accent border-t-transparent rounded-full animate-spin" /> {t('irrigation.starting')}</span> : t('irrigation.startNow')}
+                    </button>
+                  ) : null}
+                  <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button
+                      onClick={() => { setEditingZone(zone); setZoneFormOpen(true); }}
+                      className="text-text-muted hover:text-text-primary min-h-[36px] min-w-[36px] flex items-center justify-center"
+                      title={t('fields.editZone')}
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                    </button>
+                    <button
+                      onClick={() => setDeletingZoneId(zone.id)}
+                      className="text-text-muted hover:text-critical min-h-[36px] min-w-[36px] flex items-center justify-center"
+                      title={t('fields.deleteZone')}
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}

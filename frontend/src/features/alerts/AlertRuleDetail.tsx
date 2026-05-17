@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import type { Alert2, AlertRule } from '@/shared/types';
 import { cn } from '@/shared/lib/cn';
 import { Modal } from '@/shared/components/Modal';
@@ -10,9 +12,9 @@ interface AlertRuleDetailProps {
 }
 
 export function AlertRuleDetail({ alert, rules, className }: AlertRuleDetailProps) {
+  const { t } = useTranslation();
   const [showRuleDetail, setShowRuleDetail] = useState(false);
 
-  // Find the rule that triggered this alert
   const rule = rules.find(
     (r) => r.name === alert.rule_name || (r.enabled && r.sensor_type_id)
   );
@@ -20,7 +22,7 @@ export function AlertRuleDetail({ alert, rules, className }: AlertRuleDetailProp
   if (!rule) {
     return (
       <div className={cn('text-xs text-text-muted', className)}>
-        {alert.rule_name ? `Rule: ${alert.rule_name}` : 'No rule associated'}
+        {alert.rule_name ? t('alertRuleDetail.ruleTrigger', { name: alert.rule_name }) : t('alertRuleDetail.noRule')}
       </div>
     );
   }
@@ -34,54 +36,49 @@ export function AlertRuleDetail({ alert, rules, className }: AlertRuleDetailProp
           className
         )}
       >
-        📋 Rule: {rule.name}
+        📋 {t('alertRuleDetail.ruleTrigger', { name: rule.name })}
       </button>
 
-      {/* Rule Detail Modal */}
       {showRuleDetail && (
         <Modal
-          title={`Alert Rule: ${rule.name}`}
+          title={t('alertRuleDetail.modalTitle', { name: rule.name })}
           open={showRuleDetail}
           onClose={() => setShowRuleDetail(false)}
         >
           <div className="space-y-4">
-            {/* Rule Name & Status */}
             <div>
               <p className="text-xs font-semibold text-text-secondary uppercase tracking-wider mb-1">
-                Rule Name
+                {t('alertRuleDetail.ruleName')}
               </p>
               <p className="text-sm font-medium text-text-primary">{rule.name}</p>
               <p className="text-xs text-text-muted mt-1">
-                {rule.enabled ? '🟢 Enabled' : '🔴 Disabled'}
+                {rule.enabled ? `🟢 ${t('alertRuleDetail.enabled')}` : `🔴 ${t('alertRuleDetail.disabled')}`}
               </p>
             </div>
 
-            {/* Condition */}
             <div>
               <p className="text-xs font-semibold text-text-secondary uppercase tracking-wider mb-1">
-                Condition
+                {t('alertRuleDetail.condition')}
               </p>
               <div className="bg-surface-elevated rounded-md p-3 border border-border-default">
                 <p className="text-sm text-text-primary font-mono">
-                  {getSensorTypeName(rule.sensor_type_id)} {rule.condition} {rule.threshold_value}
+                  {getSensorTypeName(rule.sensor_type_id, t)} {rule.condition} {rule.threshold_value}
                 </p>
               </div>
             </div>
 
-            {/* Duration */}
             <div>
               <p className="text-xs font-semibold text-text-secondary uppercase tracking-wider mb-1">
-                Duration
+                {t('alertRuleDetail.duration')}
               </p>
               <p className="text-sm text-text-primary">
-                {rule.duration_seconds} seconds
+                {t('alertRuleDetail.seconds', { count: rule.duration_seconds })}
               </p>
             </div>
 
-            {/* Severity */}
             <div>
               <p className="text-xs font-semibold text-text-secondary uppercase tracking-wider mb-1">
-                Severity
+                {t('alertRuleDetail.severity')}
               </p>
               <span
                 className={cn(
@@ -97,21 +94,19 @@ export function AlertRuleDetail({ alert, rules, className }: AlertRuleDetailProp
               </span>
             </div>
 
-            {/* Applicable Device */}
             {rule.device_id && (
               <div>
                 <p className="text-xs font-semibold text-text-secondary uppercase tracking-wider mb-1">
-                  Device
+                  {t('alertRuleDetail.device')}
                 </p>
-                <p className="text-sm text-text-primary">Device ID: {rule.device_id}</p>
+                <p className="text-sm text-text-primary">{t('alertRuleDetail.deviceId', { id: rule.device_id })}</p>
               </div>
             )}
 
-            {/* Created Date */}
             {rule.created_at && (
               <div>
                 <p className="text-xs font-semibold text-text-secondary uppercase tracking-wider mb-1">
-                  Created
+                  {t('alertRuleDetail.created')}
                 </p>
                 <p className="text-sm text-text-muted">
                   {new Date(rule.created_at).toLocaleString()}
@@ -119,18 +114,17 @@ export function AlertRuleDetail({ alert, rules, className }: AlertRuleDetailProp
               </div>
             )}
 
-            {/* Action Buttons */}
             <div className="pt-4 border-t border-border-default flex gap-2">
               <button
                 onClick={() => setShowRuleDetail(false)}
                 className="flex-1 px-4 py-2 text-sm font-medium rounded-md bg-surface-hover text-text-secondary hover:text-text-primary transition-colors"
               >
-                Close
+                {t('alertRuleDetail.close')}
               </button>
               <button
                 className="flex-1 px-4 py-2 text-sm font-medium rounded-md bg-accent text-white hover:opacity-90 transition-opacity"
               >
-                Edit Rule
+                {t('alertRuleDetail.editRule')}
               </button>
             </div>
           </div>
@@ -140,13 +134,13 @@ export function AlertRuleDetail({ alert, rules, className }: AlertRuleDetailProp
   );
 }
 
-function getSensorTypeName(sensorTypeId: number): string {
+function getSensorTypeName(sensorTypeId: number, t: TFunction): string {
   const names: Record<number, string> = {
-    1: 'Temperature',
-    2: 'Moisture',
-    3: 'Humidity',
-    4: 'pH',
-    5: 'EC (Conductivity)',
+    1: t('alertRules.sensorTemperature'),
+    2: t('alertRules.sensorMoisture'),
+    3: t('alertRules.sensorHumidity'),
+    4: t('alertRules.sensorPh'),
+    5: t('alertRules.sensorEc'),
   };
-  return names[sensorTypeId] || `Sensor ${sensorTypeId}`;
+  return names[sensorTypeId] || t('alertRules.sensorUnknown', { id: sensorTypeId });
 }

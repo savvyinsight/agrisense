@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Box,
   Card,
@@ -35,6 +36,7 @@ interface AuditLogEntry {
 }
 
 export const AuditLogViewer: React.FC = () => {
+  const { t } = useTranslation();
   const { account } = useAuth();
   const { canViewAuditLog } = usePermission();
 
@@ -80,7 +82,7 @@ export const AuditLogViewer: React.FC = () => {
         },
       });
 
-      if (!response.ok) throw new Error('Failed to load audit logs');
+      if (!response.ok) throw new Error(t('auditLog.failedToLoad'));
 
       const data = await response.json();
       setLogs(data.logs || []);
@@ -114,7 +116,7 @@ export const AuditLogViewer: React.FC = () => {
   if (!canViewAuditLog()) {
     return (
       <Alert severity="error">
-        Only account owners can view audit logs.
+        {t('auditLog.noPermission')}
       </Alert>
     );
   }
@@ -122,7 +124,7 @@ export const AuditLogViewer: React.FC = () => {
   return (
     <Box sx={{ width: '100%' }}>
       <Card>
-        <CardHeader title="Audit Log" subtitle="All account activities and changes" />
+        <CardHeader title={t('auditLog.title')} subtitle={t('auditLog.subtitle')} />
 
         <CardContent>
           {error && (
@@ -142,12 +144,22 @@ export const AuditLogViewer: React.FC = () => {
               displayEmpty
               sx={{ minWidth: 150 }}
             >
-              <MenuItem value="">All Resources</MenuItem>
-              {resourceTypes.map((rt) => (
-                <MenuItem key={rt} value={rt}>
-                  {rt}
-                </MenuItem>
-              ))}
+              <MenuItem value="">{t('auditLog.allResources')}</MenuItem>
+              {resourceTypes.map((rt) => {
+                const labelMap: Record<string, string> = {
+                  user: t('auditLog.resourceUser'),
+                  device: t('auditLog.resourceDevice'),
+                  alert: t('auditLog.resourceAlert'),
+                  farm: t('auditLog.resourceFarm'),
+                  irrigation_schedule: t('auditLog.resourceIrrigation'),
+                  user_permission: t('auditLog.resourcePermission'),
+                };
+                return (
+                  <MenuItem key={rt} value={rt}>
+                    {labelMap[rt] || rt}
+                  </MenuItem>
+                );
+              })}
             </Select>
 
             <Select
@@ -159,12 +171,20 @@ export const AuditLogViewer: React.FC = () => {
               displayEmpty
               sx={{ minWidth: 150 }}
             >
-              <MenuItem value="">All Actions</MenuItem>
-              {actions.map((a) => (
-                <MenuItem key={a} value={a}>
-                  {a.toUpperCase()}
-                </MenuItem>
-              ))}
+              <MenuItem value="">{t('auditLog.allActions')}</MenuItem>
+              {actions.map((a) => {
+                const actionLabelMap: Record<string, string> = {
+                  create: t('auditLog.actionCreate'),
+                  read: t('auditLog.actionRead'),
+                  update: t('auditLog.actionUpdate'),
+                  delete: t('auditLog.actionDelete'),
+                };
+                return (
+                  <MenuItem key={a} value={a}>
+                    {actionLabelMap[a] || a.toUpperCase()}
+                  </MenuItem>
+                );
+              })}
             </Select>
 
             <Button
@@ -175,7 +195,7 @@ export const AuditLogViewer: React.FC = () => {
                 setPage(0);
               }}
             >
-              Reset Filters
+              {t('auditLog.resetFilters')}
             </Button>
           </Box>
 
@@ -189,19 +209,19 @@ export const AuditLogViewer: React.FC = () => {
               <Table>
                 <TableHead>
                   <TableRow sx={{ backgroundColor: '#262a3a' }}>
-                    <TableCell>Action</TableCell>
-                    <TableCell>Resource Type</TableCell>
-                    <TableCell>Resource Name</TableCell>
-                    <TableCell>User ID</TableCell>
-                    <TableCell>Status</TableCell>
-                    <TableCell>Timestamp</TableCell>
+                    <TableCell>{t('auditLog.action')}</TableCell>
+                    <TableCell>{t('auditLog.resourceType')}</TableCell>
+                    <TableCell>{t('auditLog.resourceName')}</TableCell>
+                    <TableCell>{t('auditLog.userId')}</TableCell>
+                    <TableCell>{t('common.status')}</TableCell>
+                    <TableCell>{t('auditLog.timestamp')}</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {logs.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={6} align="center">
-                        No audit logs found
+                        {t('auditLog.noLogs')}
                       </TableCell>
                     </TableRow>
                   ) : (

@@ -26,6 +26,8 @@
 | Migrations | `make migrate-up` — SQL files in `deployments/init/postgres/` (auto-run on container start) |
 | Tidy Go modules | `make tidy` |
 | Root Makefile wraps all above | `make dev`, `make test`, `make lint`, etc. |
+| Device simulator (irrigation) | `cd backend && make simulate` — MQTT device that responds to irrigation commands |
+| Device simulator (all) | `cd backend && make simulate-all` — sensors + controller MQTT simulators |
 
 ## Frontend quirks
 - Vite proxies `/api` → `localhost:8080`, `/ws` → `ws://localhost:8080` (`vite.config.ts:14-25`)

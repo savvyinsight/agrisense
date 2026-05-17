@@ -16,9 +16,10 @@ interface IrrigationZoneFormModalProps {
   preSelectedFieldId?: number;
 }
 
+const typeIcon: Record<string, string> = { controller: '🔧', both: '📡', sensor: '🌡️' };
+
 export function IrrigationZoneFormModal({ open, onClose, onSaved, zone, preSelectedFieldId }: IrrigationZoneFormModalProps) {
   const { t } = useTranslation();
-  const [name, setName] = useState('');
   const [fieldId, setFieldId] = useState(preSelectedFieldId ?? 0);
   const [deviceId, setDeviceId] = useState<number | null>(null);
   const [targetMoisture, setTargetMoisture] = useState(60);
@@ -29,16 +30,15 @@ export function IrrigationZoneFormModal({ open, onClose, onSaved, zone, preSelec
   const [error, setError] = useState('');
 
   const isEdit = !!zone;
+  const selectedDevice = devices.find(d => d.id === deviceId);
 
   useEffect(() => {
     if (isEdit && zone) {
-      setName(zone.name);
       setFieldId(zone.field_id);
       setDeviceId(zone.device_id ?? null);
       setTargetMoisture(zone.target_moisture);
       setFlowRateLPM(zone.flow_rate_lpm);
     } else {
-      setName('');
       setFieldId(preSelectedFieldId ?? 0);
       setDeviceId(null);
       setTargetMoisture(60);
@@ -60,16 +60,20 @@ export function IrrigationZoneFormModal({ open, onClose, onSaved, zone, preSelec
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) { setError(t('common.nameRequired')); return; }
-    if (!fieldId) { setError(t('fields.fieldName') + ' ' + t('common.valueRequired')); return; }
+    if (!fieldId) { setError('Select a field'); return; }
+    if (!deviceId) { setError('Select a device'); return; }
 
     setSaving(true);
     setError('');
 
+    const zoneName = selectedDevice?.name || selectedDevice?.device_id || `Zone-${deviceId}`;
+
     if (isEdit && zone) {
       const payload: Record<string, unknown> = {};
-      if (name !== zone.name) payload.name = name.trim();
-      if (deviceId !== (zone.device_id ?? null)) payload.device_id = deviceId;
+      if (deviceId !== (zone.device_id ?? null)) {
+        payload.device_id = deviceId;
+        payload.name = zoneName;
+      }
       if (targetMoisture !== zone.target_moisture) payload.target_moisture = targetMoisture;
       if (flowRateLPM !== zone.flow_rate_lpm) payload.flow_rate_lpm = flowRateLPM;
 
@@ -89,7 +93,7 @@ export function IrrigationZoneFormModal({ open, onClose, onSaved, zone, preSelec
       }
     } else {
       const res = await createZone({
-        name: name.trim(),
+        name: zoneName,
         field_id: fieldId,
         device_id: deviceId,
         target_moisture: targetMoisture,
@@ -120,19 +124,6 @@ export function IrrigationZoneFormModal({ open, onClose, onSaved, zone, preSelec
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Name */}
-          <div>
-            <label className="block text-xs font-medium text-text-secondary mb-1">{t('irrigation.zoneName')}</label>
-            <input
-              type="text"
-              value={name}
-              onChange={e => setName(e.target.value)}
-              maxLength={100}
-              className="w-full rounded-lg border border-border-default bg-surface-elevated px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent"
-              placeholder={t('irrigation.zoneNamePlaceholder')}
-            />
-          </div>
-
           {/* Field selector — hidden when pre-selected */}
           {!preSelectedFieldId && (
             <div>
@@ -147,6 +138,33 @@ export function IrrigationZoneFormModal({ open, onClose, onSaved, zone, preSelec
               </select>
             </div>
           )}
+
+          {/* Controller Device */}
+          <div>
+            <label className="block text-xs font-medium text-text-secondary mb-1">{t('irrigation.controllerDevice')}</label>
+            <select
+              value={deviceId ?? ''}
+              onChange={e => setDeviceId(e.target.value ? Number(e.target.value) : null)}
+              className="w-full rounded-lg border border-border-default bg-surface-elevated px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-accent"
+            >
+              <option value="">{t('analytics.selectDevice')}</option>
+              {devices.filter(d => {
+                if (d.type !== 'controller' && d.type !== 'both') return false;
+                const curField = fieldId || preSelectedFieldId;
+                if (!curField) return true;
+                return d.field_id === curField || !d.field_id;
+              }).map(d => (
+                <option key={d.id} value={d.id}>
+                  {typeIcon[d.type] ?? '🌡️'} {d.device_id} — {d.name}{!d.field_id ? ` (${t('map.unplaced')})` : ''}
+                </option>
+              ))}
+            </select>
+            {selectedDevice && (
+              <p className="text-[10px] text-text-muted mt-1">
+                {t('irrigation.zoneName')}: <span className="text-text-primary font-medium">{selectedDevice.name || selectedDevice.device_id}</span>
+              </p>
+            )}
+          </div>
 
           {/* Target Moisture */}
           <div>
@@ -165,30 +183,6 @@ export function IrrigationZoneFormModal({ open, onClose, onSaved, zone, preSelec
               <span>10%</span>
               <span>100%</span>
             </div>
-          </div>
-
-          {/* Controller Device */}
-          <div>
-            <label className="block text-xs font-medium text-text-secondary mb-1">{t('irrigation.controllerDevice')} <span className="text-text-muted">{t('irrigation.optional')}</span></label>
-            <select
-              value={deviceId ?? ''}
-              onChange={e => setDeviceId(e.target.value ? Number(e.target.value) : null)}
-              className="w-full rounded-lg border border-border-default bg-surface-elevated px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-accent"
-            >
-              <option value="">{t('irrigation.noDevice')}</option>
-              {devices.filter(d => {
-                const curField = fieldId || preSelectedFieldId;
-                if (!curField) return true;
-                return d.field_id === curField || !d.field_id;
-              }).map(d => (
-                <option key={d.id} value={d.id}>
-                  {d.name || d.device_id}
-                  {d.type === 'sensor' ? ` (${t('devices.sensor').toLowerCase()})` : d.type === 'controller' ? ` (${t('devices.controller').toLowerCase()})` : d.type === 'both' ? ` (${t('devices.controller').toLowerCase()}+${t('devices.sensor').toLowerCase()})` : ''}
-                  {!d.field_id ? ` (${t('map.unplaced')})` : ''}
-                </option>
-              ))}
-            </select>
-            <p className="text-[10px] text-text-muted mt-1">{t('irrigation.deviceAssignedHint')}</p>
           </div>
 
           {/* Flow Rate */}
@@ -218,7 +212,7 @@ export function IrrigationZoneFormModal({ open, onClose, onSaved, zone, preSelec
             </button>
             <button
               type="submit"
-              disabled={saving}
+              disabled={saving || !deviceId}
               className="flex-1 py-2.5 rounded-lg bg-accent text-white text-sm font-medium hover:bg-accent-hover transition-colors min-h-[44px] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {saving && <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />}
