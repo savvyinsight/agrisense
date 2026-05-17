@@ -22,6 +22,7 @@ type Field struct {
 	LastIrrigation *time.Time  `json:"last_irrigation,omitempty"`
 	Latitude       *float64    `json:"latitude,omitempty"`
 	Longitude      *float64    `json:"longitude,omitempty"`
+	Geometry       *string     `json:"geometry,omitempty"`
 	UserID         int         `json:"user_id"`
 	CreatedAt      time.Time   `json:"created_at"`
 	UpdatedAt      time.Time   `json:"updated_at"`

@@ -1,9 +1,11 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import 'leaflet-draw';
+import 'leaflet-draw/dist/leaflet.draw.css';
 import { MapContainer, TileLayer, GeoJSON, Marker, Popup, useMap } from 'react-leaflet';
 import { cn } from '@/shared/lib/cn';
-import { mapClickCb } from '@/shared/lib/mapClickStore';
+import { mapClickCb, drawCancelCb } from '@/shared/lib/mapClickStore';
 
 
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -45,6 +47,7 @@ interface FarmMapProps {
   height?: number;
   onFieldClick?: (field: FieldGeo) => void;
   onMapClick?: (latlng: { lat: number; lng: number }) => void;
+  onFieldDraw?: (coordinates: number[][][]) => void;
   focusedAlertId?: number | null;
   className?: string;
 }
@@ -64,6 +67,29 @@ const healthFill: Record<string, string> = {
   healthy: '#4caf5020', warning: '#f59e0b20', critical: '#ef444420',
 };
 
+function DrawController({ onComplete }: { onComplete: (coords: number[][][]) => void }) {
+  const map = useMap();
+  useEffect(() => {
+    const draw = new (L as any).Draw.Polygon(map, {
+      shapeOptions: { color: '#f97316', fillColor: '#f9731633', fillOpacity: 0.2, weight: 2, dashArray: '8, 4' },
+    });
+    draw.enable();
+    const handler = (e: any) => {
+      map.removeLayer(e.layer);
+      const latlngs = (e.layer as L.Polygon).getLatLngs() as L.LatLng[][];
+      const ring = latlngs[0].map((ll: L.LatLng) => [ll.lng, ll.lat]);
+      ring.push(ring[0]);
+      onComplete([ring]);
+    };
+    map.on(L.Draw.Event.CREATED, handler);
+    return () => {
+      draw.disable();
+      map.off(L.Draw.Event.CREATED, handler);
+    };
+  }, [map, onComplete]);
+  return null;
+}
+
 function MapController({ focusedAlertId, fields }: { focusedAlertId?: number | null; fields: FieldGeo[] }) {
   const map = useMap();
   useEffect(() => {
@@ -80,18 +106,37 @@ function MapController({ focusedAlertId, fields }: { focusedAlertId?: number | n
 }
 
 export function FarmMap({ fields, devices = [], center = [30.5, 114.3], zoom = 12, height = 400, 
-  onFieldClick, onMapClick, focusedAlertId, className }: FarmMapProps) {
+  onFieldClick, onMapClick, onFieldDraw, focusedAlertId, className }: FarmMapProps) {
   const [mode, setMode] = useState<MapMode>('health');
   const [selectedField, setSelectedField] = useState<FieldGeo | null>(null);
+  const [isDrawing, setIsDrawing] = useState(false);
+  const [drawnCoords, setDrawnCoords] = useState<number[][][] | null>(null);
+  const isDrawingRef = useRef(false);
+
+  isDrawingRef.current = isDrawing;
 
   mapClickCb.current = onMapClick ?? null;
 
   const handleWhenReady = useCallback((m: any) => {
     if (!m?.target) return;
     m.target.on('click', (e: any) => {
+      if (isDrawingRef.current) return;
       mapClickCb.current?.({ lat: e.latlng.lat, lng: e.latlng.lng });
     });
   }, []);
+
+  const handleDrawComplete = useCallback((coords: number[][][]) => {
+    setDrawnCoords(coords);
+    onFieldDraw?.(coords);
+    setIsDrawing(false);
+  }, [onFieldDraw]);
+
+  const cancelDraw = useCallback(() => {
+    setDrawnCoords(null);
+    setIsDrawing(false);
+  }, []);
+
+  drawCancelCb.current = cancelDraw;
 
   const handleFieldClick = useCallback((field: FieldGeo) => {
     setSelectedField(field);
@@ -158,6 +203,9 @@ export function FarmMap({ fields, devices = [], center = [30.5, 114.3], zoom = 1
               </button>
             );
           })}
+          <button onClick={() => setIsDrawing(!isDrawing)} className={cn('px-3 py-1.5 text-xs font-medium rounded-md transition-colors whitespace-nowrap backdrop-blur-sm', isDrawing ? 'bg-critical text-white' : 'bg-surface-card/90 text-text-secondary hover:text-text-primary border border-border-default')}>
+            {isDrawing ? '✕ Cancel' : '✎ Draw Field'}
+          </button>
         </div>
         <div className="absolute top-3 right-3 z-[1000] w-72 rounded-2xl border border-border-default bg-surface-card/95 p-3 text-xs shadow-lg backdrop-blur-sm">
           <div className="flex items-start justify-between gap-3">
@@ -197,6 +245,11 @@ export function FarmMap({ fields, devices = [], center = [30.5, 114.3], zoom = 1
 
         <MapContainer center={center} zoom={zoom} style={{ height: '100%', width: '100%' }} zoomControl={false} scrollWheelZoom={true} whenReady={handleWhenReady as any}>
           <TileLayer url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}" attribution='&copy; <a href="https://www.esri.com/">Esri</a>' />
+          {isDrawing && <DrawController onComplete={handleDrawComplete} />}
+          {drawnCoords && <>
+            <GeoJSON key="draw-outline" data={{ type: 'Polygon', coordinates: drawnCoords } as any} style={{ color: '#ffffff', weight: 5, fillOpacity: 0 }} />
+            <GeoJSON key="draw-fill" data={{ type: 'Polygon', coordinates: drawnCoords } as any} style={{ color: '#f97316', weight: 2, dashArray: '8, 4', fillColor: '#f9731633', fillOpacity: 0.2 }} />
+          </>}
           <MapController focusedAlertId={focusedAlertId} fields={fieldPolygons} />
           {fieldPolygons.map((field) => (
             <GeoJSON

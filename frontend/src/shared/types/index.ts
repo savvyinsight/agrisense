@@ -20,6 +20,7 @@ export interface Field {
   last_irrigation?: string;
   latitude?: number;
   longitude?: number;
+  geometry?: string;
   zones?: Zone[];
 }
 
