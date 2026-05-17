@@ -5,7 +5,9 @@ import { DataTable } from '@/shared/components/DataTable';
 import { Modal } from '@/shared/components/Modal';
 import { toast } from '@/shared/components/Toast';
 import { getDevices, createDevice, updateDevice, deleteDevice, claimDevice, unclaimDevice } from '@/features/devices/api';
+import { getFields } from '@/features/fields/api';
 import type { Device } from '@/shared/types/api';
+import type { Field } from '@/shared/types';
 
 const generateDeviceId = () => {
   const d = new Date();
@@ -31,6 +33,7 @@ export default function DeviceManagement() {
   const [open, setOpen] = useState(false);
   const [editId, setEditId] = useState<number | null>(null);
   const [form, setForm] = useState(emptyForm);
+  const [fields, setFields] = useState<Field[]>([]);
   const [deleteTarget, setDeleteTarget] = useState<Device | null>(null);
   const [unclaimTarget, setUnclaimTarget] = useState<Device | null>(null);
   const [showClaim, setShowClaim] = useState(false);
@@ -40,8 +43,9 @@ export default function DeviceManagement() {
 
   const load = async () => {
     setLoading(true);
-    const res = await getDevices();
-    if (res.success) setDevices(res.data?.devices || []);
+    const [deviceRes, fieldRes] = await Promise.all([getDevices(), getFields()]);
+    if (deviceRes.success) setDevices(deviceRes.data?.devices || []);
+    if (fieldRes.success && fieldRes.data) setFields(fieldRes.data);
     setLoading(false);
   };
 
@@ -136,7 +140,10 @@ export default function DeviceManagement() {
             { key: 'device_id', header: t('devices.deviceId') },
             { key: 'name', header: t('devices.deviceName') },
             { key: 'type', header: t('devices.deviceType') },
-            { key: 'location', header: t('devices.location'), render: (d: Device) => d.location || '-' },
+            { key: 'field', header: 'Field', render: (d: Device) => {
+              const f = d.field_id ? fields.find(f => f.id === d.field_id) : null;
+              return f ? <span className="text-text-primary">{f.name}</span> : <span className="text-text-muted italic">No field</span>;
+            }},
             { key: 'status', header: t('devices.status'), render: (d: Device) => <span className={`text-xs font-medium px-2 py-0.5 rounded-full border ${statusColor(d.status)}`}>{t(`devices.${d.status}`)}</span> },
           ]}
           data={devices}
@@ -160,8 +167,8 @@ export default function DeviceManagement() {
         <><button onClick={() => setOpen(false)} className="px-4 py-2 rounded-lg text-sm text-text-secondary hover:text-text-primary hover:bg-surface-hover transition-colors">{t('devices.cancel')}</button><button onClick={save} className="px-4 py-2 rounded-lg bg-accent hover:bg-accent-hover text-white text-sm font-medium transition-colors">{t('devices.save')}</button></>
       }>
         <div>
-          <label className="block text-xs font-medium text-text-secondary mb-1.5">{t('devices.deviceId')} <span className="text-text-muted">(auto)</span></label>
-          <input value={form.device_id} readOnly className="w-full px-3 py-2 rounded-lg bg-surface-hover border border-border-default text-text-muted text-sm cursor-not-allowed" />
+          <label className="block text-xs font-medium text-text-secondary mb-1.5">{t('devices.deviceId')} <span className="text-text-muted">(from device label)</span></label>
+          <input value={form.device_id} onChange={(e) => setForm({ ...form, device_id: e.target.value })} placeholder="e.g. ESP32-AABBCCDD" className="w-full px-3 py-2 rounded-lg bg-surface-base border border-border-default text-text-primary text-sm font-mono focus:outline-none focus:border-accent" />
         </div>
         <div>
           <label className="block text-xs font-medium text-text-secondary mb-1.5">{t('devices.deviceName')}</label>

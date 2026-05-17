@@ -84,6 +84,9 @@ interface DeviceMarker {
   latitude: number;
   longitude: number;
   status: string;
+  type?: string;
+  field_id?: number | null;
+  last_heartbeat?: string | null;
   latestTemp?: number | null;
 }
 
@@ -96,6 +99,7 @@ interface FarmMapProps {
   onFieldClick?: (field: FieldGeo) => void;
   onMapClick?: (latlng: { lat: number; lng: number }, fieldId?: number) => void;
   onFieldDraw?: (coordinates: number[][][]) => void;
+  onDeviceMove?: (deviceId: number | string, latlng: { lat: number; lng: number }) => void;
   focusedAlertId?: number | null;
   className?: string;
 }
@@ -154,7 +158,7 @@ function MapController({ focusedAlertId, fields }: { focusedAlertId?: number | n
 }
 
 export function FarmMap({ fields, devices = [], center = [30.5, 114.3], zoom = 12, height = 400, 
-  onFieldClick, onMapClick, onFieldDraw, focusedAlertId, className }: FarmMapProps) {
+  onFieldClick, onMapClick, onFieldDraw, onDeviceMove, focusedAlertId, className }: FarmMapProps) {
   const [mode, setMode] = useState<MapMode>('health');
   const [selectedField, setSelectedField] = useState<FieldGeo | null>(null);
   const [isDrawing, setIsDrawing] = useState(false);
@@ -204,6 +208,8 @@ export function FarmMap({ fields, devices = [], center = [30.5, 114.3], zoom = 1
 
   const onFieldClickRef = useRef(onFieldClick);
   onFieldClickRef.current = onFieldClick;
+  const onDeviceMoveRef = useRef(onDeviceMove);
+  onDeviceMoveRef.current = onDeviceMove;
 
   const handleFieldClick = useCallback((field: FieldGeo) => {
     setSelectedField(field);
@@ -253,6 +259,20 @@ export function FarmMap({ fields, devices = [], center = [30.5, 114.3], zoom = 1
 
   return (
     <div className={cn('flex flex-col lg:flex-row gap-0 rounded-lg border border-border-default overflow-hidden', className)}>
+      <style>{`
+        .leaflet-popup-content-wrapper {
+          background: #1e293b !important;
+          color: #e2e8f0 !important;
+          border-radius: 8px !important;
+          box-shadow: 0 4px 16px rgba(0,0,0,0.4) !important;
+        }
+        .leaflet-popup-tip {
+          background: #1e293b !important;
+        }
+        .leaflet-popup-close-button {
+          color: #64748b !important;
+        }
+      `}</style>
       {/* Map area */}
       <div className="flex-1 relative" style={{ height }}>
         <div className="absolute top-3 left-3 right-3 z-[1000] flex gap-1 overflow-x-auto">
@@ -339,18 +359,54 @@ export function FarmMap({ fields, devices = [], center = [30.5, 114.3], zoom = 1
               </Popup>
             </Marker>
           ))}
-          {devices.filter(d => d.latitude != null && d.longitude != null).map((d) => (
-            <Marker key={d.id} position={[d.latitude, d.longitude]}>
-              <Popup>
-                <div className="text-sm">
-                  <strong>{d.name}</strong><br />
-                  <span className="text-xs">{d.device_id}</span><br />
-                  <span className={d.status === 'online' ? 'text-green-600' : 'text-red-600'}>{d.status}</span>
-                  {d.latestTemp != null && <><br />{d.latestTemp}°C</>}
-                </div>
-              </Popup>
-            </Marker>
-          ))}
+          {devices.filter(d => d.latitude != null && d.longitude != null).map((d) => {
+            const typeIcon = d.type === 'controller' ? '🔧' : d.type === 'both' ? '📡' : '🌡️';
+            const fieldName = fields.find(f => f.id === d.field_id)?.name;
+            const markerColor = d.status === 'online' ? '#22c55e' : '#ef4444';
+            const deviceIcon = L.divIcon({
+              className: '',
+              html: `<div style="width:14px;height:14px;border-radius:50%;background:${markerColor};border:2px solid white;box-shadow:0 1px 4px rgba(0,0,0,0.4);"></div>`,
+              iconSize: [14, 14],
+              iconAnchor: [7, 7],
+            });
+            const lastSeen = d.last_heartbeat ? (() => {
+              const diff = Date.now() - new Date(d.last_heartbeat).getTime();
+              const mins = Math.floor(diff / 60000);
+              if (mins < 1) return 'Just now';
+              if (mins < 60) return `${mins} min ago`;
+              const hrs = Math.floor(mins / 60);
+              if (hrs < 24) return `${hrs} hr ago`;
+              return `${Math.floor(hrs / 24)} days ago`;
+            })() : null;
+            return (
+              <Marker key={d.id} position={[d.latitude, d.longitude]} icon={deviceIcon} draggable={!!onDeviceMove} eventHandlers={{
+                dragend: (e) => {
+                  const pos = e.target.getLatLng();
+                  onDeviceMoveRef.current?.(d.id, { lat: pos.lat, lng: pos.lng });
+                },
+              }}>
+                <Popup>
+                  <div className="text-sm min-w-[180px]">
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <span>{typeIcon}</span>
+                      <strong className="text-text-primary truncate">{d.name}</strong>
+                    </div>
+                    <div className="border-t border-border-default my-1" />
+                    <div className="flex items-center gap-1.5 text-xs">
+                      <span className={cn('w-2 h-2 rounded-full inline-block', d.status === 'online' ? 'bg-green-500' : 'bg-red-500')} />
+                      <span className={d.status === 'online' ? 'text-green-600' : 'text-red-600'}>{d.status}</span>
+                      <span className="text-text-muted ml-auto">{d.type ?? 'sensor'}</span>
+                    </div>
+                    {fieldName && <div className="text-xs text-text-muted mt-0.5">📍 {fieldName}</div>}
+                    {d.latestTemp != null && <div className="text-xs text-text-secondary mt-0.5">{d.latestTemp}°C</div>}
+                    <div className="text-[10px] text-text-muted mt-0.5 font-mono">ID: {d.device_id}</div>
+                    {lastSeen && <div className="text-[10px] text-text-muted mt-0.5">Last seen: {lastSeen}</div>}
+                    <div className="text-[10px] text-text-muted mt-1 italic">Drag to move</div>
+                  </div>
+                </Popup>
+              </Marker>
+            );
+          })}
         </MapContainer>
       </div>
 

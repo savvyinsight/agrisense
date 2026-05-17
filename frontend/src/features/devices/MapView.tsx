@@ -5,7 +5,7 @@ import { FarmMap } from '@/shared/components/FarmMap';
 import { mapClickCb, drawCancelCb } from '@/shared/lib/mapClickStore';
 import { Modal } from '@/shared/components/Modal';
 import { toast } from '@/shared/components/Toast';
-import { getDevices, createDevice } from '@/features/devices/api';
+import { getDevices, createDevice, updateDevice } from '@/features/devices/api';
 import { getFields, createField } from '@/features/fields/api';
 import type { Device } from '@/shared/types/api';
 import type { Field } from '@/shared/types';
@@ -35,12 +35,19 @@ export default function MapView() {
   const [showPlaceDialog, setShowPlaceDialog] = useState(false);
   const [placeDeviceId, setPlaceDeviceId] = useState(generateDeviceId());
   const [placeFieldId, setPlaceFieldId] = useState<number | null>(null);
+  const [placeMode, setPlaceMode] = useState<'select' | 'custom'>('select');
+  const [selectedDeviceId, setSelectedDeviceId] = useState<number | ''>('');
 
   // Draw field dialog
   const [drawnCoords, setDrawnCoords] = useState<number[][][] | null>(null);
   const [fieldName, setFieldName] = useState('');
   const [showFieldDialog, setShowFieldDialog] = useState(false);
   const [savingField, setSavingField] = useState(false);
+
+  const unplacedDevices = useMemo(() =>
+    devices.filter(d => d.latitude == null || d.longitude == null || (d.latitude === 0 && d.longitude === 0)),
+    [devices]
+  );
 
   useEffect(() => {
     (async () => {
@@ -58,28 +65,65 @@ export default function MapView() {
     setPlaceType('sensor');
     setPlaceDeviceId(generateDeviceId());
     setPlaceFieldId(fieldId ?? null);
+    setPlaceMode('select');
+    setSelectedDeviceId('');
     setShowPlaceDialog(true);
+  };
+
+  const handleSelectDevice = (id: number | '') => {
+    setSelectedDeviceId(id);
+    if (id === '') {
+      setPlaceMode('custom');
+      setPlaceName('');
+      setPlaceType('sensor');
+      setPlaceDeviceId(generateDeviceId());
+    } else {
+      setPlaceMode('select');
+      const dev = devices.find(d => d.id === id);
+      if (dev) {
+        setPlaceName(dev.name);
+        setPlaceType(dev.type);
+        setPlaceDeviceId(dev.device_id);
+      }
+    }
   };
 
   const handlePlaceDevice = async () => {
     if (!placeName) return;
     setPlacing(true);
-    const res = await createDevice({
-      device_id: placeDeviceId,
-      name: placeName,
-      type: placeType,
-      latitude: placeLat,
-      longitude: placeLng,
-      field_id: placeFieldId ?? undefined,
-    } as Partial<Device>);
-    setPlacing(false);
-    if (res.success) {
-      toast('success', 'Device placed on map');
-      closePlaceDialog();
-      const deviceRes = await getDevices();
-      if (deviceRes.success && deviceRes.data) setDevices(deviceRes.data.devices);
+    if (selectedDeviceId) {
+      const res = await updateDevice(selectedDeviceId, {
+        latitude: placeLat,
+        longitude: placeLng,
+        field_id: placeFieldId ?? undefined,
+      } as Partial<Device>);
+      setPlacing(false);
+      if (res.success) {
+        toast('success', 'Device placed on map');
+        closePlaceDialog();
+        const deviceRes = await getDevices();
+        if (deviceRes.success && deviceRes.data) setDevices(deviceRes.data.devices);
+      } else {
+        toast('error', res.error || 'Failed to place device');
+      }
     } else {
-      toast('error', res.error || 'Failed to create device');
+      const res = await createDevice({
+        device_id: placeDeviceId,
+        name: placeName,
+        type: placeType,
+        latitude: placeLat,
+        longitude: placeLng,
+        field_id: placeFieldId ?? undefined,
+      } as Partial<Device>);
+      setPlacing(false);
+      if (res.success) {
+        toast('success', 'Device placed on map');
+        closePlaceDialog();
+        const deviceRes = await getDevices();
+        if (deviceRes.success && deviceRes.data) setDevices(deviceRes.data.devices);
+      } else {
+        toast('error', res.error || 'Failed to create device');
+      }
     }
   };
 
@@ -128,6 +172,20 @@ export default function MapView() {
     setDrawnCoords(coordinates);
     setFieldName('');
     setShowFieldDialog(true);
+  };
+
+  const handleDeviceMove = async (deviceId: number | string, latlng: { lat: number; lng: number }) => {
+    const res = await updateDevice(deviceId, {
+      latitude: latlng.lat,
+      longitude: latlng.lng,
+    } as Partial<Device>);
+    if (res.success) {
+      toast('success', 'Device moved');
+      const deviceRes = await getDevices();
+      if (deviceRes.success && deviceRes.data) setDevices(deviceRes.data.devices);
+    } else {
+      toast('error', res.error || 'Failed to move device');
+    }
   };
 
   const handleSaveField = async () => {
@@ -181,19 +239,23 @@ export default function MapView() {
               latitude: d.latitude ?? 0,
               longitude: d.longitude ?? 0,
               status: d.status,
+              type: d.type,
+              field_id: d.field_id,
+              last_heartbeat: d.last_heartbeat,
               latestTemp: d.latestTemp,
             }))}
           height={520}
           onFieldClick={(f) => navigate(`/fields/${f.id}`)}
           onMapClick={handleMapClick}
           onFieldDraw={handleFieldDraw}
+          onDeviceMove={handleDeviceMove}
           className="shadow-elevated"
         />
       )}
 
       {/* Place Device dialog */}
       <Modal open={showPlaceDialog} onClose={closePlaceDialog} title="Place Device" actions={
-        <><button onClick={closePlaceDialog} className="px-4 py-2 rounded-lg text-sm text-text-secondary hover:text-text-primary hover:bg-surface-hover transition-colors">Cancel</button><button onClick={handlePlaceDevice} disabled={placing || !placeName} className="px-4 py-2 rounded-lg bg-accent hover:bg-accent-hover text-white text-sm font-medium transition-colors disabled:opacity-50">{placing ? 'Placing...' : 'Place Device'}</button></>
+        <><button onClick={closePlaceDialog} className="px-4 py-2 rounded-lg text-sm text-text-secondary hover:text-text-primary hover:bg-surface-hover transition-colors">Cancel</button><button onClick={handlePlaceDevice} disabled={placing || !placeName || (placeMode === 'select' && !selectedDeviceId)} className="px-4 py-2 rounded-lg bg-accent hover:bg-accent-hover text-white text-sm font-medium transition-colors disabled:opacity-50">{placing ? 'Placing...' : 'Place Device'}</button></>
       }>
         <div className="space-y-3">
           <div className="grid grid-cols-2 gap-3">
@@ -208,25 +270,64 @@ export default function MapView() {
           </div>
           {placeFieldName && (
             <div className="rounded-lg bg-accent/10 border border-accent/20 px-3 py-2 text-xs text-accent">
-              Associating with field: <strong>{placeFieldName}</strong>
+              📍 <strong>{placeFieldName}</strong>
             </div>
           )}
+
           <div>
-            <label className="block text-xs text-text-muted mb-1">Device ID <span className="text-text-muted">(auto)</span></label>
-            <input value={placeDeviceId} readOnly className="w-full px-3 py-2 rounded-lg bg-surface-hover border border-border-default text-text-muted text-sm cursor-not-allowed" />
-          </div>
-          <div>
-            <label className="block text-xs text-text-muted mb-1">Name</label>
-            <input value={placeName} onChange={e => setPlaceName(e.target.value)} className="w-full px-3 py-2 rounded-lg bg-surface-base border border-border-default text-text-primary text-sm" />
-          </div>
-          <div>
-            <label className="block text-xs text-text-muted mb-1">Type</label>
-            <select value={placeType} onChange={e => setPlaceType(e.target.value)} className="w-full px-3 py-2 rounded-lg bg-surface-base border border-border-default text-text-primary text-sm">
-              <option value="sensor">Sensor</option>
-              <option value="controller">Controller</option>
-              <option value="both">Gateway</option>
+            <label className="block text-xs text-text-muted mb-1">Device</label>
+            <select value={selectedDeviceId} onChange={e => handleSelectDevice(e.target.value ? Number(e.target.value) : '')} className="w-full px-3 py-2 rounded-lg bg-surface-base border border-border-default text-text-primary text-sm">
+              <option value="">✏️ Enter custom device ID...</option>
+              {unplacedDevices.map(d => (
+                <option key={d.id} value={d.id}>
+                  {d.type === 'controller' ? '🔧' : d.type === 'both' ? '📡' : '🌡️'} {d.device_id} — {d.name || 'unnamed'}
+                </option>
+              ))}
             </select>
+            {unplacedDevices.length > 0 ? (
+              <p className="text-[10px] text-text-muted mt-1">{unplacedDevices.length} device{unplacedDevices.length > 1 ? 's' : ''} claimed but not yet placed on map</p>
+            ) : (
+              <p className="text-[10px] text-text-muted mt-1">All claimed devices are already on the map</p>
+            )}
           </div>
+
+          {placeMode === 'custom' && (
+            <>
+              <div>
+                <label className="block text-xs text-text-muted mb-1">Device ID</label>
+                <input value={placeDeviceId} onChange={e => setPlaceDeviceId(e.target.value)} placeholder="e.g. ESP32-AABBCCDD" className="w-full px-3 py-2 rounded-lg bg-surface-base border border-border-default text-text-primary text-sm font-mono" />
+              </div>
+              <div>
+                <label className="block text-xs text-text-muted mb-1">Name</label>
+                <input value={placeName} onChange={e => setPlaceName(e.target.value)} className="w-full px-3 py-2 rounded-lg bg-surface-base border border-border-default text-text-primary text-sm" />
+              </div>
+              <div>
+                <label className="block text-xs text-text-muted mb-1">Type</label>
+                <select value={placeType} onChange={e => setPlaceType(e.target.value)} className="w-full px-3 py-2 rounded-lg bg-surface-base border border-border-default text-text-primary text-sm">
+                  <option value="sensor">Sensor</option>
+                  <option value="controller">Controller</option>
+                  <option value="both">Gateway</option>
+                </select>
+              </div>
+            </>
+          )}
+
+          {placeMode === 'select' && selectedDeviceId && (
+            <>
+              <div>
+                <label className="block text-xs text-text-muted mb-1">Name</label>
+                <input value={placeName} onChange={e => setPlaceName(e.target.value)} className="w-full px-3 py-2 rounded-lg bg-surface-base border border-border-default text-text-primary text-sm" />
+              </div>
+              <div>
+                <label className="block text-xs text-text-muted mb-1">Type</label>
+                <select value={placeType} onChange={e => setPlaceType(e.target.value)} className="w-full px-3 py-2 rounded-lg bg-surface-base border border-border-default text-text-primary text-sm">
+                  <option value="sensor">Sensor</option>
+                  <option value="controller">Controller</option>
+                  <option value="both">Gateway</option>
+                </select>
+              </div>
+            </>
+          )}
         </div>
       </Modal>
 

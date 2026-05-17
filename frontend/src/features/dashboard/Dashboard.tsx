@@ -260,6 +260,9 @@ export default function Dashboard() {
             latitude: d.latitude ?? 0,
             longitude: d.longitude ?? 0,
             status: d.status,
+            type: d.type,
+            field_id: d.field_id,
+            last_heartbeat: d.last_heartbeat,
             latestTemp: d.latestTemp,
           })).filter(d => d.latitude && d.longitude)}
           height={typeof window !== 'undefined' && window.innerWidth < 768 ? 250 : 340}
