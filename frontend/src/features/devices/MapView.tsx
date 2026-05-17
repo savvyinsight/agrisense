@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { FarmMap } from '@/shared/components/FarmMap';
+import { mapClickCb } from '@/shared/lib/mapClickStore';
 import { Modal } from '@/shared/components/Modal';
 import { toast } from '@/shared/components/Toast';
 import { getDevices, createDevice } from '@/features/devices/api';
@@ -74,26 +75,33 @@ export default function MapView() {
   };
 
   // Build field polygons from real coordinates
-  const fieldGeo = fields
-    .filter(f => f.latitude && f.longitude)
+  const fieldGeo = useMemo(() => fields
+    .filter(f => f.latitude != null && f.longitude != null)
     .map((f) => {
-    const size = 0.015;
-    return {
-      id: f.id, name: f.name, health: f.health, soil_moisture: f.soil_moisture,
-      alerts: f.health === 'critical' ? 1 : f.health === 'warning' ? 1 : undefined,
-      zoneCount: f.zones?.length || 0,
-      geometry: {
-        type: 'Polygon' as const,
-        coordinates: [[
-          [f.longitude! - size, f.latitude! - size],
-          [f.longitude! + size, f.latitude! - size],
-          [f.longitude! + size * 1.3, f.latitude! + size],
-          [f.longitude! - size * 0.8, f.latitude! + size * 1.3],
-          [f.longitude! - size, f.latitude! - size],
-        ]],
-      },
-    };
-  });
+      const size = 0.015;
+      return {
+        id: f.id,
+        name: f.name,
+        health: f.health,
+        soil_moisture: f.soil_moisture,
+        alerts: f.health === 'critical' ? 1 : f.health === 'warning' ? 1 : undefined,
+        zoneCount: f.zones?.length ?? 0,
+        latitude: f.latitude,
+        longitude: f.longitude,
+        geometry: {
+          type: 'Polygon' as const,
+          coordinates: [[
+            [f.longitude! - size, f.latitude! - size],
+            [f.longitude! + size, f.latitude! - size],
+            [f.longitude! + size * 1.3, f.latitude! + size],
+            [f.longitude! - size * 0.8, f.latitude! + size * 1.3],
+            [f.longitude! - size, f.latitude! - size],
+          ]],
+        },
+      };
+    }), [fields]);
+
+  mapClickCb.current = handleMapClick;
 
   return (
     <div className="max-w-7xl mx-auto space-y-4">
@@ -112,15 +120,17 @@ export default function MapView() {
       ) : (
         <FarmMap
           fields={fieldGeo}
-          devices={devices.map(d => ({
-            id: d.id ?? d.device_id,
-            device_id: d.device_id,
-            name: d.name,
-            latitude: d.latitude ?? 0,
-            longitude: d.longitude ?? 0,
-            status: d.status,
-            latestTemp: d.latestTemp,
-          })).filter(d => d.latitude && d.longitude)}
+          devices={devices
+            .filter((d) => d.latitude != null && d.longitude != null)
+            .map(d => ({
+              id: d.id ?? d.device_id,
+              device_id: d.device_id,
+              name: d.name,
+              latitude: d.latitude ?? 0,
+              longitude: d.longitude ?? 0,
+              status: d.status,
+              latestTemp: d.latestTemp,
+            }))}
           height={520}
           onFieldClick={(f) => navigate(`/fields/${f.id}`)}
           onMapClick={handleMapClick}

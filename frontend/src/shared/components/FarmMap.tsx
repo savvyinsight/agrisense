@@ -1,8 +1,10 @@
-import { useRef, useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { MapContainer, TileLayer, GeoJSON, Marker, Popup, useMap } from 'react-leaflet';
 import { cn } from '@/shared/lib/cn';
+import { mapClickCb } from '@/shared/lib/mapClickStore';
+
 
 delete (L.Icon.Default.prototype as any)._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -14,9 +16,15 @@ L.Icon.Default.mergeOptions({
 type MapMode = 'health' | 'moisture' | 'irrigation' | 'diagnostics';
 
 interface FieldGeo {
-  id: number; name: string; health: 'healthy' | 'warning' | 'critical';
-  soil_moisture?: number; geometry: { type: 'Polygon'; coordinates: number[][][] };
-  zoneCount?: number; alerts?: number;
+  id: number;
+  name: string;
+  health: 'healthy' | 'warning' | 'critical';
+  soil_moisture?: number;
+  latitude?: number;
+  longitude?: number;
+  geometry?: { type: 'Polygon'; coordinates: number[][][] };
+  zoneCount?: number;
+  alerts?: number;
 }
 
 interface DeviceMarker {
@@ -61,7 +69,7 @@ function MapController({ focusedAlertId, fields }: { focusedAlertId?: number | n
   useEffect(() => {
     if (focusedAlertId && fields.length > 0) {
       const f = fields.find((x) => x.id === focusedAlertId);
-      if (f && f.geometry.coordinates[0].length > 0) {
+      if (f?.geometry?.coordinates?.[0]?.length) {
         const coords = f.geometry.coordinates[0] as [number, number][];
         const bounds = L.latLngBounds(coords);
         map.fitBounds(bounds, { padding: [50, 50], maxZoom: 16 });
@@ -75,16 +83,25 @@ export function FarmMap({ fields, devices = [], center = [30.5, 114.3], zoom = 1
   onFieldClick, onMapClick, focusedAlertId, className }: FarmMapProps) {
   const [mode, setMode] = useState<MapMode>('health');
   const [selectedField, setSelectedField] = useState<FieldGeo | null>(null);
-  const mapRef = useRef<L.Map | null>(null);
+
+  mapClickCb.current = onMapClick ?? null;
+
+  const handleWhenReady = useCallback((m: any) => {
+    if (!m?.target) return;
+    m.target.on('click', (e: any) => {
+      mapClickCb.current?.({ lat: e.latlng.lat, lng: e.latlng.lng });
+    });
+  }, []);
 
   const handleFieldClick = useCallback((field: FieldGeo) => {
     setSelectedField(field);
     onFieldClick?.(field);
   }, [onFieldClick]);
 
-  // Map click → place device (bound in whenReady via ref to always use latest callback)
-  const onClickRef = useRef(onMapClick);
-  onClickRef.current = onMapClick;
+  const totalAlerts = fields.reduce((sum, field) => sum + (field.alerts ?? 0), 0);
+  const fieldPolygons = fields.filter((field) => field.geometry);
+  const fieldPoints = fields.filter((field) => !field.geometry && field.latitude != null && field.longitude != null);
+  const selectedHighlight = (field: FieldGeo) => selectedField?.id === field.id ? { color: '#2563eb', fillColor: '#2563eb33', weight: 4, dashArray: '3' } : {};
 
   const colorByMode = (field: FieldGeo) => {
     if (mode === 'health') {
@@ -115,11 +132,9 @@ export function FarmMap({ fields, devices = [], center = [30.5, 114.3], zoom = 1
 
     layer.on('mouseover', () => {
       layer.setStyle({ weight: 3, fillOpacity: 0.5 });
-      if (mapRef.current) mapRef.current.getContainer().style.cursor = 'pointer';
     });
     layer.on('mouseout', () => {
       layer.setStyle({ weight: 2, fillOpacity: 0.3 });
-      if (mapRef.current) mapRef.current.getContainer().style.cursor = '';
     });
   };
 
@@ -144,25 +159,66 @@ export function FarmMap({ fields, devices = [], center = [30.5, 114.3], zoom = 1
             );
           })}
         </div>
+        <div className="absolute top-3 right-3 z-[1000] w-72 rounded-2xl border border-border-default bg-surface-card/95 p-3 text-xs shadow-lg backdrop-blur-sm">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-[11px] uppercase tracking-[0.22em] text-text-muted">Map summary</p>
+              <p className="text-sm font-semibold text-text-primary">{fields.length} fields · {devices.length} devices</p>
+            </div>
+            <div className="rounded-full bg-success/10 px-2 py-1 text-[11px] font-semibold text-success">{totalAlerts} Alerts</div>
+          </div>
+          <div className="mt-3 space-y-2 text-[11px] text-text-muted">
+            <div>{modeConfig[mode].desc}</div>
+            <div className="grid grid-cols-2 gap-2">
+              {mode === 'health' && (
+                <>
+                  <span className="rounded-full bg-[#4caf50] px-2 py-1 text-white">Healthy</span>
+                  <span className="rounded-full bg-[#f59e0b] px-2 py-1 text-white">Warning</span>
+                  <span className="rounded-full bg-[#ef4444] px-2 py-1 text-white">Critical</span>
+                </>
+              )}
+              {mode === 'moisture' && (
+                <>
+                  <span className="rounded-full bg-[#ef4444] px-2 py-1 text-white">{'<30%'}</span>
+                  <span className="rounded-full bg-[#f59e0b] px-2 py-1 text-white">30-49%</span>
+                  <span className="rounded-full bg-[#4caf50] px-2 py-1 text-white">50-69%</span>
+                  <span className="rounded-full bg-[#2196f3] px-2 py-1 text-white">70%+</span>
+                </>
+              )}
+              {mode === 'irrigation' && (
+                <span className="col-span-2 rounded-full bg-[#2196f3] px-2 py-1 text-white">Irrigation zones</span>
+              )}
+              {mode === 'diagnostics' && (
+                <span className="col-span-2 rounded-full bg-[#64748b] px-2 py-1 text-white">Device diagnostics</span>
+              )}
+            </div>
+          </div>
+        </div>
 
-        <MapContainer center={center} zoom={zoom} style={{ height: '100%', width: '100%' }} ref={mapRef} zoomControl={false} whenReady={(m) => {
-          const leafletMap = m.target;
-          mapRef.current = leafletMap;
-          leafletMap.on('click', (e: L.LeafletMouseEvent) => {
-            onClickRef.current?.({ lat: e.latlng.lat, lng: e.latlng.lng });
-          });
-        }}>
+        <MapContainer center={center} zoom={zoom} style={{ height: '100%', width: '100%' }} zoomControl={false} scrollWheelZoom={true} whenReady={handleWhenReady as any}>
           <TileLayer url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}" attribution='&copy; <a href="https://www.esri.com/">Esri</a>' />
-          <MapController focusedAlertId={focusedAlertId} fields={fields} />
-          {fields.map((field) => (
+          <MapController focusedAlertId={focusedAlertId} fields={fieldPolygons} />
+          {fieldPolygons.map((field) => (
             <GeoJSON
               key={field.id}
               data={field.geometry as any}
-              style={() => colorByMode(field)}
+              style={() => ({ ...colorByMode(field), ...selectedHighlight(field) })}
               onEachFeature={(_, layer) => onEachFeature(field, layer as L.Path)}
             />
           ))}
-          {devices.filter(d => d.latitude && d.longitude).map((d) => (
+          {fieldPoints.map((field) => (
+            <Marker key={`field-${field.id}`} position={[field.latitude!, field.longitude!]} eventHandlers={{ click: () => handleFieldClick(field) }}>
+              <Popup>
+                <div className="text-sm">
+                  <strong>{field.name}</strong><br />
+                  <span className="text-xs">Field center</span><br />
+                  {field.soil_moisture != null && <>Moisture: {field.soil_moisture}%<br /></>}
+                  <span className={field.health === 'healthy' ? 'text-green-600' : field.health === 'warning' ? 'text-yellow-600' : 'text-red-600'}>{field.health}</span>
+                </div>
+              </Popup>
+            </Marker>
+          ))}
+          {devices.filter(d => d.latitude != null && d.longitude != null).map((d) => (
             <Marker key={d.id} position={[d.latitude, d.longitude]}>
               <Popup>
                 <div className="text-sm">
