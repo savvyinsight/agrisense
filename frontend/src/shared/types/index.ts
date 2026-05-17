@@ -20,7 +20,7 @@ export interface Field {
   last_irrigation?: string;
   latitude?: number;
   longitude?: number;
-  geometry?: string;
+  geometry?: string | { type: 'Polygon'; coordinates: number[][][] };
   zones?: Zone[];
 }
 

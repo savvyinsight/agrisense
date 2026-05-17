@@ -2,6 +2,7 @@ package field
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"time"
 )
@@ -37,7 +38,8 @@ func (r *PostgresFieldRepository) GetByID(id int) (*Field, error) {
 	`
 
 	var f Field
-	var crop, area, geometry sql.NullString
+	var crop, area sql.NullString
+	var geometryBytes []byte
 	var soilMoisture, temperature, humidity sql.NullFloat64
 	var lastIrrigation sql.NullTime
 	var lat, lng sql.NullFloat64
@@ -45,7 +47,7 @@ func (r *PostgresFieldRepository) GetByID(id int) (*Field, error) {
 	err := r.DB.QueryRow(query, id).Scan(
 		&f.ID, &f.Name, &crop, &area, &f.Health,
 		&soilMoisture, &temperature, &humidity,
-		&lastIrrigation, &lat, &lng, &geometry, &f.UserID, &f.CreatedAt, &f.UpdatedAt,
+		&lastIrrigation, &lat, &lng, &geometryBytes, &f.UserID, &f.CreatedAt, &f.UpdatedAt,
 	)
 
 	if err == sql.ErrNoRows {
@@ -81,8 +83,9 @@ func (r *PostgresFieldRepository) GetByID(id int) (*Field, error) {
 	if lng.Valid {
 		f.Longitude = &lng.Float64
 	}
-	if geometry.Valid {
-		f.Geometry = &geometry.String
+	if geometryBytes != nil {
+		raw := json.RawMessage(geometryBytes)
+		f.Geometry = &raw
 	}
 
 	return &f, nil
@@ -105,7 +108,8 @@ func (r *PostgresFieldRepository) List(userID int) ([]Field, error) {
 	var fields []Field
 	for rows.Next() {
 		var f Field
-		var crop, area, geometry sql.NullString
+		var crop, area sql.NullString
+		var geometryBytes []byte
 		var soilMoisture, temperature, humidity sql.NullFloat64
 		var lastIrrigation sql.NullTime
 		var lat, lng sql.NullFloat64
@@ -113,7 +117,7 @@ func (r *PostgresFieldRepository) List(userID int) ([]Field, error) {
 		err := rows.Scan(
 			&f.ID, &f.Name, &crop, &area, &f.Health,
 			&soilMoisture, &temperature, &humidity,
-			&lastIrrigation, &lat, &lng, &geometry, &f.UserID, &f.CreatedAt, &f.UpdatedAt,
+			&lastIrrigation, &lat, &lng, &geometryBytes, &f.UserID, &f.CreatedAt, &f.UpdatedAt,
 		)
 		if err != nil {
 			return nil, err
@@ -140,8 +144,9 @@ func (r *PostgresFieldRepository) List(userID int) ([]Field, error) {
 		if lng.Valid {
 			f.Longitude = &lng.Float64
 		}
-		if geometry.Valid {
-			f.Geometry = &geometry.String
+		if geometryBytes != nil {
+			raw := json.RawMessage(geometryBytes)
+			f.Geometry = &raw
 		}
 
 		fields = append(fields, f)

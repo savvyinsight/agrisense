@@ -34,6 +34,7 @@ export default function MapView() {
   const [placing, setPlacing] = useState(false);
   const [showPlaceDialog, setShowPlaceDialog] = useState(false);
   const [placeDeviceId, setPlaceDeviceId] = useState(generateDeviceId());
+  const [placeFieldId, setPlaceFieldId] = useState<number | null>(null);
 
   // Draw field dialog
   const [drawnCoords, setDrawnCoords] = useState<number[][][] | null>(null);
@@ -50,12 +51,13 @@ export default function MapView() {
     })();
   }, []);
 
-  const handleMapClick = (latlng: { lat: number; lng: number }) => {
+  const handleMapClick = (latlng: { lat: number; lng: number }, fieldId?: number) => {
     setPlaceLat(latlng.lat);
     setPlaceLng(latlng.lng);
     setPlaceName('');
     setPlaceType('sensor');
     setPlaceDeviceId(generateDeviceId());
+    setPlaceFieldId(fieldId ?? null);
     setShowPlaceDialog(true);
   };
 
@@ -68,11 +70,12 @@ export default function MapView() {
       type: placeType,
       latitude: placeLat,
       longitude: placeLng,
-    });
+      field_id: placeFieldId ?? undefined,
+    } as Partial<Device>);
     setPlacing(false);
     if (res.success) {
       toast('success', 'Device placed on map');
-      setShowPlaceDialog(false);
+      closePlaceDialog();
       const deviceRes = await getDevices();
       if (deviceRes.success && deviceRes.data) setDevices(deviceRes.data.devices);
     } else {
@@ -84,7 +87,9 @@ export default function MapView() {
   const fieldGeo = useMemo(() => fields
     .filter(f => (f.latitude != null && f.longitude != null) || f.geometry)
     .map((f) => {
-      const parsedGeo = f.geometry ? (() => { try { return JSON.parse(f.geometry); } catch { return null; } })() : null;
+      const parsedGeo = f.geometry
+        ? (typeof f.geometry === 'string' ? (() => { try { return JSON.parse(f.geometry); } catch { return null; } })() : f.geometry)
+        : null;
       return {
         id: f.id,
         name: f.name,
@@ -109,6 +114,16 @@ export default function MapView() {
 
   mapClickCb.current = handleMapClick;
 
+  const placeFieldName = useMemo(() => {
+    if (placeFieldId == null) return null;
+    return fields.find(f => f.id === placeFieldId)?.name ?? null;
+  }, [placeFieldId, fields]);
+
+  const closePlaceDialog = () => {
+    setShowPlaceDialog(false);
+    setPlaceFieldId(null);
+  };
+
   const handleFieldDraw = (coordinates: number[][][]) => {
     setDrawnCoords(coordinates);
     setFieldName('');
@@ -125,7 +140,7 @@ export default function MapView() {
       name: fieldName,
       latitude: centroidLat,
       longitude: centroidLng,
-      geometry: JSON.stringify({ type: 'Polygon', coordinates: drawnCoords }),
+      geometry: { type: 'Polygon', coordinates: drawnCoords } as any,
     });
     setSavingField(false);
     if (res.success) {
@@ -177,8 +192,8 @@ export default function MapView() {
       )}
 
       {/* Place Device dialog */}
-      <Modal open={showPlaceDialog} onClose={() => setShowPlaceDialog(false)} title="Place Device" actions={
-        <><button onClick={() => setShowPlaceDialog(false)} className="px-4 py-2 rounded-lg text-sm text-text-secondary hover:text-text-primary hover:bg-surface-hover transition-colors">Cancel</button><button onClick={handlePlaceDevice} disabled={placing || !placeName} className="px-4 py-2 rounded-lg bg-accent hover:bg-accent-hover text-white text-sm font-medium transition-colors disabled:opacity-50">{placing ? 'Placing...' : 'Place Device'}</button></>
+      <Modal open={showPlaceDialog} onClose={closePlaceDialog} title="Place Device" actions={
+        <><button onClick={closePlaceDialog} className="px-4 py-2 rounded-lg text-sm text-text-secondary hover:text-text-primary hover:bg-surface-hover transition-colors">Cancel</button><button onClick={handlePlaceDevice} disabled={placing || !placeName} className="px-4 py-2 rounded-lg bg-accent hover:bg-accent-hover text-white text-sm font-medium transition-colors disabled:opacity-50">{placing ? 'Placing...' : 'Place Device'}</button></>
       }>
         <div className="space-y-3">
           <div className="grid grid-cols-2 gap-3">
@@ -191,6 +206,11 @@ export default function MapView() {
               <input value={placeLng.toFixed(6)} readOnly className="w-full px-3 py-2 rounded-lg bg-surface-hover border border-border-default text-text-muted text-sm cursor-not-allowed" />
             </div>
           </div>
+          {placeFieldName && (
+            <div className="rounded-lg bg-accent/10 border border-accent/20 px-3 py-2 text-xs text-accent">
+              Associating with field: <strong>{placeFieldName}</strong>
+            </div>
+          )}
           <div>
             <label className="block text-xs text-text-muted mb-1">Device ID <span className="text-text-muted">(auto)</span></label>
             <input value={placeDeviceId} readOnly className="w-full px-3 py-2 rounded-lg bg-surface-hover border border-border-default text-text-muted text-sm cursor-not-allowed" />

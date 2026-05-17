@@ -5,7 +5,7 @@ import 'leaflet-draw';
 import 'leaflet-draw/dist/leaflet.draw.css';
 import { MapContainer, TileLayer, GeoJSON, Marker, Popup, useMap } from 'react-leaflet';
 import { cn } from '@/shared/lib/cn';
-import { mapClickCb, drawCancelCb } from '@/shared/lib/mapClickStore';
+import { mapClickCb, drawCancelCb, hoveredFieldIdRef } from '@/shared/lib/mapClickStore';
 
 
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -14,6 +14,54 @@ L.Icon.Default.mergeOptions({
   iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
 });
+
+// Geometry utilities
+function pointInPolygon(latlng: { lat: number; lng: number }, polygon: number[][][]): boolean {
+  const x = latlng.lng, y = latlng.lat;
+  const ring = polygon[0];
+  let inside = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const xi = ring[i][0], yi = ring[i][1];
+    const xj = ring[j][0], yj = ring[j][1];
+    if ((yi > y) !== (yj > y) && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) {
+      inside = !inside;
+    }
+  }
+  return inside;
+}
+
+function distToSegment(latlng: { lat: number; lng: number }, a: number[], b: number[]): number {
+  const x = latlng.lng, y = latlng.lat;
+  const x1 = a[0], y1 = a[1], x2 = b[0], y2 = b[1];
+  const dx = x2 - x1, dy = y2 - y1;
+  const lenSq = dx * dx + dy * dy;
+  if (lenSq === 0) return Math.sqrt((x - x1) ** 2 + (y - y1) ** 2);
+  let t = ((x - x1) * dx + (y - y1) * dy) / lenSq;
+  t = Math.max(0, Math.min(1, t));
+  const px = x1 + t * dx, py = y1 + t * dy;
+  return Math.sqrt((x - px) ** 2 + (y - py) ** 2);
+}
+
+function isOnBoundary(latlng: { lat: number; lng: number }, polygon: number[][][], thresholdDeg = 0.0001): boolean {
+  const ring = polygon[0];
+  for (let i = 0; i < ring.length - 1; i++) {
+    if (distToSegment(latlng, ring[i], ring[i + 1]) < thresholdDeg) return true;
+  }
+  return false;
+}
+
+function findFieldAtPoint(latlng: { lat: number; lng: number }, fields: FieldGeo[]): { field: FieldGeo; onBoundary: boolean } | null {
+  for (const field of fields) {
+    if (!field.geometry) continue;
+    if (isOnBoundary(latlng, field.geometry.coordinates)) {
+      return { field, onBoundary: true };
+    }
+    if (pointInPolygon(latlng, field.geometry.coordinates)) {
+      return { field, onBoundary: false };
+    }
+  }
+  return null;
+}
 
 type MapMode = 'health' | 'moisture' | 'irrigation' | 'diagnostics';
 
@@ -46,7 +94,7 @@ interface FarmMapProps {
   zoom?: number;
   height?: number;
   onFieldClick?: (field: FieldGeo) => void;
-  onMapClick?: (latlng: { lat: number; lng: number }) => void;
+  onMapClick?: (latlng: { lat: number; lng: number }, fieldId?: number) => void;
   onFieldDraw?: (coordinates: number[][][]) => void;
   focusedAlertId?: number | null;
   className?: string;
@@ -117,11 +165,23 @@ export function FarmMap({ fields, devices = [], center = [30.5, 114.3], zoom = 1
 
   mapClickCb.current = onMapClick ?? null;
 
+  const fieldsRef = useRef<FieldGeo[]>([]);
+
   const handleWhenReady = useCallback((m: any) => {
     if (!m?.target) return;
     m.target.on('click', (e: any) => {
       if (isDrawingRef.current) return;
-      mapClickCb.current?.({ lat: e.latlng.lat, lng: e.latlng.lng });
+      const latlng = { lat: e.latlng.lat, lng: e.latlng.lng };
+      const result = findFieldAtPoint(latlng, fieldsRef.current);
+      if (result?.onBoundary) {
+        onFieldClickRef.current?.(result.field);
+        return;
+      }
+      if (result && !result.onBoundary) {
+        mapClickCb.current?.(latlng, result.field.id);
+        return;
+      }
+      mapClickCb.current?.(latlng);
     });
   }, []);
 
@@ -138,13 +198,17 @@ export function FarmMap({ fields, devices = [], center = [30.5, 114.3], zoom = 1
 
   drawCancelCb.current = cancelDraw;
 
+  const onFieldClickRef = useRef(onFieldClick);
+  onFieldClickRef.current = onFieldClick;
+
   const handleFieldClick = useCallback((field: FieldGeo) => {
     setSelectedField(field);
-    onFieldClick?.(field);
-  }, [onFieldClick]);
+    onFieldClickRef.current?.(field);
+  }, []);
 
   const totalAlerts = fields.reduce((sum, field) => sum + (field.alerts ?? 0), 0);
   const fieldPolygons = fields.filter((field) => field.geometry);
+  fieldsRef.current = fieldPolygons;
   const fieldPoints = fields.filter((field) => !field.geometry && field.latitude != null && field.longitude != null);
   const selectedHighlight = (field: FieldGeo) => selectedField?.id === field.id ? { color: '#2563eb', fillColor: '#2563eb33', weight: 4, dashArray: '3' } : {};
 
@@ -173,12 +237,12 @@ export function FarmMap({ fields, devices = [], center = [30.5, 114.3], zoom = 1
       </div>`;
     layer.bindTooltip(tooltipContent, { sticky: true, className: 'rounded-lg shadow-lg border border-border-default bg-surface-card p-2 text-xs' });
 
-    layer.on('click', () => handleFieldClick(field));
-
     layer.on('mouseover', () => {
+      hoveredFieldIdRef.current = field.id;
       layer.setStyle({ weight: 3, fillOpacity: 0.5 });
     });
     layer.on('mouseout', () => {
+      hoveredFieldIdRef.current = null;
       layer.setStyle({ weight: 2, fillOpacity: 0.3 });
     });
   };
