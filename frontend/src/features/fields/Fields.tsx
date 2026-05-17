@@ -44,8 +44,8 @@ export default function Fields() {
   const handleDelete = async () => {
     if (!deleteTarget?.id) return;
     const res = await deleteField(deleteTarget.id);
-    if (res.success) { toast('success', 'Field deleted'); setDeleteTarget(null); load(); }
-    else toast('error', 'Failed to delete');
+    if (res.success) { toast('success', t('fields.fieldDeleted')); setDeleteTarget(null); load(); }
+    else toast('error', t('fields.failedToDeleteField'));
   };
 
   const sorted = [...fields].sort((a, b) => {
@@ -108,7 +108,7 @@ export default function Fields() {
                 <button
                   onClick={(e) => { e.stopPropagation(); setDeleteTarget(field); }}
                   className="absolute top-2 right-2 p-1.5 rounded-md bg-surface-card/80 text-text-muted hover:text-critical hover:bg-critical-bg opacity-0 group-hover:opacity-100 transition-opacity min-h-[32px] min-w-[32px] flex items-center justify-center"
-                  title="Delete field"
+                  title={t('fields.deleteFieldTitle')}
                 >
                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                 </button>
@@ -119,13 +119,13 @@ export default function Fields() {
       )}
 
       {/* Delete confirmation */}
-      <Modal open={deleteTarget !== null} onClose={() => setDeleteTarget(null)} title="Delete Field" actions={
-        <><button onClick={() => setDeleteTarget(null)} className="px-4 py-2 min-h-[44px] rounded-lg text-sm text-text-secondary hover:text-text-primary hover:bg-surface-hover transition-colors">Cancel</button><button onClick={handleDelete} className="px-4 py-2 min-h-[44px] rounded-lg bg-critical hover:bg-critical/80 text-white text-sm font-medium transition-colors">Delete</button></>
+      <Modal open={deleteTarget !== null} onClose={() => setDeleteTarget(null)} title={t('fields.deleteFieldTitle')} actions={
+        <><button onClick={() => setDeleteTarget(null)} className="px-4 py-2 min-h-[44px] rounded-lg text-sm text-text-secondary hover:text-text-primary hover:bg-surface-hover transition-colors">{t('common.cancel')}</button><button onClick={handleDelete} className="px-4 py-2 min-h-[44px] rounded-lg bg-critical hover:bg-critical/80 text-white text-sm font-medium transition-colors">{t('common.delete')}</button></>
       }>
         <div className="text-center py-2">
           <span className="text-3xl block mb-3">⚠️</span>
-          <p className="text-sm text-text-primary font-medium mb-1">Delete {deleteTarget?.name}?</p>
-          <p className="text-xs text-text-muted">This will permanently remove this field and its data.</p>
+          <p className="text-sm text-text-primary font-medium mb-1">{t('fields.deleteFieldConfirm', { name: deleteTarget?.name })}</p>
+          <p className="text-xs text-text-muted">{t('fields.deleteFieldDesc')}</p>
         </div>
       </Modal>
 
@@ -142,12 +142,12 @@ export default function Fields() {
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="block text-xs font-medium text-text-secondary mb-1.5">Latitude</label>
-            <input value={newLat} onChange={(e) => setNewLat(e.target.value)} placeholder="40.7128" className="w-full px-3 py-2 rounded-lg bg-surface-base border border-border-default text-text-primary text-sm font-mono focus:outline-none focus:border-accent" />
+            <label className="block text-xs font-medium text-text-secondary mb-1.5">{t('fields.latitude')}</label>
+            <input value={newLat} onChange={(e) => setNewLat(e.target.value)} placeholder={t('fields.latPlaceholder')} className="w-full px-3 py-2 rounded-lg bg-surface-base border border-border-default text-text-primary text-sm font-mono focus:outline-none focus:border-accent" />
           </div>
           <div>
-            <label className="block text-xs font-medium text-text-secondary mb-1.5">Longitude</label>
-            <input value={newLng} onChange={(e) => setNewLng(e.target.value)} placeholder="-74.0060" className="w-full px-3 py-2 rounded-lg bg-surface-base border border-border-default text-text-primary text-sm font-mono focus:outline-none focus:border-accent" />
+            <label className="block text-xs font-medium text-text-secondary mb-1.5">{t('fields.longitude')}</label>
+            <input value={newLng} onChange={(e) => setNewLng(e.target.value)} placeholder={t('fields.lngPlaceholder')} className="w-full px-3 py-2 rounded-lg bg-surface-base border border-border-default text-text-primary text-sm font-mono focus:outline-none focus:border-accent" />
           </div>
         </div>
       </Modal>

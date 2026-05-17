@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { Field, Device } from '@/shared/types';
 import { useFarmStore } from '@/shared/store/farmStore';
 import { cn } from '@/shared/lib/cn';
@@ -16,7 +17,7 @@ export function FieldGrouping({
   onFieldClick,
   onStartIrrigation,
 }: FieldGroupingProps) {
-  
+  const { t } = useTranslation();
   const { selectedFieldId, setSelectedField } = useFarmStore();
 
   // Group devices by field
@@ -66,10 +67,10 @@ export function FieldGrouping({
 
   return (
     <div className="space-y-3">
-      <h3 className="text-sm font-semibold text-text-primary mb-3">Fields & Zones</h3>
+      <h3 className="text-sm font-semibold text-text-primary mb-3">{t('fields.fieldsAndZones')}</h3>
       
       {fieldGroups.length === 0 ? (
-        <p className="text-sm text-text-secondary text-center py-8">No fields configured</p>
+        <p className="text-sm text-text-secondary text-center py-8">{t('fields.noFieldsConfigured')}</p>
       ) : (
         fieldGroups.map(({ field, devices: fieldDevices, health, moisture }) => (
           <div
@@ -93,14 +94,14 @@ export function FieldGrouping({
                   <h4 className="font-semibold text-text-primary">{field.name}</h4>
                 </div>
                 <p className="text-xs text-text-secondary">
-                  {field.crop || 'Unknown crop'} • {fieldDevices.length} sensor(s)
+                  {field.crop || t('fields.unknownCrop')} • {t('fields.sensorsCount', { count: fieldDevices.length })}
                 </p>
               </div>
               <div className="text-right">
                 <p className={cn('text-2xl font-bold', getMoistureColor(moisture))}>
                   {moisture.toFixed(0)}%
                 </p>
-                <p className="text-xs text-text-secondary">Soil Moisture</p>
+                <p className="text-xs text-text-secondary">{t('fields.soilMoisture')}</p>
               </div>
             </div>
 
@@ -116,12 +117,12 @@ export function FieldGrouping({
                       'px-2 py-0.5 rounded text-white text-xs font-medium',
                       device.status === 'online' ? 'bg-green-500' : 'bg-gray-500'
                     )}>
-                      {device.status === 'online' ? '📡 Online' : '❌ Offline'}
+                      {device.status === 'online' ? `📡 ${t('common.online')}` : `❌ ${t('common.offline')}`}
                     </span>
                   </div>
                 ))}
                 {fieldDevices.length > 3 && (
-                  <p className="text-xs text-text-secondary px-2">+ {fieldDevices.length - 3} more sensors</p>
+                  <p className="text-xs text-text-secondary px-2">{t('fields.moreSensors', { count: fieldDevices.length - 3 })}</p>
                 )}
               </div>
             )}
@@ -135,7 +136,7 @@ export function FieldGrouping({
                 }}
                 className="flex-1 px-3 py-1.5 bg-blue-500 text-white text-xs font-semibold rounded hover:bg-blue-600 transition-colors"
               >
-                💧 Irrigate
+                💧 {t('fields.irrigate')}
               </button>
               <button
                 onClick={(e) => {
@@ -144,7 +145,7 @@ export function FieldGrouping({
                 }}
                 className="flex-1 px-3 py-1.5 bg-gray-200 text-text-primary text-xs font-semibold rounded hover:bg-gray-300 transition-colors"
               >
-                View Details →
+                {t('fields.viewDetails')} →
               </button>
             </div>
           </div>

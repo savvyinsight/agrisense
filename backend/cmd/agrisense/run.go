@@ -93,6 +93,7 @@ func runServer(cliCtx *cli.Context) error {
 	alertRepo := &alert.PostgresAlertRepository{DB: pgDB}
 	fieldRepo := &field.PostgresFieldRepository{DB: pgDB}
 	irrigationRepo := &irrigation.PostgresIrrigationZoneRepository{DB: pgDB}
+	irrigationEventRepo := &irrigation.PostgresIrrigationEventRepository{DB: pgDB}
 	weatherRepo := &weather.PostgresWeatherRepository{DB: pgDB}
 	cacheRepo := redis.NewCacheRepository(redisClient)
 
@@ -189,7 +190,7 @@ func runServer(cliCtx *cli.Context) error {
 	controlHandler := control.NewControlHandler(controlService)
 	automationHandler := automation.NewAutomationHandler(automationService)
 	fieldHandler := field.NewFieldHandler(fieldRepo)
-	irrigationHandler := irrigation.NewIrrigationHandler(irrigationRepo)
+	irrigationHandler := irrigation.NewIrrigationHandler(irrigationRepo, irrigationEventRepo, irrigationCmdAdapter{controlService})
 	weatherHandler := weather.NewWeatherHandler(weatherRepo)
 	analyticsHandler := analytics.NewAnalyticsHandler(analyticsService)
 	
@@ -314,9 +315,13 @@ func runServer(cliCtx *cli.Context) error {
 		irrigationRoutes := api.Group("/irrigation/zones")
 		{
 			irrigationRoutes.GET("", irrigationHandler.List)
+			irrigationRoutes.POST("", irrigationHandler.Create)
+			irrigationRoutes.PUT("/:id", irrigationHandler.Update)
+			irrigationRoutes.DELETE("/:id", irrigationHandler.Delete)
 			irrigationRoutes.POST("/:id/start", irrigationHandler.Start)
 			irrigationRoutes.POST("/:id/stop", irrigationHandler.Stop)
 			irrigationRoutes.POST("/:id/retry", irrigationHandler.Retry)
+			irrigationRoutes.GET("/events", irrigationHandler.ListEvents)
 		}
 
 		// Weather routes
@@ -427,4 +432,14 @@ func runServer(cliCtx *cli.Context) error {
 
 	log.Println("AgriSense shut down gracefully")
 	return nil
+}
+
+// irrigationCmdAdapter adapts control.Service to irrigation.CommandSender.
+type irrigationCmdAdapter struct {
+	svc *control.Service
+}
+
+func (a irrigationCmdAdapter) SendCommand(deviceID int, command string, parameters map[string]interface{}, userID int) error {
+	_, err := a.svc.ExecuteCommand(deviceID, command, parameters, &userID)
+	return err
 }

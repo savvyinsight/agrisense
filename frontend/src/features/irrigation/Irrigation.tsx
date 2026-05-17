@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { StatusCard } from '@/shared/components/StatusCard';
 import { cn } from '@/shared/lib/cn';
-import { getZones, startZone, stopZone, retryZone } from '@/features/irrigation/api';
+import { getZones, startZone, stopZone, retryZone, deleteZone } from '@/features/irrigation/api';
+import { IrrigationZoneFormModal } from '@/features/irrigation/IrrigationZoneFormModal';
 import { toast } from '@/shared/components/Toast';
 import type { IrrigationZone } from '@/features/irrigation/api';
 
@@ -19,6 +20,9 @@ export default function Irrigation() {
   const [loading, setLoading] = useState(true);
   const [actionLoadingId, setActionLoadingId] = useState<number | null>(null);
   const [filter, setFilter] = useState<string>('all');
+  const [zoneFormOpen, setZoneFormOpen] = useState(false);
+  const [editingZone, setEditingZone] = useState<IrrigationZone | null>(null);
+  const [deletingZoneId, setDeletingZoneId] = useState<number | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -55,9 +59,18 @@ export default function Irrigation() {
 
   return (
     <div className="max-w-7xl mx-auto space-y-4 md:space-y-6">
-      <div>
-        <h1 className="text-lg font-bold text-text-primary">{t('irrigation.title')}</h1>
-        <p className="text-sm text-text-muted mt-0.5">{t('irrigation.subtitle')}</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-lg font-bold text-text-primary">{t('irrigation.title')}</h1>
+          <p className="text-sm text-text-muted mt-0.5">{t('irrigation.subtitle')}</p>
+        </div>
+        <button
+          onClick={() => { setEditingZone(null); setZoneFormOpen(true); }}
+          className="text-xs font-medium text-accent hover:text-accent-hover flex items-center gap-1 min-h-[44px] px-3 py-2 rounded-lg border border-accent/30 hover:bg-accent/5 transition-colors"
+        >
+          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+          Add Zone
+        </button>
       </div>
 
       {/* Tier 1: Failed zones banner */}
@@ -94,29 +107,49 @@ export default function Irrigation() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           {sorted.map((zone) => {
             const cfg = statusConfig[zone.status];
-            const moisturePct = Math.round((zone.moisture / zone.target_moisture) * 100);
-            const needsAttention = moisturePct < 50 || zone.status === 'failed';
+            const hasMoisture = zone.moisture > 0;
+            const moisturePct = hasMoisture ? Math.round((zone.moisture / zone.target_moisture) * 100) : 0;
+            const needsAttention = (hasMoisture && moisturePct < 50) || zone.status === 'failed';
             return (
               <div key={zone.id} className={cn('rounded-lg border p-4 transition-colors', zone.status === 'active' ? 'bg-info-bg border-l-[3px] border-l-info-bright' : zone.status === 'failed' ? 'bg-critical-bg border-l-[3px] border-l-critical' : needsAttention ? 'bg-warning-bg border-l-[3px] border-l-warning' : 'bg-surface-card border-border-default')}>
                 <div className="flex items-center justify-between mb-2">
-                  <span className="font-semibold text-sm text-text-primary">{zone.name}</span>
-                  <span className={cn('text-xs font-medium px-2 py-0.5 rounded-full', cfg.color, cfg.bg)}>{t(`irrigation.${zone.status}`)}</span>
+                  <span className="font-semibold text-sm text-text-primary truncate">{zone.name}</span>
+                  <div className="flex items-center gap-0.5 shrink-0">
+                    <button
+                      onClick={() => { setEditingZone(zone); setZoneFormOpen(true); }}
+                      className="text-text-muted hover:text-text-primary min-h-[36px] min-w-[36px] flex items-center justify-center"
+                      title="Edit zone"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                    </button>
+                    <button
+                      onClick={() => setDeletingZoneId(zone.id)}
+                      className="text-text-muted hover:text-critical min-h-[36px] min-w-[36px] flex items-center justify-center"
+                      title="Delete zone"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                    </button>
+                    <span className={cn('text-xs font-medium px-2 py-0.5 rounded-full', cfg.color, cfg.bg)}>{t(`irrigation.${zone.status}`)}</span>
+                  </div>
                 </div>
 
                 {/* Moisture bar with target indicator */}
                 <div className="mb-3">
                   <div className="flex justify-between text-xs text-text-muted mb-1">
-                    <span className={cn('font-medium', moisturePct < 50 ? 'text-critical' : moisturePct < 80 ? 'text-warning' : 'text-success')}>{zone.moisture}%</span>
+                    <span className={cn('font-medium', hasMoisture ? (moisturePct < 50 ? 'text-critical' : moisturePct < 80 ? 'text-warning' : 'text-success') : 'text-text-muted')}>{hasMoisture ? `${zone.moisture}%` : 'No data'}</span>
                     <span>Target {zone.target_moisture}%</span>
                   </div>
-                  <div className="h-2.5 bg-surface-elevated rounded-full overflow-hidden">
-                    <div className={cn('h-full rounded-full transition-all', moisturePct < 50 ? 'bg-critical' : moisturePct < 80 ? 'bg-warning' : 'bg-success')} style={{ width: `${moisturePct}%` }} />
-                  </div>
+                  {hasMoisture && (
+                    <div className="h-2.5 bg-surface-elevated rounded-full overflow-hidden">
+                      <div className={cn('h-full rounded-full transition-all', moisturePct < 50 ? 'bg-critical' : moisturePct < 80 ? 'bg-warning' : 'bg-success')} style={{ width: `${moisturePct}%` }} />
+                    </div>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-2 gap-2 text-xs text-text-muted">
                   <span>{t('irrigation.runtime', { minutes: zone.runtime_minutes })}</span>
                   <span>{t('irrigation.flow', { rate: zone.flow_rate_lpm })}</span>
+                  {zone.device_name ? <span className="text-accent">{zone.device_name}</span> : zone.device_id ? <span className="text-accent">Device #{zone.device_id}</span> : <span className="italic">No controller</span>}
                 </div>
 
                 {/* Action buttons with loading state */}
@@ -143,6 +176,33 @@ export default function Irrigation() {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Zone Form Modal */}
+      <IrrigationZoneFormModal
+        open={zoneFormOpen}
+        onClose={() => { setZoneFormOpen(false); setEditingZone(null); }}
+        onSaved={load}
+        zone={editingZone}
+      />
+
+      {/* Delete Zone Confirmation */}
+      {deletingZoneId !== null && (
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/50" onClick={() => setDeletingZoneId(null)}>
+          <div className="bg-surface-card rounded-lg border border-border-default w-full max-w-sm mx-4 p-6 shadow-xl" onClick={e => e.stopPropagation()}>
+            <h3 className="text-base font-bold text-text-primary mb-2">Delete Zone</h3>
+            <p className="text-sm text-text-secondary mb-6">Are you sure you want to delete this irrigation zone? This action cannot be undone.</p>
+            <div className="flex gap-3">
+              <button onClick={() => setDeletingZoneId(null)} className="flex-1 py-2.5 rounded-lg border border-border-default text-sm text-text-secondary hover:text-text-primary transition-colors min-h-[44px]">Cancel</button>
+              <button onClick={async () => {
+                const res = await deleteZone(deletingZoneId);
+                if (res.success) { toast('success', 'Zone deleted'); load(); }
+                else { toast('error', res.error || 'Failed to delete zone'); }
+                setDeletingZoneId(null);
+              }} className="flex-1 py-2.5 rounded-lg bg-critical text-white text-sm font-medium hover:bg-critical/80 transition-colors min-h-[44px]">Delete</button>
+            </div>
+          </div>
         </div>
       )}
     </div>

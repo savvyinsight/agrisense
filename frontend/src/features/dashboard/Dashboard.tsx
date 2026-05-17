@@ -341,11 +341,11 @@ export default function Dashboard() {
           <h3 className="text-sm font-semibold text-text-primary mb-4">{t('dashboard.irrigationToday')}</h3>
           <div className="space-y-2.5">
             {zones.length === 0 ? (
-              <div className="text-center py-6 text-sm text-text-muted">No irrigation today</div>
+              <div className="text-center py-6 text-sm text-text-muted">{t('common.noIrrigation')}</div>
             ) : zones.map((zone) => {
               const isUrgent = zone.status === 'failed' || zone.moisture < zone.target_moisture * 0.5;
-              const statusLabel = zone.status === 'active' ? t('irrigation.active') : zone.status === 'failed' ? t('irrigation.failed') : zone.status === 'scheduled' ? 'Scheduled' : 'Idle';
-              const timeLabel = zone.status === 'active' ? `Running ${zone.runtime_minutes}m` : statusLabel;
+              const statusLabel = zone.status === 'active' ? t('irrigation.active') : zone.status === 'failed' ? t('irrigation.failed') : zone.status === 'scheduled' ? t('irrigation.scheduled') : t('irrigation.idle');
+              const timeLabel = zone.status === 'active' ? t('common.runningMinutes', { minutes: zone.runtime_minutes }) : statusLabel;
               const waterLabel = zone.status !== 'idle' ? `${Math.round(zone.runtime_minutes * zone.flow_rate_lpm).toLocaleString()} L` : '-';
               return (
                 <div key={zone.id} className={cn('flex items-center justify-between py-2 px-3 rounded-md', isUrgent ? 'bg-critical-bg' : '')}>
@@ -467,11 +467,11 @@ export default function Dashboard() {
                   {/* Zone Details */}
                   <div className="grid grid-cols-2 gap-2 text-xs text-text-muted mb-3 pb-3 border-b border-border-default">
                     <div>
-                      <span className="block text-text-secondary font-medium">Runtime</span>
+                      <span className="block text-text-secondary font-medium">{t('common.runtime')}</span>
                       <span>{zone.runtime_minutes}m</span>
                     </div>
                     <div>
-                      <span className="block text-text-secondary font-medium">Flow Rate</span>
+                      <span className="block text-text-secondary font-medium">{t('common.flowRate')}</span>
                       <span>{zone.flow_rate_lpm} L/min</span>
                     </div>
                   </div>

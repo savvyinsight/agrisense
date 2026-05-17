@@ -99,12 +99,12 @@ export default function MapView() {
       } as Partial<Device>);
       setPlacing(false);
       if (res.success) {
-        toast('success', 'Device placed on map');
+        toast('success', t('common.devicePlaced'));
         closePlaceDialog();
         const deviceRes = await getDevices();
         if (deviceRes.success && deviceRes.data) setDevices(deviceRes.data.devices);
       } else {
-        toast('error', res.error || 'Failed to place device');
+        toast('error', res.error || t('common.failedToPlaceDevice'));
       }
     } else {
       const res = await createDevice({
@@ -117,12 +117,12 @@ export default function MapView() {
       } as Partial<Device>);
       setPlacing(false);
       if (res.success) {
-        toast('success', 'Device placed on map');
+        toast('success', t('common.devicePlaced'));
         closePlaceDialog();
         const deviceRes = await getDevices();
         if (deviceRes.success && deviceRes.data) setDevices(deviceRes.data.devices);
       } else {
-        toast('error', res.error || 'Failed to create device');
+        toast('error', res.error || t('common.failedToCreateDevice'));
       }
     }
   };
@@ -180,11 +180,11 @@ export default function MapView() {
       longitude: latlng.lng,
     } as Partial<Device>);
     if (res.success) {
-      toast('success', 'Device moved');
+      toast('success', t('common.deviceMoved'));
       const deviceRes = await getDevices();
       if (deviceRes.success && deviceRes.data) setDevices(deviceRes.data.devices);
     } else {
-      toast('error', res.error || 'Failed to move device');
+      toast('error', res.error || t('common.failedToMoveDevice'));
     }
   };
 
@@ -202,14 +202,14 @@ export default function MapView() {
     });
     setSavingField(false);
     if (res.success) {
-      toast('success', 'Field created');
+      toast('success', t('common.fieldCreated'));
       setShowFieldDialog(false);
       drawCancelCb.current?.();
       setDrawnCoords(null);
       const [fieldRes] = await Promise.all([getFields()]);
       if (fieldRes.success && fieldRes.data) setFields(fieldRes.data);
     } else {
-      toast('error', res.error || 'Failed to create field');
+      toast('error', res.error || t('common.failedToCreateField'));
     }
   };
 
@@ -254,17 +254,17 @@ export default function MapView() {
       )}
 
       {/* Place Device dialog */}
-      <Modal open={showPlaceDialog} onClose={closePlaceDialog} title="Place Device" actions={
-        <><button onClick={closePlaceDialog} className="px-4 py-2 rounded-lg text-sm text-text-secondary hover:text-text-primary hover:bg-surface-hover transition-colors">Cancel</button><button onClick={handlePlaceDevice} disabled={placing || !placeName || (placeMode === 'select' && !selectedDeviceId)} className="px-4 py-2 rounded-lg bg-accent hover:bg-accent-hover text-white text-sm font-medium transition-colors disabled:opacity-50">{placing ? 'Placing...' : 'Place Device'}</button></>
+      <Modal open={showPlaceDialog} onClose={closePlaceDialog} title={t('map.placeDevice')} actions={
+        <><button onClick={closePlaceDialog} className="px-4 py-2 rounded-lg text-sm text-text-secondary hover:text-text-primary hover:bg-surface-hover transition-colors">{t('common.cancel')}</button><button onClick={handlePlaceDevice} disabled={placing || !placeName || (placeMode === 'select' && !selectedDeviceId)} className="px-4 py-2 rounded-lg bg-accent hover:bg-accent-hover text-white text-sm font-medium transition-colors disabled:opacity-50">{placing ? t('map.placing') : t('map.placeDevice')}</button></>
       }>
         <div className="space-y-3">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs text-text-muted mb-1">Latitude</label>
+              <label className="block text-xs text-text-muted mb-1">{t('map.latitude')}</label>
               <input value={placeLat.toFixed(6)} readOnly className="w-full px-3 py-2 rounded-lg bg-surface-hover border border-border-default text-text-muted text-sm cursor-not-allowed" />
             </div>
             <div>
-              <label className="block text-xs text-text-muted mb-1">Longitude</label>
+              <label className="block text-xs text-text-muted mb-1">{t('map.longitude')}</label>
               <input value={placeLng.toFixed(6)} readOnly className="w-full px-3 py-2 rounded-lg bg-surface-hover border border-border-default text-text-muted text-sm cursor-not-allowed" />
             </div>
           </div>
@@ -275,38 +275,38 @@ export default function MapView() {
           )}
 
           <div>
-            <label className="block text-xs text-text-muted mb-1">Device</label>
+            <label className="block text-xs text-text-muted mb-1">{t('map.device')}</label>
             <select value={selectedDeviceId} onChange={e => handleSelectDevice(e.target.value ? Number(e.target.value) : '')} className="w-full px-3 py-2 rounded-lg bg-surface-base border border-border-default text-text-primary text-sm">
-              <option value="">✏️ Enter custom device ID...</option>
+              <option value="">{t('map.enterCustomDevice')}</option>
               {unplacedDevices.map(d => (
                 <option key={d.id} value={d.id}>
-                  {d.type === 'controller' ? '🔧' : d.type === 'both' ? '📡' : '🌡️'} {d.device_id} — {d.name || 'unnamed'}
+                  {d.type === 'controller' ? '🔧' : d.type === 'both' ? '📡' : '🌡️'} {d.device_id} — {d.name || t('map.unnamed')}
                 </option>
               ))}
             </select>
             {unplacedDevices.length > 0 ? (
-              <p className="text-[10px] text-text-muted mt-1">{unplacedDevices.length} device{unplacedDevices.length > 1 ? 's' : ''} claimed but not yet placed on map</p>
+              <p className="text-[10px] text-text-muted mt-1">{t('map.unplacedCount', { count: unplacedDevices.length })}</p>
             ) : (
-              <p className="text-[10px] text-text-muted mt-1">All claimed devices are already on the map</p>
+              <p className="text-[10px] text-text-muted mt-1">{t('map.allPlaced')}</p>
             )}
           </div>
 
           {placeMode === 'custom' && (
             <>
               <div>
-                <label className="block text-xs text-text-muted mb-1">Device ID</label>
-                <input value={placeDeviceId} onChange={e => setPlaceDeviceId(e.target.value)} placeholder="e.g. ESP32-AABBCCDD" className="w-full px-3 py-2 rounded-lg bg-surface-base border border-border-default text-text-primary text-sm font-mono" />
+                <label className="block text-xs text-text-muted mb-1">{t('map.deviceId')}</label>
+                <input value={placeDeviceId} onChange={e => setPlaceDeviceId(e.target.value)} placeholder={t('map.deviceIdPlaceholder')} className="w-full px-3 py-2 rounded-lg bg-surface-base border border-border-default text-text-primary text-sm font-mono" />
               </div>
               <div>
-                <label className="block text-xs text-text-muted mb-1">Name</label>
+                <label className="block text-xs text-text-muted mb-1">{t('map.name')}</label>
                 <input value={placeName} onChange={e => setPlaceName(e.target.value)} className="w-full px-3 py-2 rounded-lg bg-surface-base border border-border-default text-text-primary text-sm" />
               </div>
               <div>
-                <label className="block text-xs text-text-muted mb-1">Type</label>
+                <label className="block text-xs text-text-muted mb-1">{t('map.type')}</label>
                 <select value={placeType} onChange={e => setPlaceType(e.target.value)} className="w-full px-3 py-2 rounded-lg bg-surface-base border border-border-default text-text-primary text-sm">
-                  <option value="sensor">Sensor</option>
-                  <option value="controller">Controller</option>
-                  <option value="both">Gateway</option>
+                  <option value="sensor">{t('map.sensor')}</option>
+                  <option value="controller">{t('map.controller')}</option>
+                  <option value="both">{t('map.gateway')}</option>
                 </select>
               </div>
             </>
@@ -315,15 +315,15 @@ export default function MapView() {
           {placeMode === 'select' && selectedDeviceId && (
             <>
               <div>
-                <label className="block text-xs text-text-muted mb-1">Name</label>
+                <label className="block text-xs text-text-muted mb-1">{t('map.name')}</label>
                 <input value={placeName} onChange={e => setPlaceName(e.target.value)} className="w-full px-3 py-2 rounded-lg bg-surface-base border border-border-default text-text-primary text-sm" />
               </div>
               <div>
-                <label className="block text-xs text-text-muted mb-1">Type</label>
+                <label className="block text-xs text-text-muted mb-1">{t('map.type')}</label>
                 <select value={placeType} onChange={e => setPlaceType(e.target.value)} className="w-full px-3 py-2 rounded-lg bg-surface-base border border-border-default text-text-primary text-sm">
-                  <option value="sensor">Sensor</option>
-                  <option value="controller">Controller</option>
-                  <option value="both">Gateway</option>
+                  <option value="sensor">{t('map.sensor')}</option>
+                  <option value="controller">{t('map.controller')}</option>
+                  <option value="both">{t('map.gateway')}</option>
                 </select>
               </div>
             </>
@@ -332,19 +332,19 @@ export default function MapView() {
       </Modal>
 
       {/* Draw Field dialog */}
-      <Modal open={showFieldDialog} onClose={() => { setShowFieldDialog(false); drawCancelCb.current?.(); }} title="New Field" actions={
-        <><button onClick={() => { setShowFieldDialog(false); drawCancelCb.current?.(); }} className="px-4 py-2 rounded-lg text-sm text-text-secondary hover:text-text-primary hover:bg-surface-hover transition-colors">Cancel</button><button onClick={handleSaveField} disabled={savingField || !fieldName} className="px-4 py-2 rounded-lg bg-accent hover:bg-accent-hover text-white text-sm font-medium transition-colors disabled:opacity-50">{savingField ? 'Saving...' : 'Save Field'}</button></>
+      <Modal open={showFieldDialog} onClose={() => { setShowFieldDialog(false); drawCancelCb.current?.(); }} title={t('map.newField')} actions={
+        <><button onClick={() => { setShowFieldDialog(false); drawCancelCb.current?.(); }} className="px-4 py-2 rounded-lg text-sm text-text-secondary hover:text-text-primary hover:bg-surface-hover transition-colors">{t('common.cancel')}</button><button onClick={handleSaveField} disabled={savingField || !fieldName} className="px-4 py-2 rounded-lg bg-accent hover:bg-accent-hover text-white text-sm font-medium transition-colors disabled:opacity-50">{savingField ? t('common.saving') : t('map.saveField')}</button></>
       }>
         <div className="space-y-3">
           <div>
-            <label className="block text-xs text-text-muted mb-1">Field Name</label>
-            <input value={fieldName} onChange={e => setFieldName(e.target.value)} placeholder="e.g. North Field" className="w-full px-3 py-2 rounded-lg bg-surface-base border border-border-default text-text-primary text-sm" />
+            <label className="block text-xs text-text-muted mb-1">{t('map.fieldName')}</label>
+            <input value={fieldName} onChange={e => setFieldName(e.target.value)} placeholder={t('map.fieldNamePlaceholder')} className="w-full px-3 py-2 rounded-lg bg-surface-base border border-border-default text-text-primary text-sm" />
           </div>
           {drawnCoords && (
             <div>
-              <label className="block text-xs text-text-muted mb-1">Polygon</label>
+              <label className="block text-xs text-text-muted mb-1">{t('map.polygon')}</label>
               <div className="rounded-lg bg-surface-hover border border-border-default p-2 text-[11px] text-text-muted font-mono overflow-auto max-h-32">
-                {drawnCoords[0]?.length ?? 0} vertices
+                {t('map.vertices', { count: drawnCoords[0]?.length ?? 0 })}
               </div>
             </div>
           )}
