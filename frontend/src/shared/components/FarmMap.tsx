@@ -178,7 +178,11 @@ export function FarmMap({ fields, devices = [], center = [30.5, 114.3], zoom = 1
         return;
       }
       if (result && !result.onBoundary) {
-        mapClickCb.current?.(latlng, result.field.id);
+        if (mapClickCb.current) {
+          mapClickCb.current(latlng, result.field.id);
+        } else {
+          onFieldClickRef.current?.(result.field);
+        }
         return;
       }
       mapClickCb.current?.(latlng);

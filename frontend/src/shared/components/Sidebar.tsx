@@ -25,9 +25,9 @@ const navItems: NavItem[] = [
   { label: 'nav.settings', path: '/settings', icon: '⚙', bottom: true },
 ];
 
-interface SidebarProps { open: boolean; onClose: () => void; isAdmin: boolean }
+interface SidebarProps { open: boolean; onClose: () => void; isAdmin: boolean; collapsed?: boolean; onToggleCollapse?: () => void }
 
-export function Sidebar({ open, onClose, isAdmin }: SidebarProps) {
+export function Sidebar({ open, onClose, isAdmin, collapsed = false, onToggleCollapse }: SidebarProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const { t } = useTranslation();
@@ -57,18 +57,22 @@ export function Sidebar({ open, onClose, isAdmin }: SidebarProps) {
   return (
     <>
       {open && <div className="fixed inset-0 bg-black/50 z-40 md:hidden" onClick={onClose} />}
-      <aside className={cn('fixed top-0 left-0 z-50 h-full w-64 bg-surface-card border-r border-border-default transform transition-transform duration-200 ease-in-out md:translate-x-0 md:static md:z-auto', open ? 'translate-x-0' : '-translate-x-full')}>
-        <div className="flex items-center h-14 px-4 border-b border-border-default">
-          <span className="text-lg font-bold text-text-primary tracking-tight">AgriSense</span>
+      <aside className={cn('fixed top-0 left-0 z-50 h-full bg-surface-card border-r border-border-default transform transition-all duration-200 ease-in-out md:translate-x-0 md:static md:z-auto', collapsed ? 'w-16' : 'w-64', open ? 'translate-x-0' : '-translate-x-full')}>
+        <div className={cn('flex items-center h-14 border-b border-border-default', collapsed ? 'justify-center px-0' : 'px-4')}>
+          {collapsed ? (
+            <span className="text-lg font-bold text-text-primary tracking-tight">A</span>
+          ) : (
+            <span className="text-lg font-bold text-text-primary tracking-tight">AgriSense</span>
+          )}
         </div>
-        <nav className="py-2 flex flex-col h-[calc(100%-3.5rem)]">
+        <nav className="py-2 flex flex-col h-[calc(100%-7rem)]">
           <div className="flex-1">
             {main.map((item) => {
               const isActive = location.pathname === item.path;
               return (
-                <button key={item.path} onClick={() => handleNav(item.path)} className={cn('w-full flex items-center gap-3 px-4 py-3 md:py-2.5 min-h-[44px] text-sm transition-colors', isActive ? 'bg-accent/10 text-accent border-r-2 border-accent' : 'text-text-secondary hover:text-text-primary hover:bg-surface-hover')}>
-                  <span className="text-base w-5 text-center">{item.icon}</span>
-                  <span>{t(item.label)}</span>
+                <button key={item.path} onClick={() => handleNav(item.path)} className={cn('w-full flex items-center gap-3 min-h-[44px] text-sm transition-colors', collapsed ? 'justify-center px-0' : 'px-4', isActive ? (collapsed ? 'bg-accent/10 text-accent' : 'bg-accent/10 text-accent border-r-2 border-accent') : 'text-text-secondary hover:text-text-primary hover:bg-surface-hover')}>
+                  <span className={cn('text-base text-center', collapsed ? 'text-lg' : 'w-5')}>{item.icon}</span>
+                  {!collapsed && <span>{t(item.label)}</span>}
                 </button>
               );
             })}
@@ -77,14 +81,21 @@ export function Sidebar({ open, onClose, isAdmin }: SidebarProps) {
             {bottom.map((item) => {
               const isActive = location.pathname === item.path;
               return (
-                <button key={item.path} onClick={() => handleNav(item.path)} className={cn('w-full flex items-center gap-3 px-4 py-3 md:py-2.5 min-h-[44px] text-sm transition-colors', isActive ? 'bg-accent/10 text-accent border-r-2 border-accent' : 'text-text-secondary hover:text-text-primary hover:bg-surface-hover')}>
-                  <span className="text-base w-5 text-center">{item.icon}</span>
-                  <span>{t(item.label)}</span>
+                <button key={item.path} onClick={() => handleNav(item.path)} className={cn('w-full flex items-center gap-3 min-h-[44px] text-sm transition-colors', collapsed ? 'justify-center px-0' : 'px-4', isActive ? (collapsed ? 'bg-accent/10 text-accent' : 'bg-accent/10 text-accent border-r-2 border-accent') : 'text-text-secondary hover:text-text-primary hover:bg-surface-hover')}>
+                  <span className={cn('text-base text-center', collapsed ? 'text-lg' : 'w-5')}>{item.icon}</span>
+                  {!collapsed && <span>{t(item.label)}</span>}
                 </button>
               );
             })}
           </div>
         </nav>
+        <div className="border-t border-border-default hidden md:block">
+          <button onClick={onToggleCollapse} className="w-full flex items-center justify-center min-h-[44px] text-text-muted hover:text-text-primary hover:bg-surface-hover transition-colors">
+            <svg className={cn('w-4 h-4 transition-transform', collapsed ? 'rotate-180' : '')} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
+            </svg>
+          </button>
+        </div>
       </aside>
     </>
   );

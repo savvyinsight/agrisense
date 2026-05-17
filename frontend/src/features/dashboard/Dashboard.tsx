@@ -156,25 +156,29 @@ export default function Dashboard() {
 
   // Generate field geometry with real coordinates if available, else use location-based fallback
   const fieldGeo = useMemo(() => fields
-    .filter(f => f.latitude && f.longitude)
+    .filter(f => (f.latitude != null && f.longitude != null) || f.geometry)
     .map((f) => {
-    const size = 0.015;
-    return {
-      id: f.id, name: f.name, health: f.health, soil_moisture: f.soil_moisture,
-      alerts: f.health === 'critical' ? 1 : f.health === 'warning' ? 1 : undefined,
-      zoneCount: f.zones?.length || 0,
-      geometry: {
-        type: 'Polygon' as const,
-        coordinates: [[
-          [f.longitude! - size, f.latitude! - size],
-          [f.longitude! + size, f.latitude! - size],
-          [f.longitude! + size * 1.3, f.latitude! + size],
-          [f.longitude! - size * 0.8, f.latitude! + size * 1.3],
-          [f.longitude! - size, f.latitude! - size],
-        ]],
-      },
-    };
-  }), [fields]);
+      const parsedGeo = f.geometry
+        ? (typeof f.geometry === 'string' ? (() => { try { return JSON.parse(f.geometry); } catch { return null; } })() : f.geometry)
+        : null;
+      return {
+        id: f.id, name: f.name, health: f.health, soil_moisture: f.soil_moisture,
+        alerts: f.health === 'critical' ? 1 : f.health === 'warning' ? 1 : undefined,
+        zoneCount: f.zones?.length || 0,
+        latitude: f.latitude,
+        longitude: f.longitude,
+        geometry: parsedGeo || {
+          type: 'Polygon' as const,
+          coordinates: [[
+            [(f.longitude ?? 114.3) - 0.015, (f.latitude ?? 30.5) - 0.015],
+            [(f.longitude ?? 114.3) + 0.015, (f.latitude ?? 30.5) - 0.015],
+            [(f.longitude ?? 114.3) + 0.0195, (f.latitude ?? 30.5) + 0.015],
+            [(f.longitude ?? 114.3) - 0.012, (f.latitude ?? 30.5) + 0.0195],
+            [(f.longitude ?? 114.3) - 0.015, (f.latitude ?? 30.5) - 0.015],
+          ]],
+        },
+      };
+    }), [fields]);
 
   const handleAcknowledge = async (id: number) => {
     const res = await acknowledgeAlert(id);

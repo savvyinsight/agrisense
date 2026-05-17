@@ -5,6 +5,7 @@ import { cn } from '@/shared/lib/cn';
 
 const tabs = [
   { path: '/dashboard', icon: '⊞', labelKey: 'nav.dashboard' },
+  { path: '/map', icon: '🗺', labelKey: 'nav.map' },
   { path: '/fields', icon: '⏹', labelKey: 'nav.fields' },
   { path: '/alerts', icon: '⚡', labelKey: 'nav.alerts', badge: true },
   { path: '/irrigation', icon: '💧', labelKey: 'nav.irrigation' },
