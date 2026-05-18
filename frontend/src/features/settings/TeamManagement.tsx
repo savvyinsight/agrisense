@@ -299,7 +299,7 @@ export const TeamManagement: React.FC = () => {
                         <TableCell>{member.email}</TableCell>
                         <TableCell>{member.username}</TableCell>
                         <TableCell>
-                          {member.permissions.map((perm) => (
+                          {(member.permissions ?? []).map((perm) => (
                             <Chip
                               key={perm.id}
                               label={perm.role}
@@ -314,7 +314,7 @@ export const TeamManagement: React.FC = () => {
                           {new Date(member.created_at).toLocaleDateString()}
                         </TableCell>
                         <TableCell align="right">
-                          {member.permissions.map((perm) => (
+                          {(member.permissions ?? []).map((perm) => (
                             <IconButton
                               key={perm.id}
                               size="small"
@@ -327,7 +327,7 @@ export const TeamManagement: React.FC = () => {
                               <EditIcon fontSize="small" />
                             </IconButton>
                           ))}
-                          {member.permissions.map((perm) => (
+                          {(member.permissions ?? []).map((perm) => (
                             <IconButton
                               key={`delete-${perm.id}`}
                               size="small"

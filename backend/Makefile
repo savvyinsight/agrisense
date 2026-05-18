@@ -1,10 +1,10 @@
-.PHONY: run test docker-up docker-down migrate-up help
+.PHONY: run test docker-up docker-down migrate-up help seed simulate simulate-all
 
 run:
 	go run ./cmd/agrisense/
 
 docker-up:
-	docker compose -f deployments/docker-compose.yml up -d
+	docker compose -f deployments/docker-compose.yml down --remove-orphans 2>/dev/null; docker compose -f deployments/docker-compose.yml up -d
 
 docker-down:
 	docker compose -f deployments/docker-compose.yml down
@@ -24,24 +24,31 @@ test:
 tidy:
 	go mod tidy
 
+seed:
+	@echo "Seeding test data (account, fields, devices, zones)..."
+	go run ./scripts/seed-test-data/
+
 simulate:
 	@echo "Starting device simulators for irrigation controllers (bg)..."
-	nohup go run ./scripts/generate-device-simulator/main.go D260517-QSPO D260517-I25Q &>simulator.log &
+	-kill -9 $$(lsof -ti:1883 -c go) 2>/dev/null
+	nohup go run ./scripts/generate-device-simulator/ CTRL-NTH CTRL-STH &>simulator.log &
 	@echo "Log: backend/simulator.log  |  tail -f simulator.log"
 
 simulate-all:
 	@echo "Starting all device simulators (bg)..."
-	nohup go run ./scripts/generate-device-simulator/main.go sim-device-01 sim-device-02 sim-device-03 D260517-QSPO D260517-I25Q &>simulator.log &
+	-kill -9 $$(lsof -ti:1883 -c go) 2>/dev/null
+	nohup go run ./scripts/generate-device-simulator/ SEN-NTH-TEMP SEN-NTH-SOIL CTRL-NTH SEN-STH-TEMP SEN-STH-SOIL CTRL-STH &>simulator.log &
 	@echo "Log: backend/simulator.log  |  tail -f simulator.log"
 
 help:
 	@echo "Available commands:"
 	@echo "  make run         - Start the server"
-	@echo "  make docker-up   - Start all dependencies (PostgreSQL, InfluxDB, Redis, EMQX)"
+	@echo "  make docker-up   - Start infra (PostgreSQL, InfluxDB, Redis, EMQX)"
 	@echo "  make docker-down - Stop all dependencies"
 	@echo "  make docker-logs - View dependency logs"
 	@echo "  make migrate-up  - Run database migrations"
 	@echo "  make test        - Run tests"
 	@echo "  make tidy        - Tidy go modules"
-	@echo "  make simulate    - Run device simulators for irrigation controllers"
-	@echo "  make simulate-all- Run all device simulators (sensors + controllers)"
+	@echo "  make seed        - Seed test data (account, 2 fields, 6 devices, 2 zones)"
+	@echo "  make simulate    - Run controller simulators (responds to irrigation commands)"
+	@echo "  make simulate-all- Run all simulators (sensors + controllers, sends telemetry)"

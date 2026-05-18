@@ -115,7 +115,7 @@ func runServer(cliCtx *cli.Context) error {
 	defer ruleEngine.Stop()
 
 	// Data service
-	dataService := data.NewService(sensorTypeRepo, deviceRepo, cacheRepo, influxRepo, ruleEngine)
+	dataService := data.NewService(sensorTypeRepo, deviceRepo, cacheRepo, influxRepo, ruleEngine, fieldRepo)
 
 	// MQTT client (for publishing commands from the API server)
 	mqttClient, err := mqtt.NewClient(mqtt.Config{

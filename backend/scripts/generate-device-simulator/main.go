@@ -4,159 +4,289 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"math"
 	"math/rand"
 	"os"
 	"os/signal"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 )
 
-var messagePubHandler mqtt.MessageHandler = func(client mqtt.Client, msg mqtt.Message) {
-	deviceID := extractDeviceID(msg.Topic())
-	log.Printf("[%s] ⬅ Received command on %s: %s", deviceID, msg.Topic(), string(msg.Payload()))
+type DeviceState struct {
+	mu             sync.Mutex
+	deviceID       string
+	isController   bool
 
-	var payload map[string]interface{}
-	if err := json.Unmarshal(msg.Payload(), &payload); err != nil {
-		log.Printf("[%s] Bad JSON: %v", deviceID, err)
-		return
+	// Sensor readings (updated per tick)
+	moisture    float64
+	temperature float64
+	humidity    float64
+	light       float64
+
+	// Controller state (controllers only)
+	irrigating bool
+	irrigatingSince time.Time
+
+	rng    *rand.Rand
+	baseTemp float64
+	startedAt time.Time
+}
+
+func NewDeviceState(deviceID string, isController bool) *DeviceState {
+	now := time.Now()
+	rng := rand.New(rand.NewSource(now.UnixNano()))
+	return &DeviceState{
+		deviceID:     deviceID,
+		isController: isController,
+		moisture:     30 + rng.Float64()*20,
+		temperature:  22 + rng.Float64()*6,
+		humidity:     55 + rng.Float64()*15,
+		light:        0,
+		baseTemp:     22 + rng.Float64()*4,
+		rng:          rng,
+		startedAt:    now,
+	}
+}
+
+func (s *DeviceState) Tick() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	hours := time.Since(s.startedAt).Hours()
+	hourOfDay := math.Mod(hours, 24)
+
+	// Diurnal temperature: peak at 14:00, trough at 04:00
+	// ~25°C ± 8°C based on time of day
+	tempAngle := (hourOfDay - 14) / 24 * 2 * math.Pi
+	s.temperature = s.baseTemp - 8*math.Cos(tempAngle) + (s.rng.Float64()-0.5)*1.5
+	if s.temperature < 5 {
+		s.temperature = 5
 	}
 
-	cmdID, hasID := payload["command_id"]
-	if !hasID {
-		log.Printf("[%s] No command_id in payload, ignoring", deviceID)
-		return
+	// Humidity inversely related to temp, 40-90% range
+	s.humidity = 85 - (s.temperature-s.baseTemp)*1.5 + (s.rng.Float64()-0.5)*5
+	if s.humidity < 30 {
+		s.humidity = 30
+	}
+	if s.humidity > 95 {
+		s.humidity = 95
 	}
 
-	command, _ := payload["command"].(string)
-	respTopic := fmt.Sprintf("device/%s/response", deviceID)
-	response := map[string]interface{}{
-		"command_id": cmdID,
-		"status":     "executed",
-		"message":    fmt.Sprintf("Command '%s' executed by %s", command, deviceID),
-	}
-	respPayload, _ := json.Marshal(response)
-	token := client.Publish(respTopic, 1, false, respPayload)
-	token.Wait()
-	if token.Error() != nil {
-		log.Printf("[%s] Failed to publish response: %v", deviceID, token.Error())
+	// Light intensity (lux): bell curve around solar noon (12:00)
+	lightHour := hourOfDay - 12
+	if lightHour < -6 || lightHour > 6 {
+		s.light = 0
 	} else {
-		log.Printf("[%s] ➡ Response sent: %s", deviceID, string(respPayload))
+		normalized := lightHour / 6
+		s.light = 100000 * math.Exp(-normalized*normalized*3)
+		s.light += s.rng.Float64() * 5000
+	}
+
+	// Soil moisture: decays when not irrigating, recovers when irrigating
+	if s.irrigating {
+		elapsed := time.Since(s.irrigatingSince).Minutes()
+		if elapsed < 2 {
+			// Ramp up to 80% over 2 minutes
+			s.moisture = 40 + 40*(elapsed/2)
+		} else if elapsed < 30 {
+			// Hold at 80%
+			s.moisture = 80
+		} else {
+			// Slowly decline after 30 min
+			s.moisture = 80 - (elapsed-30)*0.2
+		}
+		if s.moisture > 85 {
+			s.moisture = 85
+		}
+	} else {
+		// Natural decay: 0.3% per tick (10s = 1.8%/min)
+		s.moisture -= 0.3
+	}
+	if s.moisture < 0 {
+		s.moisture = 0
+	}
+	if s.moisture > 100 {
+		s.moisture = 100
 	}
 }
 
-type TelemetrySimulator struct {
-	client    mqtt.Client
-	deviceID  string
-	stopChan  chan bool
-	rng       *rand.Rand
+func (s *DeviceState) Readings() []map[string]interface{} {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return []map[string]interface{}{
+		{"sensor": "temperature", "value": math.Round(s.temperature*10) / 10},
+		{"sensor": "humidity", "value": math.Round(s.humidity)},
+		{"sensor": "soil_moisture", "value": math.Round(s.moisture*10) / 10},
+		{"sensor": "light_intensity", "value": math.Round(s.light)},
+	}
 }
 
-func NewTelemetrySimulator(deviceID string, broker string) *TelemetrySimulator {
+func (s *DeviceState) Heartbeat() map[string]interface{} {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return map[string]interface{}{
+		"timestamp": time.Now(),
+		"rssi":      -50 - s.rng.Intn(25),
+		"battery":   max(15, 95-int(time.Since(s.startedAt).Hours()/24*5)),
+	}
+}
+
+func (s *DeviceState) StartIrrigation() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.irrigating = true
+	s.irrigatingSince = time.Now()
+	log.Printf("[%s] Irrigation started", s.deviceID)
+}
+
+func (s *DeviceState) StopIrrigation() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.irrigating = false
+	log.Printf("[%s] Irrigation stopped (moisture=%.1f%%)", s.deviceID, s.moisture)
+}
+
+// ---
+
+type Simulator struct {
+	client   mqtt.Client
+	states   []*DeviceState
+	stopChan chan bool
+	broker   string
+}
+
+func NewSimulator(broker string, deviceIDs []string) *Simulator {
+	states := make([]*DeviceState, len(deviceIDs))
+	for i, id := range deviceIDs {
+		isCtrl := strings.HasPrefix(id, "CTRL-")
+		states[i] = NewDeviceState(id, isCtrl)
+	}
+
 	opts := mqtt.NewClientOptions()
 	opts.AddBroker(broker)
-	opts.SetClientID(fmt.Sprintf("sim-%s", deviceID))
+	opts.SetClientID(fmt.Sprintf("sim-all-%d", time.Now().Unix()))
 	opts.SetKeepAlive(60 * time.Second)
 	opts.SetPingTimeout(10 * time.Second)
 	opts.SetAutoReconnect(true)
 	client := mqtt.NewClient(opts)
-	return &TelemetrySimulator{
+
+	return &Simulator{
 		client:   client,
-		deviceID: deviceID,
+		states:   states,
 		stopChan: make(chan bool),
-		rng:      rand.New(rand.NewSource(time.Now().UnixNano())),
+		broker:   broker,
 	}
 }
 
-func (s *TelemetrySimulator) Start() error {
-	if token := s.client.Connect(); token.Wait() && token.Error() != nil {
-		return token.Error()
+func (sim *Simulator) Start() error {
+	if token := sim.client.Connect(); token.Wait() && token.Error() != nil {
+		return fmt.Errorf("connect: %w", token.Error())
 	}
-	log.Printf("[%s] Connected", s.deviceID)
+	log.Printf("Connected to %s with %d device(s)", sim.broker, len(sim.states))
 
-	// Subscribe to commands so this device responds to irrigation start/stop
-	cmdTopic := fmt.Sprintf("device/%s/commands", s.deviceID)
-	token := s.client.Subscribe(cmdTopic, 1, messagePubHandler)
-	token.Wait()
-	if token.Error() != nil {
-		return fmt.Errorf("subscribe %s: %w", cmdTopic, token.Error())
+	// Subscribe to commands for all devices
+	for _, s := range sim.states {
+		if s.isController {
+			topic := fmt.Sprintf("device/%s/commands", s.deviceID)
+			token := sim.client.Subscribe(topic, 1, sim.makeCommandHandler(s))
+			token.Wait()
+			if token.Error() != nil {
+				return fmt.Errorf("subscribe %s: %w", topic, token.Error())
+			}
+			log.Printf("[%s] Subscribed to commands", s.deviceID)
+		}
 	}
-	log.Printf("[%s] Subscribed to %s", s.deviceID, cmdTopic)
 
-	go s.sendHeartbeat()
-	go s.sendTelemetry()
+	// Start telemetry loop
+	go sim.loop()
 	return nil
 }
 
-func (s *TelemetrySimulator) Stop() {
-	close(s.stopChan)
-	s.client.Disconnect(250)
+func (sim *Simulator) Stop() {
+	close(sim.stopChan)
+	sim.client.Disconnect(250)
 }
 
-func (s *TelemetrySimulator) sendHeartbeat() {
-	ticker := time.NewTicker(30 * time.Second)
-	defer ticker.Stop()
-	for {
-		select {
-		case <-s.stopChan:
+func (sim *Simulator) makeCommandHandler(state *DeviceState) mqtt.MessageHandler {
+	return func(client mqtt.Client, msg mqtt.Message) {
+		var payload map[string]interface{}
+		if err := json.Unmarshal(msg.Payload(), &payload); err != nil {
+			log.Printf("[%s] Bad JSON: %v", state.deviceID, err)
 			return
-		case <-ticker.C:
-			data := map[string]interface{}{
-				"timestamp": time.Now(),
-				"rssi":      -50 - s.rng.Intn(20),
-				"battery":   80 + s.rng.Intn(20),
-			}
-			payload, _ := json.Marshal(data)
-			topic := fmt.Sprintf("device/%s/heartbeat", s.deviceID)
-			s.client.Publish(topic, 1, false, payload)
-			log.Printf("[%s] Heartbeat sent", s.deviceID)
+		}
+
+		cmdID, hasID := payload["command_id"]
+		if !hasID {
+			log.Printf("[%s] No command_id, ignoring", state.deviceID)
+			return
+		}
+
+		command, _ := payload["command"].(string)
+		log.Printf("[%s] Command received: %s (id=%v)", state.deviceID, command, cmdID)
+
+		switch command {
+		case "irrigation_start":
+			state.StartIrrigation()
+		case "irrigation_stop":
+			state.StopIrrigation()
+		case "irrigation_retry":
+			state.StartIrrigation()
+		}
+
+		respTopic := fmt.Sprintf("device/%s/response", state.deviceID)
+		response := map[string]interface{}{
+			"command_id": cmdID,
+			"status":     "executed",
+			"message":    fmt.Sprintf("Command '%s' executed by %s", command, state.deviceID),
+		}
+		respPayload, _ := json.Marshal(response)
+		token := client.Publish(respTopic, 1, false, respPayload)
+		token.Wait()
+		if token.Error() != nil {
+			log.Printf("[%s] Failed to publish response: %v", state.deviceID, token.Error())
+		} else {
+			log.Printf("[%s] Response sent", state.deviceID)
 		}
 	}
 }
 
-func (s *TelemetrySimulator) sendTelemetry() {
-	ticker := time.NewTicker(10 * time.Second)
-	defer ticker.Stop()
-	var temp float64
-	if s.rng.Float32() < 0.2 {
-		temp = 32 + s.rng.Float64()*8
-	} else {
-		temp = 20 + s.rng.Float64()*8
-	}
+func (sim *Simulator) loop() {
+	tick := time.NewTicker(10 * time.Second)
+	heartbeat := time.NewTicker(30 * time.Second)
+	defer tick.Stop()
+	defer heartbeat.Stop()
+
 	for {
 		select {
-		case <-s.stopChan:
+		case <-sim.stopChan:
 			return
-		case <-ticker.C:
-			data := map[string]interface{}{
-				"timestamp": time.Now(),
-				"readings": []map[string]interface{}{
-					{"sensor": "temperature", "value": temp},
-					{"sensor": "humidity", "value": 50 + s.rng.Float64()*20},
-					{"sensor": "soil_moisture", "value": 30 + s.rng.Float64()*40},
-					{"sensor": "light_intensity", "value": 1000 + s.rng.Float64()*9000},
-				},
+		case <-tick.C:
+			for _, s := range sim.states {
+				s.Tick()
+				readings := s.Readings()
+				topic := fmt.Sprintf("device/%s/telemetry", s.deviceID)
+				payload, _ := json.Marshal(map[string]interface{}{
+					"timestamp": time.Now(),
+					"readings":  readings,
+				})
+				sim.client.Publish(topic, 1, false, payload)
 			}
-			payload, _ := json.Marshal(data)
-			topic := fmt.Sprintf("device/%s/telemetry", s.deviceID)
-			s.client.Publish(topic, 1, false, payload)
-			log.Printf("[%s] Telemetry sent", s.deviceID)
+		case <-heartbeat.C:
+			for _, s := range sim.states {
+				topic := fmt.Sprintf("device/%s/heartbeat", s.deviceID)
+				payload, _ := json.Marshal(s.Heartbeat())
+				sim.client.Publish(topic, 1, false, payload)
+			}
 		}
 	}
-}
-
-func extractDeviceID(topic string) string {
-	parts := strings.Split(topic, "/")
-	if len(parts) >= 2 {
-		return parts[1]
-	}
-	return "unknown"
 }
 
 func main() {
-	defaultDevices := []string{"sim-device-01", "sim-device-02", "sim-device-03"}
+	defaultDevices := []string{"SEN-NTH-TEMP", "SEN-NTH-SOIL", "CTRL-NTH", "SEN-STH-TEMP", "SEN-STH-SOIL", "CTRL-STH"}
 	broker := "tcp://localhost:1883"
 
 	args := os.Args[1:]
@@ -172,27 +302,37 @@ func main() {
 		deviceIDs = defaultDevices
 	}
 
-	log.Printf("Starting device simulators (broker: %s)", broker)
+	log.Printf("Starting device simulator (broker: %s)", broker)
 	log.Printf("Devices: %s", strings.Join(deviceIDs, ", "))
+	log.Println("")
+	log.Println("Telemetry:    every 10s  (temp, humidity, moisture, light)")
+	log.Println("Heartbeat:    every 30s  (rssi, battery)")
+	log.Println("Controllers:  subscribe to commands, respond with executed status")
+	log.Println("Moisture:     decays 1.8%/min; jumps to 80% on irrigation_start, holds 30min")
+	log.Println("Temperature:  diurnal cycle (peak 14:00, trough 04:00)")
+	log.Println("")
 
-	simulators := make([]*TelemetrySimulator, len(deviceIDs))
-	for i, id := range deviceIDs {
-		sim := NewTelemetrySimulator(id, broker)
-		simulators[i] = sim
-		if err := sim.Start(); err != nil {
-			log.Fatalf("Failed to start simulator %s: %v", id, err)
-		}
+	sim := NewSimulator(broker, deviceIDs)
+	if err := sim.Start(); err != nil {
+		log.Fatalf("Failed to start: %v", err)
 	}
 
+	// Print active device IDs and their states
+	for _, s := range sim.states {
+		role := "sensor"
+		if s.isController {
+			role = "controller"
+		}
+		log.Printf("  %s (%s)", s.deviceID, role)
+	}
+
+	log.Println("")
 	log.Println("All simulators running. Press Ctrl+C to stop.")
-	log.Println("Tip: pass device IDs as args, e.g.: go run . D260517-QSPO D260517-I25Q")
 
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
 	<-sig
 
 	log.Println("Shutting down...")
-	for _, sim := range simulators {
-		sim.Stop()
-	}
+	sim.Stop()
 }

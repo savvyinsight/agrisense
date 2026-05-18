@@ -26,8 +26,10 @@
 | Migrations | `make migrate-up` — SQL files in `deployments/init/postgres/` (auto-run on container start) |
 | Tidy Go modules | `make tidy` |
 | Root Makefile wraps all above | `make dev`, `make test`, `make lint`, etc. |
-| Device simulator (irrigation) | `cd backend && make simulate` — MQTT device that responds to irrigation commands |
-| Device simulator (all) | `cd backend && make simulate-all` — sensors + controller MQTT simulators |
+| Seed test data | `cd backend && make seed` — creates account "Test Farm", 2 fields, 6 devices, 2 zones |
+| Simulate controllers | `cd backend && make simulate` — CTRL-NTH, CTRL-STH; respond to irrigation commands |
+| Simulate all devices | `cd backend && make simulate-all` — sensors + controllers, sends realistic telemetry |
+| Simulator log | `backend/simulator.log` — tail -f to watch commands and telemetry |
 
 ## Frontend quirks
 - Vite proxies `/api` → `localhost:8080`, `/ws` → `ws://localhost:8080` (`vite.config.ts:14-25`)

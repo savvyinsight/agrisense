@@ -90,6 +90,7 @@ func main() {
 		cacheRepo,
 		influxRepo,
 		ruleEngine,
+		nil, // fieldRepo not needed for query tests
 	)
 
 	// Test 1: Get latest reading

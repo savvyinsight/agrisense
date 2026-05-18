@@ -37,4 +37,5 @@ type FieldRepository interface {
 	List(userID int) ([]Field, error)
 	Update(field *Field) error
 	Delete(id int) error
+	UpdateSensorData(fieldID int, moisture, temperature, humidity float64) error
 }

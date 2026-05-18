@@ -8,6 +8,7 @@ import (
 
 	"github.com/savvyinsight/agrisense/internal/automation"
 	"github.com/savvyinsight/agrisense/internal/device"
+	"github.com/savvyinsight/agrisense/internal/field"
 	"github.com/savvyinsight/agrisense/internal/ruleengine"
 	"github.com/savvyinsight/agrisense/internal/sensor"
 )
@@ -19,6 +20,7 @@ type Service struct {
 	influxRepo     sensor.InfluxRepository
 	ruleEngine     *ruleengine.Engine
 	automationSvc  *automation.Service
+	fieldRepo      field.FieldRepository
 }
 
 func NewService(
@@ -27,6 +29,7 @@ func NewService(
 	cacheRepo sensor.CacheRepository,
 	influxRepo sensor.InfluxRepository,
 	ruleEngine *ruleengine.Engine,
+	fieldRepo field.FieldRepository,
 ) *Service {
 	return &Service{
 		sensorTypeRepo: sensorTypeRepo,
@@ -34,6 +37,7 @@ func NewService(
 		cacheRepo:      cacheRepo,
 		influxRepo:     influxRepo,
 		ruleEngine:     ruleEngine,
+		fieldRepo:      fieldRepo,
 	}
 }
 
@@ -50,45 +54,104 @@ func (s *Service) ProcessTelemetry(deviceID string, payload []byte) error {
 		} `json:"readings"`
 	}
 
+	var sensorData []sensor.SensorData
+	timestamp := time.Now()
+
 	if err := json.Unmarshal(payload, &telemetryData); err != nil {
 		// Fallback: try simple key-value format for compatibility
 		var readings map[string]float64
 		if err2 := json.Unmarshal(payload, &readings); err2 != nil {
 			return fmt.Errorf("failed to unmarshal telemetry: %w", err)
 		}
-		// Process as simple key-value map
-		timestamp := time.Now()
-		var sensorData []sensor.SensorData
 		for sensorType, value := range readings {
 			sensorData = append(sensorData, sensor.SensorData{
-				DeviceID:   deviceID,
-				SensorType: sensorType,
-				Value:      value,
-				Timestamp:  timestamp,
+				DeviceID: deviceID, SensorType: sensorType,
+				Value: value, Timestamp: timestamp,
 			})
 		}
-		return s.influxRepo.WriteBatch(sensorData)
-	}
-
-	// Parse timestamp if provided, otherwise use now
-	timestamp := time.Now()
-	if telemetryData.Timestamp != "" {
-		if parsedTime, err := time.Parse(time.RFC3339, telemetryData.Timestamp); err == nil {
-			timestamp = parsedTime
+	} else {
+		if telemetryData.Timestamp != "" {
+			if parsedTime, err := time.Parse(time.RFC3339, telemetryData.Timestamp); err == nil {
+				timestamp = parsedTime
+			}
+		}
+		for _, reading := range telemetryData.Readings {
+			sensorData = append(sensorData, sensor.SensorData{
+				DeviceID: deviceID, SensorType: reading.Sensor,
+				Value: reading.Value, Timestamp: timestamp,
+			})
 		}
 	}
 
-	var sensorData []sensor.SensorData
-	for _, reading := range telemetryData.Readings {
-		sensorData = append(sensorData, sensor.SensorData{
-			DeviceID:   deviceID,
-			SensorType: reading.Sensor,
-			Value:      reading.Value,
-			Timestamp:  timestamp,
-		})
+	if err := s.influxRepo.WriteBatch(sensorData); err != nil {
+		return err
 	}
 
-	return s.influxRepo.WriteBatch(sensorData)
+	// Update field-level aggregates from the latest telemetry
+	s.updateFieldFromTelemetry(deviceID, sensorData)
+
+	return nil
+}
+
+func (s *Service) updateFieldFromTelemetry(deviceID string, readings []sensor.SensorData) {
+	if s.fieldRepo == nil {
+		return
+	}
+	dev, err := s.deviceRepo.GetByDeviceID(deviceID)
+	if err != nil || dev.FieldID == nil {
+		return
+	}
+
+	var moisture, temperature, humidity *float64
+	for _, r := range readings {
+		switch r.SensorType {
+		case "soil_moisture":
+			v := r.Value
+			moisture = &v
+		case "temperature":
+			v := r.Value
+			temperature = &v
+		case "humidity":
+			v := r.Value
+			humidity = &v
+		}
+	}
+
+	if moisture == nil && temperature == nil && humidity == nil {
+		return
+	}
+
+	// Read existing field data first to preserve values not in this telemetry batch
+	existing, err := s.fieldRepo.GetByID(*dev.FieldID)
+	if err != nil {
+		log.Printf("Failed to get field %d: %v", *dev.FieldID, err)
+		return
+	}
+
+	m := 0.0
+	if moisture != nil {
+		m = *moisture
+	} else if existing.SoilMoisture != nil {
+		m = *existing.SoilMoisture
+	}
+
+	t := 0.0
+	if temperature != nil {
+		t = *temperature
+	} else if existing.Temperature != nil {
+		t = *existing.Temperature
+	}
+
+	h := 0.0
+	if humidity != nil {
+		h = *humidity
+	} else if existing.Humidity != nil {
+		h = *existing.Humidity
+	}
+
+	if err := s.fieldRepo.UpdateSensorData(*dev.FieldID, m, t, h); err != nil {
+		log.Printf("Failed to update field %d sensor data: %v", *dev.FieldID, err)
+	}
 }
 
 func (s *Service) GetLatestReading(deviceID, sensorType string) (*sensor.SensorData, error) {
