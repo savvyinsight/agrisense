@@ -1,0 +1,2 @@
+ALTER TABLE accounts DROP COLUMN IF EXISTS max_users;
+ALTER TABLE accounts DROP COLUMN IF EXISTS max_devices;

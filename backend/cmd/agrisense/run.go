@@ -59,6 +59,14 @@ func runServer(cliCtx *cli.Context) error {
 		}
 	}()
 
+	// Run database migrations
+	if err := postgres.RunMigrations(postgres.Config{
+		Host: cfg.DBHost, Port: cfg.DBPort, User: cfg.DBUser,
+		Password: cfg.DBPassword, DBName: cfg.DBName, SSLMode: cfg.DBSSLMode,
+	}); err != nil {
+		log.Fatalf("Failed to run database migrations: %v", err)
+	}
+
 	// Redis
 	redisClient, err := redis.NewConnection(redis.Config{
 		Host: cfg.RedisHost, Port: cfg.RedisPort,

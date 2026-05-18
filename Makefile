@@ -36,6 +36,15 @@ logs:                               ## View Docker logs
 migrate:                            ## Run database migrations
 	cd backend && make migrate-up
 
+migrate-down:                       ## Rollback last migration
+	cd backend && make migrate-down
+
+migrate-version:                    ## Show current migration version
+	cd backend && make migrate-version
+
+migrate-create:                     ## Create new migration (requires migrate CLI)
+	cd backend && make migrate-create
+
 # ─── Testing ──────────────────────────────────────────────────────────────
 
 test: test-backend test-frontend    ## Run all tests

@@ -1,4 +1,4 @@
-.PHONY: run test docker-up docker-down migrate-up help seed simulate simulate-all
+.PHONY: run test docker-up docker-down migrate-up migrate-down migrate-force migrate-version migrate-create help seed simulate simulate-all
 
 run:
 	go run ./cmd/agrisense/
@@ -14,9 +14,23 @@ docker-logs:
 
 migrate-up:
 	@echo "Running database migrations..."
-	@echo "Note: Migrations in init/postgres/ auto-run on container startup"
-	@echo "If containers are already running, execute migrations inside container:"
-	docker exec agrisense-postgres psql -U postgres -d agrisense -f /docker-entrypoint-initdb.d/001_init.sql
+	go run ./cmd/migrate/ up
+
+migrate-down:
+	@echo "Rolling back last migration..."
+	go run ./cmd/migrate/ down $(filter-out $@,$(MAKECMDGOALS))
+
+migrate-force:
+	@echo "Forcing migration version..."
+	go run ./cmd/migrate/ force $(filter-out $@,$(MAKECMDGOALS))
+
+migrate-version:
+	@echo "Checking migration version..."
+	go run ./cmd/migrate/ version
+
+migrate-create:
+	@read -p "Migration name: " name; \
+	migrate create -ext sql -dir migrations -seq $$name
 
 test:
 	go test ./... -v
@@ -46,7 +60,11 @@ help:
 	@echo "  make docker-up   - Start infra (PostgreSQL, InfluxDB, Redis, EMQX)"
 	@echo "  make docker-down - Stop all dependencies"
 	@echo "  make docker-logs - View dependency logs"
-	@echo "  make migrate-up  - Run database migrations"
+	@echo "  make migrate-up    - Run all pending migrations"
+	@echo "  make migrate-down  - Rollback last migration (or specify N: make migrate-down N)"
+	@echo "  make migrate-force - Force migration version (dangerous): make migrate-force VERSION"
+	@echo "  make migrate-version - Show current migration version"
+	@echo "  make migrate-create - Create new migration (requires migrate CLI)"
 	@echo "  make test        - Run tests"
 	@echo "  make tidy        - Tidy go modules"
 	@echo "  make seed        - Seed test data (account, 2 fields, 6 devices, 2 zones)"
