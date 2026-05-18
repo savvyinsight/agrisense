@@ -7,6 +7,7 @@ import (
 
 	"github.com/savvyinsight/agrisense/internal/alert"
 	"github.com/savvyinsight/agrisense/internal/device"
+	"github.com/savvyinsight/agrisense/internal/field"
 	"github.com/savvyinsight/agrisense/internal/sensor"
 )
 
@@ -17,20 +18,28 @@ type Engine struct {
 	alertSvc   alert.AlertRepository
 	ruleRepo   alert.AlertRuleRepository
 	deviceRepo device.DeviceRepository
+	fieldRepo  field.FieldRepository
 	stopChan   chan struct{}
 }
 
 func NewEngine(ruleRepo alert.AlertRuleRepository,
 	alertSvc alert.AlertRepository,
-	deviceRepo device.DeviceRepository) *Engine {
+	deviceRepo device.DeviceRepository,
+	fieldRepo field.FieldRepository) *Engine {
 	return &Engine{
 		rules:      make(map[int]*alert.AlertRule),
 		evaluator:  NewEvaluator(),
 		ruleRepo:   ruleRepo,
 		alertSvc:   alertSvc,
 		deviceRepo: deviceRepo,
+		fieldRepo:  fieldRepo,
 		stopChan:   make(chan struct{}),
 	}
+}
+
+// SetFieldRepo allows setting fieldRepo after construction (for circular dependency resolution).
+func (e *Engine) SetFieldRepo(fieldRepo field.FieldRepository) {
+	e.fieldRepo = fieldRepo
 }
 
 func (e *Engine) Start() error {
@@ -97,10 +106,14 @@ func (e *Engine) Evaluate(data *sensor.SensorData) {
 	}
 
 	for _, rule := range e.rules {
-		// Check if rule applies to this device
+		// Check if rule applies to this device (device_id takes precedence over field_id)
 		if rule.DeviceID != nil && *rule.DeviceID != 0 {
 			if *rule.DeviceID != device.ID {
-				continue // Rule is for a different device
+				continue
+			}
+		} else if rule.FieldID != nil && *rule.FieldID != 0 {
+			if device.FieldID == nil || *device.FieldID != *rule.FieldID {
+				continue
 			}
 		}
 
@@ -134,16 +147,26 @@ func (e *Engine) getSensorTypeID(sensorType string) int {
 }
 
 func (e *Engine) triggerAlert(rule *alert.AlertRule, data *sensor.SensorData) {
-	// Get device ID from database using the string device_id
-	device, err := e.deviceRepo.GetByDeviceID(data.DeviceID)
+	// Get device from database using the string device_id
+	dev, err := e.deviceRepo.GetByDeviceID(data.DeviceID)
 	if err != nil {
 		log.Printf("Failed to find device %s: %v", data.DeviceID, err)
 		return
 	}
 
-	alert := &alert.Alert{
+	// Dedup: skip if an unresolved alert already exists for this rule + device
+	existing, err := e.alertSvc.GetActiveByRuleAndDevice(rule.ID, dev.ID)
+	if err != nil {
+		log.Printf("Failed to check existing alerts: %v", err)
+		return
+	}
+	if existing != nil {
+		return
+	}
+
+	alertRecord := &alert.Alert{
 		RuleID:      rule.ID,
-		DeviceID:    device.ID, // Use the retrieved device ID
+		DeviceID:    dev.ID,
 		SensorValue: data.Value,
 		Message:     e.evaluator.FormatMessage(rule, data),
 		Severity:    rule.Severity,
@@ -156,14 +179,40 @@ func (e *Engine) triggerAlert(rule *alert.AlertRule, data *sensor.SensorData) {
 		},
 	}
 
-	// Save alert
-	if err := e.alertSvc.Create(alert); err != nil {
+	if err := e.alertSvc.Create(alertRecord); err != nil {
 		log.Printf("Failed to save alert: %v", err)
 		return
 	}
 
-	log.Printf("🚨 Alert triggered: %s (rule: %s)", alert.Message, rule.Name)
+	log.Printf("🚨 Alert triggered: %s (rule: %s)", alertRecord.Message, rule.Name)
+
+	// Update field health based on active alerts for this field
+	if e.fieldRepo != nil && dev.FieldID != nil {
+		if err := e.updateFieldHealth(*dev.FieldID); err != nil {
+			log.Printf("Failed to update field %d health: %v", *dev.FieldID, err)
+		}
+	}
 
 	// TODO: Send WebSocket notification
 	// TODO: Send email notification
+}
+
+func (e *Engine) updateFieldHealth(fieldID int) error {
+	activeAlerts, err := e.alertSvc.GetActiveAlertsByField(fieldID)
+	if err != nil {
+		return err
+	}
+
+	health := field.FieldHealthHealthy
+	for _, a := range activeAlerts {
+		if a.Severity == alert.SeverityCritical {
+			health = field.FieldHealthCritical
+			break
+		}
+		if a.Severity == alert.SeverityWarning && health != field.FieldHealthCritical {
+			health = field.FieldHealthWarning
+		}
+	}
+
+	return e.fieldRepo.UpdateHealth(fieldID, health)
 }

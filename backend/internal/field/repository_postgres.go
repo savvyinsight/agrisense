@@ -181,6 +181,12 @@ func (r *PostgresFieldRepository) UpdateSensorData(fieldID int, moisture, temper
 	return err
 }
 
+func (r *PostgresFieldRepository) UpdateHealth(fieldID int, health FieldHealth) error {
+	query := `UPDATE fields SET health = $1, updated_at = NOW() WHERE id = $2`
+	_, err := r.DB.Exec(query, health, fieldID)
+	return err
+}
+
 func (r *PostgresFieldRepository) Delete(id int) error {
 	query := `DELETE FROM fields WHERE id = $1`
 	result, err := r.DB.Exec(query, id)

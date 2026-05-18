@@ -38,4 +38,5 @@ type FieldRepository interface {
 	Update(field *Field) error
 	Delete(id int) error
 	UpdateSensorData(fieldID int, moisture, temperature, humidity float64) error
+	UpdateHealth(fieldID int, health FieldHealth) error
 }

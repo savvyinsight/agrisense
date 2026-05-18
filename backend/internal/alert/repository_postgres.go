@@ -12,9 +12,9 @@ type PostgresAlertRuleRepository struct {
 func (r *PostgresAlertRuleRepository) Create(rule *AlertRule) error {
 	query := `
         INSERT INTO alert_rules (
-            name, device_id, sensor_type_id, condition, threshold_value, 
+            name, device_id, field_id, sensor_type_id, condition, threshold_value, 
             threshold_max, duration_seconds, severity, enabled, user_id, created_at, updated_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
         RETURNING id
     `
 
@@ -23,6 +23,7 @@ func (r *PostgresAlertRuleRepository) Create(rule *AlertRule) error {
 		query,
 		rule.Name,
 		rule.DeviceID,
+		rule.FieldID,
 		rule.SensorTypeID,
 		rule.Condition,
 		rule.ThresholdValue,
@@ -39,7 +40,7 @@ func (r *PostgresAlertRuleRepository) Create(rule *AlertRule) error {
 }
 
 func (r *PostgresAlertRuleRepository) GetByID(id int) (*AlertRule, error) {
-	query := `SELECT id, name, device_id, sensor_type_id, condition, threshold_value, 
+	query := `SELECT id, name, device_id, field_id, sensor_type_id, condition, threshold_value, 
                      threshold_max, duration_seconds, severity, enabled, user_id, created_at, updated_at
               FROM alert_rules WHERE id = $1`
 
@@ -48,6 +49,7 @@ func (r *PostgresAlertRuleRepository) GetByID(id int) (*AlertRule, error) {
 		&rule.ID,
 		&rule.Name,
 		&rule.DeviceID,
+		&rule.FieldID,
 		&rule.SensorTypeID,
 		&rule.Condition,
 		&rule.ThresholdValue,
@@ -67,7 +69,7 @@ func (r *PostgresAlertRuleRepository) GetByID(id int) (*AlertRule, error) {
 }
 
 func (r *PostgresAlertRuleRepository) GetByDeviceID(deviceID int) ([]AlertRule, error) {
-	query := `SELECT id, name, device_id, sensor_type_id, condition, threshold_value, 
+	query := `SELECT id, name, device_id, field_id, sensor_type_id, condition, threshold_value, 
                      threshold_max, duration_seconds, severity, enabled, user_id, created_at, updated_at
               FROM alert_rules WHERE device_id = $1 OR device_id IS NULL`
 
@@ -88,6 +90,7 @@ func (r *PostgresAlertRuleRepository) GetByDeviceID(deviceID int) ([]AlertRule, 
 			&rule.ID,
 			&rule.Name,
 			&rule.DeviceID,
+			&rule.FieldID,
 			&rule.SensorTypeID,
 			&rule.Condition,
 			&rule.ThresholdValue,
@@ -109,7 +112,7 @@ func (r *PostgresAlertRuleRepository) GetByDeviceID(deviceID int) ([]AlertRule, 
 }
 
 func (r *PostgresAlertRuleRepository) GetEnabledRules() ([]AlertRule, error) {
-	query := `SELECT id, name, device_id, sensor_type_id, condition, threshold_value, 
+	query := `SELECT id, name, device_id, field_id, sensor_type_id, condition, threshold_value, 
                      threshold_max, duration_seconds, severity, enabled, user_id, created_at, updated_at
               FROM alert_rules WHERE enabled = true`
 
@@ -130,6 +133,7 @@ func (r *PostgresAlertRuleRepository) GetEnabledRules() ([]AlertRule, error) {
 			&rule.ID,
 			&rule.Name,
 			&rule.DeviceID,
+			&rule.FieldID,
 			&rule.SensorTypeID,
 			&rule.Condition,
 			&rule.ThresholdValue,
@@ -153,16 +157,17 @@ func (r *PostgresAlertRuleRepository) GetEnabledRules() ([]AlertRule, error) {
 func (r *PostgresAlertRuleRepository) Update(rule *AlertRule) error {
 	query := `
         UPDATE alert_rules 
-        SET name = $1, device_id = $2, sensor_type_id = $3, condition = $4, 
-            threshold_value = $5, threshold_max = $6, duration_seconds = $7, 
-            severity = $8, enabled = $9, updated_at = $10
-        WHERE id = $11
+        SET name = $1, device_id = $2, field_id = $3, sensor_type_id = $4, condition = $5, 
+            threshold_value = $6, threshold_max = $7, duration_seconds = $8, 
+            severity = $9, enabled = $10, updated_at = $11
+        WHERE id = $12
     `
 
 	_, err := r.DB.Exec(
 		query,
 		rule.Name,
 		rule.DeviceID,
+		rule.FieldID,
 		rule.SensorTypeID,
 		rule.Condition,
 		rule.ThresholdValue,
@@ -197,7 +202,7 @@ func (r *PostgresAlertRuleRepository) Delete(id int) error {
 }
 
 func (r *PostgresAlertRuleRepository) List(userID int) ([]AlertRule, error) {
-	query := `SELECT id, name, device_id, sensor_type_id, condition, threshold_value, 
+	query := `SELECT id, name, device_id, field_id, sensor_type_id, condition, threshold_value, 
                      threshold_max, duration_seconds, severity, enabled, user_id, created_at, updated_at
               FROM alert_rules WHERE user_id = $1 ORDER BY id`
 
@@ -218,6 +223,7 @@ func (r *PostgresAlertRuleRepository) List(userID int) ([]AlertRule, error) {
 			&rule.ID,
 			&rule.Name,
 			&rule.DeviceID,
+			&rule.FieldID,
 			&rule.SensorTypeID,
 			&rule.Condition,
 			&rule.ThresholdValue,

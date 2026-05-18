@@ -28,19 +28,6 @@ CREATE TABLE IF NOT EXISTS irrigation_zones (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
-
--- Weather data table
-CREATE TABLE IF NOT EXISTS weather_data (
-    id SERIAL PRIMARY KEY,
-    temperature DOUBLE PRECISION,
-    humidity DOUBLE PRECISION,
-    rainfall_mm DOUBLE PRECISION DEFAULT 0,
-    wind_speed DOUBLE PRECISION DEFAULT 0,
-    forecast VARCHAR(20) DEFAULT 'sunny' CHECK (forecast IN ('sunny', 'cloudy', 'rainy', 'storm')),
-    recorded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
 -- Indexes
 CREATE INDEX idx_fields_user_id ON fields(user_id);
 CREATE INDEX idx_irrigation_zones_field_id ON irrigation_zones(field_id);
-CREATE INDEX idx_weather_data_recorded_at ON weather_data(recorded_at DESC);

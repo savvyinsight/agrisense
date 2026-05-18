@@ -7,7 +7,6 @@ const reports = [
   { id: 3, titleKey: 'reports.envTrends', descKey: 'reports.envTrendsDesc', icon: '📈', path: '/analytics' },
   { id: 4, titleKey: 'reports.alertHistory', descKey: 'reports.alertHistoryDesc', icon: '⚡', path: '/alerts' },
   { id: 5, titleKey: 'reports.deviceHealth', descKey: 'reports.deviceHealthDesc', icon: '📡', path: '/devices' },
-  { id: 6, titleKey: 'reports.weatherReport', descKey: 'reports.weatherReportDesc', icon: '☀', path: '/weather' },
 ];
 
 export default function Reports() {

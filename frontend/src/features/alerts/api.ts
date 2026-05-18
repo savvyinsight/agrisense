@@ -68,6 +68,15 @@ export const getAlertRules = async (): Promise<AlertRulesResponse> => {
   }
 };
 
+export const updateAlertRule = async (ruleId: number, rule: Partial<AlertRule>): Promise<ApiResponse<AlertRule>> => {
+  try {
+    const response = await api.put(`/alerts/rules/${ruleId}`, rule);
+    return { success: true, data: response.data };
+  } catch (error) {
+    return { success: false, error: handleError(error) };
+  }
+};
+
 export const deleteAlertRule = async (ruleId: number | string): Promise<ApiResponse<null>> => {
   try {
     await api.delete(`/alerts/rules/${ruleId}`);

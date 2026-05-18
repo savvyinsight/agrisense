@@ -9,6 +9,7 @@ import (
 	"github.com/savvyinsight/agrisense/internal/config"
 	"github.com/savvyinsight/agrisense/internal/data"
 	"github.com/savvyinsight/agrisense/internal/device"
+	"github.com/savvyinsight/agrisense/internal/field"
 	"github.com/savvyinsight/agrisense/internal/infra/postgres"
 	"github.com/savvyinsight/agrisense/internal/infra/redis"
 	"github.com/savvyinsight/agrisense/internal/ruleengine"
@@ -71,12 +72,14 @@ func main() {
 	deviceRepo := &device.PostgresDeviceRepository{DB: pgDB}
 	sensorTypeRepo := &sensor.PostgresSensorTypeRepository{DB: pgDB}
 	cacheRepo := redis.NewCacheRepository(redisClient)
+	fieldRepo := &field.PostgresFieldRepository{DB: pgDB}
 
 	// Create rule engine
 	ruleEngine := ruleengine.NewEngine(
 		&alert.PostgresAlertRuleRepository{DB: pgDB},
 		&alert.PostgresAlertRepository{DB: pgDB},
 		&device.PostgresDeviceRepository{DB: pgDB},
+		fieldRepo,
 	)
 	if err := ruleEngine.Start(); err != nil {
 		log.Fatalf("Failed to start rule engine: %v", err)

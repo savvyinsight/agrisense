@@ -27,7 +27,6 @@ import (
 	"github.com/savvyinsight/agrisense/internal/field"
 	"github.com/savvyinsight/agrisense/internal/infra/postgres"
 	"github.com/savvyinsight/agrisense/internal/irrigation"
-	"github.com/savvyinsight/agrisense/internal/weather"
 	"github.com/savvyinsight/agrisense/internal/infra/redis"
 	"github.com/savvyinsight/agrisense/internal/middleware"
 	"github.com/savvyinsight/agrisense/internal/mqtt"
@@ -94,7 +93,6 @@ func runServer(cliCtx *cli.Context) error {
 	fieldRepo := &field.PostgresFieldRepository{DB: pgDB}
 	irrigationRepo := &irrigation.PostgresIrrigationZoneRepository{DB: pgDB}
 	irrigationEventRepo := &irrigation.PostgresIrrigationEventRepository{DB: pgDB}
-	weatherRepo := &weather.PostgresWeatherRepository{DB: pgDB}
 	cacheRepo := redis.NewCacheRepository(redisClient)
 
 	// Multi-tenant RBAC repositories
@@ -108,7 +106,7 @@ func runServer(cliCtx *cli.Context) error {
 	wsHandler := websocket.NewHander(authService)
 
 	// Rule engine
-	ruleEngine := ruleengine.NewEngine(alertRuleRepo, alertRepo, deviceRepo)
+	ruleEngine := ruleengine.NewEngine(alertRuleRepo, alertRepo, deviceRepo, fieldRepo)
 	if err := ruleEngine.Start(); err != nil {
 		log.Fatalf("Failed to start rule engine: %v", err)
 	}
@@ -146,7 +144,7 @@ func runServer(cliCtx *cli.Context) error {
 	dataService.SetAutomationService(automationService)
 
 	// Alert service
-	alertService := alert.NewService(alertRepo, alertRuleRepo, deviceRepo)
+	alertService := alert.NewService(alertRepo, alertRuleRepo, deviceRepo, fieldRepo)
 
 	// Analytics service
 	analyticsService := analytics.NewService(deviceRepo, sensorTypeRepo,
@@ -191,7 +189,6 @@ func runServer(cliCtx *cli.Context) error {
 	automationHandler := automation.NewAutomationHandler(automationService)
 	fieldHandler := field.NewFieldHandler(fieldRepo)
 	irrigationHandler := irrigation.NewIrrigationHandler(irrigationRepo, irrigationEventRepo, irrigationCmdAdapter{controlService})
-	weatherHandler := weather.NewWeatherHandler(weatherRepo)
 	analyticsHandler := analytics.NewAnalyticsHandler(analyticsService)
 	
 	// Multi-tenant RBAC handler
@@ -323,9 +320,6 @@ func runServer(cliCtx *cli.Context) error {
 			irrigationRoutes.POST("/:id/retry", irrigationHandler.Retry)
 			irrigationRoutes.GET("/events", irrigationHandler.ListEvents)
 		}
-
-		// Weather routes
-		api.GET("/weather/current", weatherHandler.GetCurrent)
 
 		// Analytics routes
 		analyticsGroup := api.Group("/analytics")

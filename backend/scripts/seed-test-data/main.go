@@ -72,9 +72,15 @@ func main() {
 	}
 
 	knownDeviceIDs := []string{}
+	fieldIDs := make(map[string]int)
 	for _, f := range fields {
-		fieldID := ensureField(db, f.name, f.lat, f.lng, f.crop, f.area, userID)
-		log.Printf("Field '%s' ID=%d", f.name, fieldID)
+		health := "healthy"
+		if f.name == "South Field" {
+			health = "warning"
+		}
+		fieldID := ensureField(db, f.name, f.lat, f.lng, f.crop, f.area, health, userID)
+		fieldIDs[f.name] = fieldID
+		log.Printf("Field '%s' ID=%d health=%s", f.name, fieldID, health)
 
 		// Step 3: Create 2 sensors per field
 		sensorIDs := []string{
@@ -98,6 +104,18 @@ func main() {
 		log.Printf("  Zone ID=%d", zoneID)
 	}
 
+	// Step 6: Create example alert rules
+	northFieldID := fieldIDs["North Field"]
+	southFieldID := fieldIDs["South Field"]
+	_ = northFieldID
+
+	// Critical alert: South Field soil moisture critically low
+	ensureAlertRule(db, "South Field - Critical Moisture", southFieldID, 3, "<", 20.0, nil, 0, "critical", userID)
+	// Warning alert: South Field temperature high
+	ensureAlertRule(db, "South Field - High Temp Warning", southFieldID, 1, ">", 35.0, nil, 300, "warning", userID)
+	// Info alert: South Field humidity out of range
+	ensureAlertRule(db, "South Field - Humidity Range", southFieldID, 2, "between", 30.0, float64Ptr(90.0), 0, "info", userID)
+
 	fmt.Println()
 	fmt.Println("=== SEED COMPLETE ===")
 	fmt.Println("Device IDs for simulator:")
@@ -106,6 +124,32 @@ func main() {
 	}
 	fmt.Println()
 	fmt.Println("Run: cd backend && make simulate")
+}
+
+func ensureAlertRule(db *sql.DB, name string, fieldID int, sensorTypeID int, condition string, thresholdValue float64, thresholdMax *float64, durationSeconds int, severity string, userID int) {
+	var existing int
+	err := db.QueryRow(`SELECT id FROM alert_rules WHERE name = $1 AND user_id = $2`, name, userID).Scan(&existing)
+	if err == nil {
+		return
+	}
+
+	var maxVal *float64
+	if thresholdMax != nil {
+		maxVal = thresholdMax
+	}
+
+	_, err = db.Exec(`INSERT INTO alert_rules (name, field_id, sensor_type_id, condition, threshold_value, threshold_max, duration_seconds, severity, enabled, user_id, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, true, $9, NOW(), NOW())`,
+		name, fieldID, sensorTypeID, condition, thresholdValue, maxVal, durationSeconds, severity, userID)
+	if err != nil {
+		log.Printf("Warning: Failed to create alert rule '%s': %v", name, err)
+	} else {
+		log.Printf("Created alert rule '%s'", name)
+	}
+}
+
+func float64Ptr(v float64) *float64 {
+	return &v
 }
 
 func fieldAbbrev(name string) string {
@@ -155,7 +199,7 @@ func ensureAccountAndUser(db *sql.DB, accountName, email, password, role string)
 	return
 }
 
-func ensureField(db *sql.DB, name string, lat, lng float64, crop string, area float64, userID int) int {
+func ensureField(db *sql.DB, name string, lat, lng float64, crop string, area float64, health string, userID int) int {
 	var id int
 	err := db.QueryRow(`SELECT id FROM fields WHERE name = $1 AND user_id = $2`, name, userID).Scan(&id)
 	if err == nil {
@@ -170,8 +214,8 @@ func ensureField(db *sql.DB, name string, lat, lng float64, crop string, area fl
 		lng-0.005, lat-0.003)
 
 	err = db.QueryRow(`INSERT INTO fields (name, crop, area_hectares, health, soil_moisture, temperature, humidity, user_id, latitude, longitude, geometry, created_at, updated_at)
-		VALUES ($1, $2, $3, 'healthy', 55.0, 24.0, 65.0, $4, $5, $6, $7::jsonb, NOW(), NOW()) RETURNING id`,
-		name, crop, area, userID, lat, lng, geometry).Scan(&id)
+		VALUES ($1, $2, $3, $4, 55.0, 24.0, 65.0, $5, $6, $7, $8::jsonb, NOW(), NOW()) RETURNING id`,
+		name, crop, area, health, userID, lat, lng, geometry).Scan(&id)
 	if err != nil {
 		log.Fatalf("Failed to create field '%s': %v", name, err)
 	}

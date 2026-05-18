@@ -267,6 +267,135 @@ func (r *PostgresAlertRepository) GetByRuleID(ruleID int) ([]Alert, error) {
 	return alerts, nil
 }
 
+func (r *PostgresAlertRepository) GetByID(id int) (*Alert, error) {
+	query := `
+		SELECT id, rule_id, device_id, sensor_value, message, severity,
+		       status, triggered_at, acknowledged_at, resolved_at, metadata
+		FROM alerts WHERE id = $1
+	`
+
+	var alert Alert
+	var metadataJSON []byte
+	err := r.DB.QueryRow(query, id).Scan(
+		&alert.ID,
+		&alert.RuleID,
+		&alert.DeviceID,
+		&alert.SensorValue,
+		&alert.Message,
+		&alert.Severity,
+		&alert.Status,
+		&alert.TriggeredAt,
+		&alert.AcknowledgedAt,
+		&alert.ResolvedAt,
+		&metadataJSON,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(metadataJSON) > 0 {
+		if err := json.Unmarshal(metadataJSON, &alert.Metadata); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal metadata: %w", err)
+		}
+	}
+
+	return &alert, nil
+}
+
+func (r *PostgresAlertRepository) GetActiveByRuleAndDevice(ruleID, deviceID int) (*Alert, error) {
+	query := `
+		SELECT id, rule_id, device_id, sensor_value, message, severity,
+		       status, triggered_at, acknowledged_at, resolved_at, metadata
+		FROM alerts
+		WHERE rule_id = $1 AND device_id = $2 AND status IN ('triggered', 'acknowledged')
+		ORDER BY triggered_at DESC
+		LIMIT 1
+	`
+
+	var alert Alert
+	var metadataJSON []byte
+	err := r.DB.QueryRow(query, ruleID, deviceID).Scan(
+		&alert.ID,
+		&alert.RuleID,
+		&alert.DeviceID,
+		&alert.SensorValue,
+		&alert.Message,
+		&alert.Severity,
+		&alert.Status,
+		&alert.TriggeredAt,
+		&alert.AcknowledgedAt,
+		&alert.ResolvedAt,
+		&metadataJSON,
+	)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	if len(metadataJSON) > 0 {
+		if err := json.Unmarshal(metadataJSON, &alert.Metadata); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal metadata: %w", err)
+		}
+	}
+
+	return &alert, nil
+}
+
+func (r *PostgresAlertRepository) GetActiveAlertsByField(fieldID int) ([]Alert, error) {
+	query := `
+		SELECT a.id, a.rule_id, a.device_id, a.sensor_value, a.message, a.severity,
+		       a.status, a.triggered_at, a.acknowledged_at, a.resolved_at, a.metadata
+		FROM alerts a
+		JOIN devices d ON a.device_id = d.id
+		WHERE d.field_id = $1 AND a.status IN ('triggered', 'acknowledged')
+		ORDER BY a.triggered_at DESC
+	`
+
+	rows, err := r.DB.Query(query, fieldID)
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		if err := rows.Close(); err != nil {
+			_ = err
+		}
+	}()
+
+	var alerts []Alert
+	for rows.Next() {
+		var alert Alert
+		var metadataJSON []byte
+		err := rows.Scan(
+			&alert.ID,
+			&alert.RuleID,
+			&alert.DeviceID,
+			&alert.SensorValue,
+			&alert.Message,
+			&alert.Severity,
+			&alert.Status,
+			&alert.TriggeredAt,
+			&alert.AcknowledgedAt,
+			&alert.ResolvedAt,
+			&metadataJSON,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		if len(metadataJSON) > 0 {
+			if err := json.Unmarshal(metadataJSON, &alert.Metadata); err != nil {
+				return nil, fmt.Errorf("failed to unmarshal metadata: %w", err)
+			}
+		}
+
+		alerts = append(alerts, alert)
+	}
+
+	return alerts, nil
+}
+
 func (r *PostgresAlertRepository) Acknowledge(id int) error {
 	query := `UPDATE alerts SET status = $1, acknowledged_at = $2 WHERE id = $3`
 	_, err := r.DB.Exec(query, AlertStatusAcknowledged, time.Now(), id)

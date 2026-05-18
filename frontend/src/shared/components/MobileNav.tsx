@@ -9,7 +9,6 @@ const tabs = [
   { path: '/fields', icon: '⏹', labelKey: 'nav.fields' },
   { path: '/alerts', icon: '⚡', labelKey: 'nav.alerts', badge: true },
   { path: '/irrigation', icon: '💧', labelKey: 'nav.irrigation' },
-  { path: '/weather', icon: '☀', labelKey: 'nav.weather' },
 ];
 
 export function MobileNav() {

@@ -11,7 +11,6 @@ const allPages: PageOption[] = [
   { key: 'fields', label: 'Fields', path: '/fields' },
   { key: 'alerts', label: 'Alerts', path: '/alerts' },
   { key: 'irrigation', label: 'Irrigation', path: '/irrigation' },
-  { key: 'weather', label: 'Weather', path: '/weather' },
   { key: 'analytics', label: 'Analytics', path: '/analytics' },
   { key: 'reports', label: 'Reports', path: '/reports' },
   { key: 'devices', label: 'Devices', path: '/devices' },

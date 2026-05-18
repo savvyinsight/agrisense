@@ -13,8 +13,6 @@ import { getDevices, getDevicesDataLatest } from '@/features/devices/api';
 import { getActiveAlerts, acknowledgeAlert, getAlertRules } from '@/features/alerts/api';
 import { enrichAlert } from '@/features/alerts/enrichAlert';
 import { getZones, startZone, stopZone, type IrrigationZone } from '@/features/irrigation/api';
-import { getCurrentWeather, type WeatherCurrent } from '@/features/weather/api';
-import { WeatherCard } from '@/features/dashboard/WeatherCard';
 import { toast } from '@/shared/components/Toast';
 import { getFields } from '@/features/fields/api';
 import type { Field, Alert2, WebSocketMessage, SensorDataMessage, Device, AlertRule } from '@/shared/types';
@@ -30,7 +28,6 @@ export default function Dashboard() {
   const [fields, setFields] = useState<Field[]>([]);
   const [alertRules, setAlertRules] = useState<AlertRule[]>([]);
   const [totalWater, setTotalWater] = useState(0);
-  const [weather, setWeather] = useState<WeatherCurrent | null>(null);
   const [zones, setZones] = useState<IrrigationZone[]>([]);
   const [irrigationActionId, setIrrigationActionId] = useState<number | null>(null);
 
@@ -143,13 +140,10 @@ export default function Dashboard() {
       if (fieldRes.success && fieldRes.data) setFields(fieldRes.data);
       if (rulesRes.success && rulesRes.data) setAlertRules(rulesRes.data.rules || []);
 
-      const [zoneRes, weatherRes] = await Promise.all([getZones(), getCurrentWeather()]);
+      const zoneRes = await getZones();
       if (zoneRes.success && zoneRes.data) {
         setZones(zoneRes.data);
         setTotalWater(zoneRes.data.reduce((sum, z) => sum + z.runtime_minutes * z.flow_rate_lpm, 0));
-      }
-      if (weatherRes.success && weatherRes.data) {
-        setWeather(weatherRes.data);
       }
     })();
   }, [setAlerts]);
@@ -241,11 +235,6 @@ export default function Dashboard() {
         <StatusCard label={t('dashboard.criticalAlerts')} value={criticalCount} status={criticalCount > 0 ? 'critical' : 'healthy'} icon="⚡" subtitle={criticalCount > 0 ? t('dashboard.requiresAttention') : t('dashboard.allClear')} onClick={() => navigate('/alerts')} />
         <StatusCard label={t('dashboard.waterUsage')} value={`${(totalWater / 1000).toFixed(1)}k L`} status="info" icon="💧" subtitle={t('dashboard.today')} onClick={() => navigate('/irrigation')} />
         <StatusCard label={t('dashboard.connectivity')} value={`${onlineCount}/${devices.length}`} status={devices.length > 0 && onlineCount === devices.length ? 'healthy' : 'warning'} icon="📡" subtitle={isConnected ? t('dashboard.systemOnline') : t('dashboard.disconnected')} />
-      </div>
-
-      {/* ─── Weather Card ─── */}
-      <div className="md:max-w-md">
-        <WeatherCard weather={weather} onClick={() => navigate('/weather')} />
       </div>
 
       {/* ─── MAIN: Map + Priority Feed ─── */}

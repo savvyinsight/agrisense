@@ -10,7 +10,6 @@ const navItems: NavItem[] = [
   { label: 'nav.fields', path: '/fields', icon: '⏹' },
   { label: 'nav.alerts', path: '/alerts', icon: '⚡' },
   { label: 'nav.irrigation', path: '/irrigation', icon: '💧' },
-  { label: 'nav.weather', path: '/weather', icon: '☀' },
   { label: 'nav.map', path: '/map', icon: '🗺' },
   { label: 'nav.analytics', path: '/analytics', icon: '📊' },
   { label: 'nav.reports', path: '/reports', icon: '📋' },

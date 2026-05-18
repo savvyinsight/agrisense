@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/savvyinsight/agrisense/internal/device"
+	"github.com/savvyinsight/agrisense/internal/field"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -14,6 +15,14 @@ type mockAlertRepo struct {
 
 func (m *mockAlertRepo) Create(alert *Alert) error {
 	return m.Called(alert).Error(0)
+}
+
+func (m *mockAlertRepo) GetByID(id int) (*Alert, error) {
+	args := m.Called(id)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*Alert), args.Error(1)
 }
 
 func (m *mockAlertRepo) GetActive() ([]Alert, error) {
@@ -32,6 +41,14 @@ func (m *mockAlertRepo) GetByDeviceID(deviceID int) ([]Alert, error) {
 }
 
 func (m *mockAlertRepo) GetByRuleID(ruleID int) ([]Alert, error) {
+	return nil, nil
+}
+
+func (m *mockAlertRepo) GetActiveByRuleAndDevice(ruleID, deviceID int) (*Alert, error) {
+	return nil, nil
+}
+
+func (m *mockAlertRepo) GetActiveAlertsByField(fieldID int) ([]Alert, error) {
 	return nil, nil
 }
 
@@ -101,10 +118,22 @@ func (m *mockDeviceRepo) FindOrCreate(deviceID string) (*device.Device, error) {
 func (m *mockDeviceRepo) ClaimDevice(deviceID string, userID, accountID int) error { return nil }
 func (m *mockDeviceRepo) UnclaimDevice(deviceID string) error { return nil }
 
+type mockFieldRepo struct {
+	mock.Mock
+}
+
+func (m *mockFieldRepo) Create(f *field.Field) error { return nil }
+func (m *mockFieldRepo) GetByID(id int) (*field.Field, error) { return nil, nil }
+func (m *mockFieldRepo) List(userID int) ([]field.Field, error) { return nil, nil }
+func (m *mockFieldRepo) Update(f *field.Field) error { return nil }
+func (m *mockFieldRepo) Delete(id int) error { return nil }
+func (m *mockFieldRepo) UpdateSensorData(fieldID int, moisture, temperature, humidity float64) error { return nil }
+func (m *mockFieldRepo) UpdateHealth(fieldID int, health field.FieldHealth) error { return nil }
+
 func TestCreateRule_ForwardsToRuleRepo(t *testing.T) {
 	rule := &AlertRule{Name: "High humidity", UserID: 10}
 	ruleRepo := new(mockRuleRepo)
-	service := NewService(nil, ruleRepo, &mockDeviceRepo{})
+	service := NewService(nil, ruleRepo, &mockDeviceRepo{}, &mockFieldRepo{})
 
 	ruleRepo.On("Create", rule).Return(nil)
 
@@ -116,7 +145,7 @@ func TestCreateRule_ForwardsToRuleRepo(t *testing.T) {
 
 func TestGetActiveAlertsPaginated_CalculatesOffset(t *testing.T) {
 	alertRepo := new(mockAlertRepo)
-	service := NewService(alertRepo, nil, &mockDeviceRepo{})
+	service := NewService(alertRepo, nil, &mockDeviceRepo{}, &mockFieldRepo{})
 
 	alerts := []Alert{{ID: 1}}
 	alertRepo.On("GetActivePaginated", 5, 10).Return(alerts, int64(42), nil)

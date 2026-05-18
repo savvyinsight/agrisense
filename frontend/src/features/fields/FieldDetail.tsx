@@ -3,14 +3,13 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { TrendChart } from '@/shared/components/TrendChart';
-import { getField } from '@/features/fields/api';
+import { getField, getDeviceAggregatedData } from '@/features/fields/api';
 import { getDevices } from '@/features/devices/api';
 import { getZones, deleteZone, getIrrigationEvents, startZone, stopZone, retryZone } from '@/features/irrigation/api';
 import type { IrrigationEvent } from '@/features/irrigation/api';
 import { IrrigationZoneFormModal } from '@/features/irrigation/IrrigationZoneFormModal';
 import { getActiveAlerts } from '@/features/alerts/api';
-import { getCurrentWeather } from '@/features/weather/api';
-import type { Field } from '@/shared/types';
+import type { Field, AggregatedDataPoint, ApiResponse } from '@/shared/types';
 import type { Device, Alert } from '@/shared/types/api';
 import type { IrrigationZone } from '@/features/irrigation/api';
 import { toast } from '@/shared/components/Toast';
@@ -45,12 +44,14 @@ export default function FieldDetail() {
   const [zones, setZones] = useState<IrrigationZone[]>([]);
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [events, setEvents] = useState<IrrigationEvent[]>([]);
-  const [weather, setWeather] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoadingId, setActionLoadingId] = useState<number | null>(null);
   const [zoneFormOpen, setZoneFormOpen] = useState(false);
   const [editingZone, setEditingZone] = useState<IrrigationZone | null>(null);
   const [deletingZoneId, setDeletingZoneId] = useState<number | null>(null);
+  const [moistureTrend, setMoistureTrend] = useState<{ label: string; value: number }[]>([]);
+  const [tempTrend, setTempTrend] = useState<{ label: string; value: number }[]>([]);
+  const [trendLoading, setTrendLoading] = useState(true);
 
   const zoneAction = async (id: number, action: () => Promise<any>, successMsg: string, errorMsg: string) => {
     setActionLoadingId(id);
@@ -69,12 +70,11 @@ export default function FieldDetail() {
 
   useEffect(() => {
     (async () => {
-      const [fieldRes, deviceRes, zoneRes, alertRes, weatherRes] = await Promise.all([
+      const [fieldRes, deviceRes, zoneRes, alertRes] = await Promise.all([
         getField(fieldId),
         getDevices(),
         getZones(fieldId),
         getActiveAlerts(),
-        getCurrentWeather(),
       ]);
 
       if (fieldRes.success && fieldRes.data) setField(fieldRes.data);
@@ -85,7 +85,6 @@ export default function FieldDetail() {
 
       if (zoneRes.success && zoneRes.data) setZones(zoneRes.data);
       if (alertRes.success && alertRes.data) setAlerts(alertRes.data?.alerts ?? []);
-      if (weatherRes.success && weatherRes.data) setWeather(weatherRes.data);
 
       const eventRes = await getIrrigationEvents({ field_id: fieldId });
       if (eventRes.success && eventRes.data) setEvents(eventRes.data);
@@ -93,6 +92,48 @@ export default function FieldDetail() {
       setLoading(false);
     })();
   }, [fieldId]);
+
+  useEffect(() => {
+    if (devices.length === 0) {
+      setMoistureTrend([]);
+      setTempTrend([]);
+      setTrendLoading(false);
+      return;
+    }
+
+    (async () => {
+      setTrendLoading(true);
+
+      const [moistureRes, tempRes] = await Promise.all([
+        Promise.all(devices.map(d => getDeviceAggregatedData(d.id, 'soil_moisture', '24h'))),
+        Promise.all(devices.map(d => getDeviceAggregatedData(d.id, 'temperature', '24h'))),
+      ]);
+
+      const aggregateData = (results: ApiResponse<AggregatedDataPoint[]>[]) => {
+        const byDate = new Map<string, { sum: number; count: number }>();
+        for (const r of results) {
+          if (!r.success || !r.data) continue;
+          for (const p of r.data) {
+            const key = new Date(p.timestamp).toISOString().split('T')[0];
+            const e = byDate.get(key) ?? { sum: 0, count: 0 };
+            e.sum += p.avg;
+            e.count++;
+            byDate.set(key, e);
+          }
+        }
+        return Array.from(byDate.entries())
+          .sort(([a], [b]) => a.localeCompare(b))
+          .map(([date, { sum, count }]) => ({
+            label: new Date(date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+            value: Math.round((sum / count) * 10) / 10,
+          }));
+      };
+
+      setMoistureTrend(aggregateData(moistureRes));
+      setTempTrend(aggregateData(tempRes));
+      setTrendLoading(false);
+    })();
+  }, [devices]);
 
   const avgMoisture = field?.soil_moisture;
   const avgTemp = field?.temperature;
@@ -146,12 +187,6 @@ export default function FieldDetail() {
           </div>
           <p className="text-sm text-text-muted">{field.crop && `${field.crop} · `}{field.area_hectares} ha{field.last_irrigation ? ` · ${t('fields.lastIrrigation', { date: timeAgo(field.last_irrigation, t) ?? '' })}` : ''}</p>
         </div>
-        {weather && (
-          <div className="text-right text-xs text-text-muted">
-            <div>{weather.temperature ?? '--'}°C</div>
-            <div>{weather.forecast ?? ''}</div>
-          </div>
-        )}
       </div>
 
       {/* Critical banner */}
@@ -219,15 +254,27 @@ export default function FieldDetail() {
         </div>
       )}
 
-      {/* 7-day trend charts (mock fallback until historical API is integrated) */}
+      {/* 7-day trend charts */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="rounded-lg border border-border-default bg-surface-card p-4">
           <h3 className="text-sm font-semibold text-text-primary mb-3">{t('fields.moistureTrend')}</h3>
-          <TrendChart data={generateTrendData(7, avgMoisture ?? 50, 8, { secondary: { base: (avgTemp ?? 25) - 3, variance: 4 } })} type="area" color="#2E7D32" secondaryColor="#38bdf8" showSecondary unit="%" height={160} />
+          {trendLoading ? (
+            <div className="h-[160px] flex items-center justify-center">
+              <div className="w-full h-24 rounded bg-surface-hover/50 animate-pulse" />
+            </div>
+          ) : (
+            <TrendChart data={moistureTrend} type="area" color="#2E7D32" unit="%" height={160} />
+          )}
         </div>
         <div className="rounded-lg border border-border-default bg-surface-card p-4">
           <h3 className="text-sm font-semibold text-text-primary mb-3">{t('fields.tempTrend')}</h3>
-          <TrendChart data={generateTrendData(7, avgTemp ?? 25, 5)} type="line" color="#f59e0b" unit="°C" height={160} />
+          {trendLoading ? (
+            <div className="h-[160px] flex items-center justify-center">
+              <div className="w-full h-24 rounded bg-surface-hover/50 animate-pulse" />
+            </div>
+          ) : (
+            <TrendChart data={tempTrend} type="line" color="#f59e0b" unit="°C" height={160} />
+          )}
         </div>
       </div>
 
@@ -431,22 +478,4 @@ export default function FieldDetail() {
   );
 }
 
-function generateTrendData(
-  days: number, baseValue: number, variance: number,
-  options?: { secondary?: { base: number; variance: number } }
-): { label: string; value: number; secondary?: number }[] {
-  const data = [];
-  const now = new Date();
-  for (let i = days - 1; i >= 0; i--) {
-    const date = new Date(now);
-    date.setDate(date.getDate() - i);
-    const value = baseValue + (Math.random() - 0.5) * variance * 2;
-    const secondary = options?.secondary ? options.secondary.base + (Math.random() - 0.5) * options.secondary.variance * 2 : undefined;
-    data.push({
-      label: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-      value: Math.round(value * 10) / 10,
-      secondary: secondary ? Math.round(secondary * 10) / 10 : undefined,
-    });
-  }
-  return data;
-}
+

@@ -143,6 +143,7 @@ export interface AlertRule {
   id?: number;
   name: string;
   device_id: number | null;
+  field_id?: number | null;
   sensor_type_id: number;
   condition: string;
   threshold_value: number | string;

@@ -90,6 +90,13 @@ func (s *Service) ProcessTelemetry(deviceID string, payload []byte) error {
 	// Update field-level aggregates from the latest telemetry
 	s.updateFieldFromTelemetry(deviceID, sensorData)
 
+	// Evaluate each sensor reading against active alert rules
+	if s.ruleEngine != nil {
+		for _, reading := range sensorData {
+			s.ruleEngine.Evaluate(&reading)
+		}
+	}
+
 	return nil
 }
 

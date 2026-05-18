@@ -76,6 +76,14 @@ export interface IrrigationEvent {
   water_usage_liters?: number;
 }
 
+export interface AggregatedDataPoint {
+  timestamp: string;
+  avg: number;
+  min: number;
+  max: number;
+  count: number;
+}
+
 export interface WeatherData {
   temperature: number;
   humidity: number;

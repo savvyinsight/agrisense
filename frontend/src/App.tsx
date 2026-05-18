@@ -15,7 +15,6 @@ import AlertRules from '@/features/alerts/AlertRules';
 import AutomationRules from '@/features/automation/AutomationRules';
 import Analytics from '@/features/analytics/Analytics';
 import Irrigation from '@/features/irrigation/Irrigation';
-import Weather from '@/features/weather/Weather';
 import DeviceManagement from '@/features/devices/DeviceManagement';
 import MapView from '@/features/devices/MapView';
 import Settings from '@/features/settings/Settings';
@@ -73,7 +72,6 @@ export default function App() {
                       <Route path="reports" element={<Reports />} />
                       <Route path="map" element={<MapView />} />
                       <Route path="irrigation" element={<Irrigation />} />
-                      <Route path="weather" element={<Weather />} />
                       <Route path="settings/team" element={<ProtectedRoute requiredRoles={['account_owner', 'farm_manager']} component={TeamManagement} />} />
                       <Route path="settings/audit" element={<ProtectedRoute requiredRoles={['account_owner']} component={AuditLogViewer} />} />
                       <Route path="settings" element={<Settings />} />

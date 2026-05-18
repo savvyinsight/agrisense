@@ -28,7 +28,8 @@ const (
 type AlertRule struct {
 	ID              int            `json:"id"`
 	Name            string         `json:"name"`
-	DeviceID        *int           `json:"device_id,omitempty"` // nil = all devices
+	DeviceID        *int           `json:"device_id,omitempty"`        // nil = all devices
+	FieldID         *int           `json:"field_id,omitempty"`         // nil = all fields (if set, applies to all devices in the field)
 	SensorTypeID    int            `json:"sensor_type_id"`
 	Condition       AlertCondition `json:"condition"`
 	ThresholdValue  *float64       `json:"threshold_value,omitempty"`
@@ -67,10 +68,13 @@ type AlertRuleRepository interface {
 
 type AlertRepository interface {
 	Create(alert *Alert) error
+	GetByID(id int) (*Alert, error)
 	GetActive() ([]Alert, error)
 	GetActivePaginated(limit, offset int) ([]Alert, int64, error)
 	GetByDeviceID(deviceID int) ([]Alert, error)
 	GetByRuleID(ruleID int) ([]Alert, error)
+	GetActiveByRuleAndDevice(ruleID, deviceID int) (*Alert, error)
+	GetActiveAlertsByField(fieldID int) ([]Alert, error)
 	Acknowledge(id int) error
 	Resolve(id int) error
 	List(limit, offset int) ([]Alert, int64, error)
