@@ -1,4 +1,4 @@
-import { createTheme } from '@mui/material/styles';
+import { createTheme, type CSSObject } from '@mui/material/styles';
 
 const theme = createTheme({
   palette: {
@@ -53,8 +53,13 @@ const theme = createTheme({
     },
     MuiButton: {
       styleOverrides: {
-        root: { textTransform: 'none', fontWeight: 500 },
-        containedPrimary: { color: '#ffffff' },
+        root: ({ ownerState }: { ownerState: { variant?: string; color?: string } }) => {
+          const base: CSSObject = { textTransform: 'none', fontWeight: 500 };
+          if (ownerState.variant === 'contained' && ownerState.color === 'primary') {
+            base.color = '#ffffff';
+          }
+          return base;
+        },
       },
     },
     MuiSelect: {
@@ -80,10 +85,22 @@ const theme = createTheme({
     },
     MuiAlert: {
       styleOverrides: {
-        standardError: { backgroundColor: '#2a1115', color: '#ef4444' },
-        standardInfo: { backgroundColor: '#0f172a', color: '#38bdf8' },
-        standardSuccess: { backgroundColor: '#132a1a', color: '#4caf50' },
-        standardWarning: { backgroundColor: '#2a1f0e', color: '#f59e0b' },
+        root: ({ ownerState }: { ownerState: { severity?: string; variant?: string } }) => {
+          const base: CSSObject = {};
+          if ((ownerState.variant === 'standard' || !ownerState.variant) && ownerState.severity === 'error') {
+            base.backgroundColor = '#2a1115'; base.color = '#ef4444';
+          }
+          if ((ownerState.variant === 'standard' || !ownerState.variant) && ownerState.severity === 'info') {
+            base.backgroundColor = '#0f172a'; base.color = '#38bdf8';
+          }
+          if ((ownerState.variant === 'standard' || !ownerState.variant) && ownerState.severity === 'success') {
+            base.backgroundColor = '#132a1a'; base.color = '#4caf50';
+          }
+          if ((ownerState.variant === 'standard' || !ownerState.variant) && ownerState.severity === 'warning') {
+            base.backgroundColor = '#2a1f0e'; base.color = '#f59e0b';
+          }
+          return base;
+        },
       },
     },
   },

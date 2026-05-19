@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
 
 interface AccountRow {
   id: number;
@@ -20,7 +19,6 @@ interface Stats {
 }
 
 export default function AdminAccounts() {
-  const { t } = useTranslation();
   const navigate = useNavigate();
   const [accounts, setAccounts] = useState<AccountRow[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);

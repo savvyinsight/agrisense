@@ -54,6 +54,7 @@ func setupPostgresContainer(t *testing.T) (*sql.DB, func()) {
         email VARCHAR(100) UNIQUE NOT NULL,
         password_hash VARCHAR(255) NOT NULL,
         role VARCHAR(20) DEFAULT 'viewer',
+        account_id INTEGER,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
@@ -71,6 +72,8 @@ func setupPostgresContainer(t *testing.T) (*sql.DB, func()) {
         firmware_version VARCHAR(20),
         config JSONB DEFAULT '{}',
         user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        account_id INTEGER,
+        field_id INTEGER,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
@@ -102,6 +105,8 @@ func setupPostgresContainer(t *testing.T) (*sql.DB, func()) {
         severity VARCHAR(20),
         enabled BOOLEAN DEFAULT TRUE,
         user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        account_id INTEGER,
+        field_id INTEGER,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
@@ -114,6 +119,7 @@ func setupPostgresContainer(t *testing.T) (*sql.DB, func()) {
         message VARCHAR(255) NOT NULL,
         severity VARCHAR(20) NOT NULL,
         status VARCHAR(20) DEFAULT 'triggered',
+        account_id INTEGER,
         triggered_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         acknowledged_at TIMESTAMP,
         resolved_at TIMESTAMP,
@@ -126,6 +132,7 @@ func setupPostgresContainer(t *testing.T) (*sql.DB, func()) {
         command VARCHAR(50) NOT NULL,
         parameters JSONB DEFAULT '{}',
         status VARCHAR(20) DEFAULT 'pending',
+        account_id INTEGER,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         sent_at TIMESTAMP,
         delivered_at TIMESTAMP,

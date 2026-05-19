@@ -67,6 +67,7 @@ export interface Device {
   longitude?: number;
   config?: DeviceConfig;
   field_id?: number | null;
+  user_id?: number | null;
   latestTemp?: number | null;
   last_heartbeat?: string;
   created_at?: string;

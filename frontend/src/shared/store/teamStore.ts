@@ -1,13 +1,13 @@
 import { create } from 'zustand';
-import { subscribeWithSelector } from 'zustand/react';
-import * as teamApi from '../api/teamApi';
+import { subscribeWithSelector } from 'zustand/middleware';
+import * as teamApi from '../../api/teamApi';
 import {
   type TeamMember,
   type InvitationRequest,
   type AuditLogEntry,
   type AuditLogFilters,
   type PermissionUpdateRequest,
-} from '../api/types/team';
+} from '../../api/types/team';
 
 export interface TeamState {
   // State
