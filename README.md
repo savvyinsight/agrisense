@@ -53,7 +53,10 @@ agrisense/
 │   │   └── main.tsx
 │   └── package.json
 │
+├── docs/                     # Centralized documentation
 ├── docker-compose.yml        # Local development stack
+├── Makefile                  # Convenience commands
+├── AGENTS.md                 # opencode agent instructions
 └── README.md
 ```
 
@@ -140,11 +143,29 @@ curl -X POST http://localhost:8080/api/v1/devices \
 
 ## 📚 Documentation
 
-- [Backend README](backend/README.md) — Architecture, API docs, deployment
-- [Frontend README](frontend/README.md) — UI setup, component structure
-- [API Reference](backend/docs/api.md) — Detailed API endpoints
-- [Architecture Overview](backend/docs/architecture.md) — System design & flows
-- [Deployment Guide](backend/DEPLOYMENT.md) — Production setup
+All documentation lives under [`docs/`](docs/):
+
+| Document | Description |
+|----------|-------------|
+| [Architecture](docs/architecture.md) | System design, components & data flows |
+| [Architecture (Detailed)](docs/architecture-detailed.md) | In-depth architecture with visual diagrams |
+| [Architecture Overview](docs/architecture-overview.md) | High-level system overview |
+| [API Reference](docs/api.md) | Complete REST & WebSocket API reference |
+| [Database](docs/database.md) | Schema design and migration guide |
+| [Deployment](docs/deployment.md) | Production setup with Docker |
+| [Monitoring](docs/monitoring.md) | Prometheus & Grafana observability |
+| [Performance](docs/performance.md) | Benchmarks and scalability results |
+| [Quick Reference](docs/quick-reference.md) | Daily development reference |
+| [Handbook](docs/handbook.md) | Developer onboarding & handoff guide |
+| [Multi-Tenant RBAC](docs/multi-tenant.md) | Multi-tenant design |
+| [RBAC Summary](docs/rbac.md) | RBAC implementation details |
+| [Backend Integration](docs/backend-integration.md) | Backend integration guide |
+| [Testing Scenarios](docs/testing-scenarios.md) | Test personas and scenarios |
+| [Requirements](docs/requirements.md) | Project requirements |
+| [Implementation Plan](docs/implementation-plan.md) | Development roadmap |
+| [Problem Statement](docs/problem.md) | Business context & motivation |
+
+Sub-project READMEs: [Backend](backend/README.md) · [Frontend](frontend/README.md)
 
 ## 🧪 Testing
 
@@ -171,7 +192,7 @@ k6 run test/load/k6-script.js
 
 ## 🚢 Production Deployment
 
-See [DEPLOYMENT.md](backend/DEPLOYMENT.md) for containerized production setup with:
+See [Deployment Guide](docs/deployment.md) for containerized production setup with:
 - Multi-stage Docker builds
 - Nginx reverse proxy
 - Environment-specific configs
@@ -194,16 +215,15 @@ See [DEPLOYMENT.md](backend/DEPLOYMENT.md) for containerized production setup wi
 - **P95 Latency**: < 6ms
 - **Scalability**: Tested with 100+ concurrent devices
 
-See [Performance Results](backend/docs/PERFORMANCE-RESULTS.md) for detailed benchmarks.
+See [Performance Results](docs/performance.md) for detailed benchmarks.
 
 ## 🤝 Contributing
 
-We welcome contributions! Please:
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/your-feature`)
-3. Commit changes (`git commit -am 'Add feature'`)
-4. Push to branch (`git push origin feature/your-feature`)
-5. Open a Pull Request
+We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on:
+- PR process and code review
+- Coding standards and conventions
+- Development workflow
+- Commit message format
 
 ## 📝 License
 

@@ -77,8 +77,8 @@ curl -X POST http://localhost:8080/api/v1/devices \
   -d '{"device_id":"sensor-001","name":"Greenhouse Sensor","type":"sensor"}'
 ```
 
-📚 API Documentation
-Full API documentation is available in docs/api.md
+## 📚 API Documentation
+Full API documentation is available in [docs/api.md](docs/api.md)
 
 ### Key Endpoints
 
@@ -147,7 +147,7 @@ Handles 2,300+ requests/second ✅ **ACHIEVED**
 - Error rate: 0%
 - Tested with 100 concurrent devices
 
-See [Performance Results](docs/PERFORMANCE-RESULTS.md) for detailed optimization analysis.
+See [Performance Results](../docs/performance.md) for detailed optimization analysis.
 
 📝 License
 

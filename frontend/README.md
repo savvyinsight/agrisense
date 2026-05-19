@@ -26,7 +26,7 @@ The backend services live in the same monorepo under `../backend`.
 - `src/assets/` – static assets and styles
 - `src/locales/` – i18n JSON files
 - `src/App.tsx`, `src/i18n.ts`, `src/main.tsx` – application entrypoints
-- `docs/` – requirements, design, and implementation docs
+- `docs/` – frontend-specific design docs
 
 ## ⚙️ Tech stack
 
@@ -70,26 +70,9 @@ The frontend expects an API base URL configured in `src/api/client.ts` or by env
 
 ## 🛡 Contributing
 
-1. Fork repository
-2. Create branch `feat/<name>` or `fix/<name>`
-3. Open pull request with summary and testing steps
-
-Optional:
-- Add `CONTRIBUTING.md`
-- Add `CODE_OF_CONDUCT.md`
-- Add GitHub issue/PR templates
+See [CONTRIBUTING.md](../CONTRIBUTING.md) for full guidelines.
 
 ## 🧾 License
 
-Add license information (e.g., MIT):
-
-```text
-MIT License
-Copyright (c) 2026 savvyinsight
-```
-
-## 📌 Additional notes
-
-- Purely frontend code; no backend is included in this folder.
-- Backend services are available in the monorepo under `../backend`.
+MIT License — see [LICENSE](../LICENSE) file for details.
 
