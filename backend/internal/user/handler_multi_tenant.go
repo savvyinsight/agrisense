@@ -102,7 +102,7 @@ func (h *UserHandler) InviteUserHandler(c *gin.Context) {
 	}
 
 	// Log action
-	h.LogAuditAction(&AuditLog{
+	_ = h.LogAuditAction(&AuditLog{
 		AccountID:    accountID,
 		UserID:       &usr.ID,
 		Action:       "create",
@@ -241,7 +241,7 @@ func (h *UserHandler) UpdateUserPermissionHandler(c *gin.Context) {
 	}
 
 	// Log action
-	h.LogAuditAction(&AuditLog{
+	_ = h.LogAuditAction(&AuditLog{
 		AccountID:    accountID,
 		UserID:       &usr.ID,
 		Action:       "update",
@@ -298,7 +298,7 @@ func (h *UserHandler) RevokeUserHandler(c *gin.Context) {
 	}
 
 	// Log action
-	h.LogAuditAction(&AuditLog{
+	_ = h.LogAuditAction(&AuditLog{
 		AccountID:    accountID,
 		UserID:       &usr.ID,
 		Action:       "delete",

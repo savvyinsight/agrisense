@@ -62,7 +62,7 @@ func (r *PostgresFieldRepository) GetByID(id int) (*Field, error) {
 	}
 	if area.Valid {
 		v := 0.0
-		fmt.Sscanf(area.String, "%f", &v)
+		_, _ = fmt.Sscanf(area.String, "%f", &v)
 		f.AreaHectares = &v
 	}
 	if soilMoisture.Valid {
@@ -103,7 +103,7 @@ func (r *PostgresFieldRepository) List(userID int) ([]Field, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var fields []Field
 	for rows.Next() {

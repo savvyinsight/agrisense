@@ -146,7 +146,7 @@ func (h *AdminHandler) GetAccountDetailHandler(c *gin.Context) {
 		accountID,
 	)
 	if err == nil {
-		defer rows.Close()
+		defer func() { _ = rows.Close() }()
 		for rows.Next() {
 			var d deviceItem
 			if err := rows.Scan(&d.ID, &d.DeviceID, &d.Name, &d.Type, &d.Status); err == nil {
@@ -429,9 +429,9 @@ func (h *AdminHandler) GetGlobalAuditLogHandler(c *gin.Context) {
 func (h *AdminHandler) GetPlatformStatsHandler(c *gin.Context) {
 	var totalAccounts, totalUsers, totalDevices int64
 
-	h.DB.QueryRow(`SELECT COUNT(*) FROM accounts WHERE is_active = TRUE`).Scan(&totalAccounts)
-	h.DB.QueryRow(`SELECT COUNT(*) FROM users`).Scan(&totalUsers)
-	h.DB.QueryRow(`SELECT COUNT(*) FROM devices`).Scan(&totalDevices)
+	_ = h.DB.QueryRow(`SELECT COUNT(*) FROM accounts WHERE is_active = TRUE`).Scan(&totalAccounts)
+	_ = h.DB.QueryRow(`SELECT COUNT(*) FROM users`).Scan(&totalUsers)
+	_ = h.DB.QueryRow(`SELECT COUNT(*) FROM devices`).Scan(&totalDevices)
 
 	c.JSON(http.StatusOK, gin.H{
 		"total_accounts": totalAccounts,

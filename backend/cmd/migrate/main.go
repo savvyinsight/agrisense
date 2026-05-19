@@ -46,7 +46,7 @@ func main() {
 	case "down":
 		steps := 1
 		if len(os.Args) > 2 {
-			fmt.Sscanf(os.Args[2], "%d", &steps)
+			_, _ = fmt.Sscanf(os.Args[2], "%d", &steps)
 		}
 		if err := m.Steps(-steps); err != nil {
 			log.Fatalf("Migrate down failed: %v", err)
@@ -64,7 +64,7 @@ func main() {
 			log.Fatalf("Usage: go run ./cmd/migrate force VERSION")
 		}
 		version := 0
-		fmt.Sscanf(os.Args[2], "%d", &version)
+		_, _ = fmt.Sscanf(os.Args[2], "%d", &version)
 		if err := m.Force(version); err != nil {
 			log.Fatalf("Migrate force failed: %v", err)
 		}

@@ -11,12 +11,13 @@ import (
 	"github.com/savvyinsight/agrisense/internal/user"
 )
 
+type contextKey string
+
 const (
-	// Context keys
-	ContextKeyUser      = "user"
-	ContextKeyAccountID = "account_id"
-	ContextKeyFarmID    = "farm_id"
-	ContextKeyIPAddress = "ip_address"
+	ContextKeyUser      contextKey = "user"
+	ContextKeyAccountID contextKey = "account_id"
+	ContextKeyFarmID    contextKey = "farm_id"
+	ContextKeyIPAddress contextKey = "ip_address"
 )
 
 // TenantIsolationMiddleware ensures that all requests have account_id and enforces row-level security

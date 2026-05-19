@@ -52,7 +52,7 @@ export const RoleBadge: React.FC = () => {
 
   return (
     <Tooltip title="Your current role and account">
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 2 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 0 }}>
         <Typography variant="body2" sx={{ fontSize: '0.9rem' }}>
           {user.username}
         </Typography>

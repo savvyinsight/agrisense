@@ -64,7 +64,7 @@ func (r *PostgresIrrigationEventRepository) scanEvents(query string, arg int, li
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var events []IrrigationEvent
 	for rows.Next() {

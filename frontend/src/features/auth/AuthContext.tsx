@@ -14,7 +14,6 @@ type AuthContextType = {
   isViewer: () => boolean;
   hasRole: (role: string, farmId?: number) => boolean;
   hasPermission: (role: string, farmId?: number) => boolean;
-  switchAccount: (accountId: number) => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -69,10 +68,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const hasPermission = (role: string, farmId?: number): boolean => hasRole(role, farmId);
 
-  const switchAccount = async (accountId: number): Promise<void> => {
-    console.log('Switching to account:', accountId);
-  };
-
   const setUser = (u: React.SetStateAction<User | null>) => {
     const resolved = typeof u === 'function' ? u(user) : u;
     if (resolved) {
@@ -95,7 +90,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     isViewer,
     hasRole,
     hasPermission,
-    switchAccount,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

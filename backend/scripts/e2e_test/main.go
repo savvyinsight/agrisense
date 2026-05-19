@@ -38,7 +38,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to connect: %v", err)
 	}
-	defer pgDB.Close()
+	defer func() { _ = pgDB.Close() }()
 
 	if err := pgDB.Ping(); err != nil {
 		log.Fatalf("Failed to ping: %v", err)
@@ -46,11 +46,11 @@ func main() {
 	log.Println("✓ Connected to Postgres")
 
 	// Clean up
-	pgDB.Exec(`DELETE FROM alerts`)
-	pgDB.Exec(`DELETE FROM alert_rules`)
-	pgDB.Exec(`DELETE FROM devices`)
-	pgDB.Exec(`DELETE FROM fields`)
-	pgDB.Exec(`DELETE FROM users WHERE email = 'e2e_test@agrisense.io'`)
+	_, _ = pgDB.Exec(`DELETE FROM alerts`)
+	_, _ = pgDB.Exec(`DELETE FROM alert_rules`)
+	_, _ = pgDB.Exec(`DELETE FROM devices`)
+	_, _ = pgDB.Exec(`DELETE FROM fields`)
+	_, _ = pgDB.Exec(`DELETE FROM users WHERE email = 'e2e_test@agrisense.io'`)
 
 	// Repos
 	fieldRepo := &field.PostgresFieldRepository{DB: pgDB}
@@ -168,7 +168,7 @@ func main() {
 
 	// Step 8: Test field health recompute on resolve (simulating alert.Service.ResolveAlert)
 	log.Println("\n=== TEST 3: Resolve alert → field health should reset to healthy ===")
-	alertRepo.Resolve(activeAlerts[0].ID)
+	_ = alertRepo.Resolve(activeAlerts[0].ID)
 
 	alertsAfter, _ := alertRepo.GetActiveAlertsByField(fieldID)
 	health := field.FieldHealthHealthy
@@ -181,7 +181,7 @@ func main() {
 			health = field.FieldHealthWarning
 		}
 	}
-	fieldRepo.UpdateHealth(fieldID, health)
+	_ = fieldRepo.UpdateHealth(fieldID, health)
 
 	f, _ = fieldRepo.GetByID(fieldID)
 	if f.Health != field.FieldHealthHealthy {
@@ -204,11 +204,11 @@ func main() {
 		Enabled:        true,
 		UserID:         userID,
 	}
-	alertRuleRepo.Create(rule2)
+	_ = alertRuleRepo.Create(rule2)
 
 	// Reload rules
 	engine = ruleengine.NewEngine(alertRuleRepo, alertRepo, deviceRepo, fieldRepo)
-	engine.Start()
+	_ = engine.Start()
 	time.Sleep(200 * time.Millisecond)
 
 	// Send temp > 35
@@ -243,7 +243,7 @@ func main() {
 			health = field.FieldHealthWarning
 		}
 	}
-	fieldRepo.UpdateHealth(fieldID, health)
+	_ = fieldRepo.UpdateHealth(fieldID, health)
 	f, _ = fieldRepo.GetByID(fieldID)
 	log.Printf("  Field health: %s (expected: warning)", f.Health)
 	if f.Health != field.FieldHealthWarning {
@@ -252,11 +252,11 @@ func main() {
 	log.Println("✓ PASS: Field health correctly set to warning")
 
 	// Cleanup
-	pgDB.Exec(`DELETE FROM alerts`)
-	pgDB.Exec(`DELETE FROM alert_rules`)
-	pgDB.Exec(`DELETE FROM devices`)
-	pgDB.Exec(`DELETE FROM fields`)
-	pgDB.Exec(`DELETE FROM users WHERE id = $1`, userID)
+	_, _ = pgDB.Exec(`DELETE FROM alerts`)
+	_, _ = pgDB.Exec(`DELETE FROM alert_rules`)
+	_, _ = pgDB.Exec(`DELETE FROM devices`)
+	_, _ = pgDB.Exec(`DELETE FROM fields`)
+	_, _ = pgDB.Exec(`DELETE FROM users WHERE id = $1`, userID)
 
 	engine.Stop()
 

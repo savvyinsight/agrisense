@@ -126,7 +126,7 @@ func (r *PostgresAccountRepository) GetAccountsByOwnerID(ownerID int) ([]Account
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	
 	var accounts []Account
 	for rows.Next() {
@@ -172,7 +172,7 @@ func (r *PostgresAccountRepository) ListAllAccounts(limit, offset int) ([]Accoun
 	if err != nil {
 		return nil, 0, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	
 	var accounts []Account
 	for rows.Next() {
@@ -227,7 +227,7 @@ func (r *PostgresPermissionRepository) GetPermissionsByUserID(userID, accountID 
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	
 	var permissions []UserPermission
 	for rows.Next() {
@@ -249,7 +249,7 @@ func (r *PostgresPermissionRepository) GetPermissionsByFarmID(farmID, accountID 
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	
 	var permissions []UserPermission
 	for rows.Next() {
@@ -339,7 +339,7 @@ func (r *PostgresInvitationRepository) GetPendingInvitationsByEmail(email string
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	
 	var invitations []UserInvitation
 	for rows.Next() {
@@ -370,7 +370,7 @@ func (r *PostgresInvitationRepository) ListPendingInvitations(accountID int) ([]
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	
 	var invitations []UserInvitation
 	for rows.Next() {
@@ -448,7 +448,7 @@ func (r *PostgresAuditLogRepository) GetAuditLogs(accountID int, filters map[str
 	if err != nil {
 		return nil, 0, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	
 	var logs []AuditLog
 	for rows.Next() {
@@ -465,8 +465,8 @@ func (r *PostgresAuditLogRepository) GetAuditLogs(accountID int, filters map[str
 		if ip.Valid { log.IPAddress = ip.String }
 		if ua.Valid { log.UserAgent = ua.String }
 		if em.Valid { log.ErrorMessage = em.String }
-		json.Unmarshal(oldB, &log.OldValues)
-		json.Unmarshal(newB, &log.NewValues)
+		_ = json.Unmarshal(oldB, &log.OldValues)
+		_ = json.Unmarshal(newB, &log.NewValues)
 		logs = append(logs, log)
 	}
 	return logs, count, rows.Err()
@@ -498,7 +498,7 @@ func (r *PostgresAuditLogRepository) GetAllAuditLogs(filters map[string]interfac
 		argIndex++
 	}
 
-	countQuery := `SELECT COUNT(*) FROM (` + query + `) cnt`
+		countQuery := `SELECT COUNT(*) FROM (` + query + `) cnt`
 	var count int64
 	err := r.DB.QueryRow(countQuery, args...).Scan(&count)
 	if err != nil {
@@ -507,12 +507,13 @@ func (r *PostgresAuditLogRepository) GetAllAuditLogs(filters map[string]interfac
 
 	query += fmt.Sprintf(` ORDER BY al.created_at DESC LIMIT $%d OFFSET $%d`, argIndex, argIndex+1)
 	args = append(args, limit, offset)
+	_ = whereAdded
 
 	rows, err := r.DB.Query(query, args...)
 	if err != nil {
 		return nil, 0, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var logs []AuditLog
 	for rows.Next() {
@@ -529,8 +530,8 @@ func (r *PostgresAuditLogRepository) GetAllAuditLogs(filters map[string]interfac
 		if ip.Valid { log.IPAddress = ip.String }
 		if ua.Valid { log.UserAgent = ua.String }
 		if em.Valid { log.ErrorMessage = em.String }
-		json.Unmarshal(oldB, &log.OldValues)
-		json.Unmarshal(newB, &log.NewValues)
+		_ = json.Unmarshal(oldB, &log.OldValues)
+		_ = json.Unmarshal(newB, &log.NewValues)
 		logs = append(logs, log)
 	}
 	return logs, count, rows.Err()
@@ -551,7 +552,7 @@ func (r *PostgresAuditLogRepository) GetUserAuditLogs(userID, accountID int, lim
 	if err != nil {
 		return nil, 0, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var logs []AuditLog
 	for rows.Next() {
@@ -568,8 +569,8 @@ func (r *PostgresAuditLogRepository) GetUserAuditLogs(userID, accountID int, lim
 		if ip.Valid { log.IPAddress = ip.String }
 		if ua.Valid { log.UserAgent = ua.String }
 		if em.Valid { log.ErrorMessage = em.String }
-		json.Unmarshal(oldB, &log.OldValues)
-		json.Unmarshal(newB, &log.NewValues)
+		_ = json.Unmarshal(oldB, &log.OldValues)
+		_ = json.Unmarshal(newB, &log.NewValues)
 		logs = append(logs, log)
 	}
 	return logs, count, rows.Err()
