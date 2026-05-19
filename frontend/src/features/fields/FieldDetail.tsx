@@ -8,7 +8,8 @@ import { getDevices } from '@/features/devices/api';
 import { getZones, deleteZone, getIrrigationEvents, startZone, stopZone, retryZone } from '@/features/irrigation/api';
 import type { IrrigationEvent } from '@/features/irrigation/api';
 import { IrrigationZoneFormModal } from '@/features/irrigation/IrrigationZoneFormModal';
-import { getActiveAlerts } from '@/features/alerts/api';
+import { useAlertsStore } from '@/shared/stores/alertsStore';
+import { getActiveAlerts, acknowledgeAlert } from '@/features/alerts/api';
 import type { Field, AggregatedDataPoint, ApiResponse } from '@/shared/types';
 import type { Device, Alert } from '@/shared/types/api';
 import type { IrrigationZone } from '@/features/irrigation/api';
@@ -52,6 +53,9 @@ export default function FieldDetail() {
   const [moistureTrend, setMoistureTrend] = useState<{ label: string; value: number }[]>([]);
   const [tempTrend, setTempTrend] = useState<{ label: string; value: number }[]>([]);
   const [trendLoading, setTrendLoading] = useState(true);
+  const [acknowledgingId, setAcknowledgingId] = useState<number | null>(null);
+  const storeAlerts = useAlertsStore((s) => s.alerts);
+  const removeAlert = useAlertsStore((s) => s.removeAlert);
 
   const zoneAction = async (id: number, action: () => Promise<any>, successMsg: string, errorMsg: string) => {
     setActionLoadingId(id);
@@ -139,10 +143,33 @@ export default function FieldDetail() {
   const avgTemp = field?.temperature;
   const avgHumidity = field?.humidity;
 
-  const fieldAlerts = useMemo(() =>
-    alerts.filter(a => a.device_id && devices.some(d => d.device_id === a.device_id)),
-    [alerts, devices]
-  );
+  const deviceIdSet = useMemo(() => new Set(devices.map((d) => d.device_id)), [devices]);
+  const fieldAlerts = useMemo(() => {
+    // From initial API fetch (Alert type)
+    const apiAlerts = alerts.filter((a) => a.device_id && deviceIdSet.has(a.device_id));
+    // From global store (Alert2 type) - real-time alerts
+    const storeFieldAlerts = storeAlerts
+      .filter((a) => a.field_id === field?.id || (a.device_id && deviceIdSet.has(a.device_id)))
+      .filter((a) => a.status === 'active' || a.status === 'acknowledged')
+      .map((a) => ({
+        id: a.id,
+        device_id: a.device_id,
+        device_name: a.device_name,
+        rule_name: a.rule_name,
+        message: a.title,
+        severity: a.severity === 'critical' ? 'critical' as const : a.severity === 'high' ? 'warning' as const : 'info' as const,
+        status: a.status === 'acknowledged' ? 'acknowledged' as const : 'triggered' as const,
+        triggered_at: a.triggered_at,
+      } satisfies Alert));
+    // Merge, dedup by id
+    const merged = new Map<number, Alert>();
+    for (const a of [...apiAlerts, ...storeFieldAlerts]) {
+      merged.set(a.id, a);
+    }
+    return Array.from(merged.values()).sort(
+      (a, b) => new Date(b.triggered_at).getTime() - new Date(a.triggered_at).getTime()
+    );
+  }, [alerts, storeAlerts, deviceIdSet, field?.id]);
 
   const lastEventForZone = useMemo(() => {
     const map = new Map<number, IrrigationEvent>();
@@ -425,7 +452,10 @@ export default function FieldDetail() {
       {/* Active Alerts */}
       {fieldAlerts.length > 0 && (
         <div className="rounded-lg border border-border-default bg-surface-card p-4">
-          <h3 className="text-sm font-semibold text-text-primary mb-3">{t('fields.activeAlerts', { count: fieldAlerts.length })}</h3>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold text-text-primary">{t('fields.activeAlerts', { count: fieldAlerts.length })}</h3>
+            <button onClick={() => navigate('/alerts')} className="text-xs text-accent hover:underline font-medium">{t('common.viewAll')}</button>
+          </div>
           <div className="space-y-2">
             {fieldAlerts.slice(0, 5).map(a => (
               <div key={a.id} className="flex items-start gap-3 px-3 py-2 rounded-lg bg-surface-hover/50 text-sm">
@@ -433,9 +463,34 @@ export default function FieldDetail() {
                   {a.severity === 'critical' ? '🔴' : a.severity === 'warning' ? '⚠️' : 'ℹ️'}
                 </span>
                 <div className="flex-1 min-w-0">
-                  <div className="text-text-primary truncate">{a.message}</div>
-                  <div className="text-[10px] text-text-muted">{a.device_name || a.device_id} · {timeAgo(a.triggered_at, t)}</div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-text-primary truncate">{a.message}</span>
+                    <span className={cn(
+                      'text-[10px] font-medium px-1.5 py-0.5 rounded shrink-0',
+                      a.status === 'triggered' ? 'bg-critical/10 text-critical' : a.status === 'acknowledged' ? 'bg-warning/10 text-warning' : 'bg-success/10 text-success'
+                    )}>
+                      {a.status === 'triggered' ? t('alerts.active') : a.status === 'acknowledged' ? t('alerts.acknowledged') : t('alerts.resolved')}
+                    </span>
+                  </div>
+                  <div className="text-[10px] text-text-muted mt-0.5">{a.device_name || a.device_id} · {timeAgo(a.triggered_at, t)}</div>
                 </div>
+                <button
+                  onClick={async () => {
+                    setAcknowledgingId(a.id);
+                    const res = await acknowledgeAlert(a.id);
+                    if (res.success) {
+                      removeAlert(a.id);
+                      toast('success', t('alerts.alertAcknowledged'));
+                    } else {
+                      toast('error', t('alerts.acknowledgeError'));
+                    }
+                    setAcknowledgingId(null);
+                  }}
+                  disabled={acknowledgingId === a.id}
+                  className="text-xs text-text-muted hover:text-text-primary font-medium shrink-0 disabled:opacity-50"
+                >
+                  {acknowledgingId === a.id ? '...' : t('alerts.acknowledge')}
+                </button>
               </div>
             ))}
           </div>

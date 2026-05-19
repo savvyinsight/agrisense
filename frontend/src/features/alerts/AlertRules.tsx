@@ -27,7 +27,7 @@ const conditions = [
 
 const emptyRule = {
   name: '', device_id: null as number | null, field_id: null as number | null,
-  sensor_type_id: 1, condition: '>', threshold_value: '', threshold_max: '',
+  sensor_type_id: 1, condition: '>', threshold_value: '', threshold_max: '' as string | null,
   duration_seconds: 300, severity: 'warning' as 'info' | 'warning' | 'critical', enabled: true,
 };
 
@@ -69,11 +69,11 @@ export default function AlertRules() {
     setForm({
       name: rule.name,
       device_id: rule.device_id,
-      field_id: (rule as any).field_id ?? null,
+      field_id: rule.field_id ?? null,
       sensor_type_id: rule.sensor_type_id,
       condition: rule.condition,
       threshold_value: String(rule.threshold_value ?? ''),
-      threshold_max: '',
+      threshold_max: rule.threshold_max != null ? String(rule.threshold_max) : null,
       duration_seconds: rule.duration_seconds,
       severity: rule.severity,
       enabled: rule.enabled,
@@ -234,7 +234,7 @@ export default function AlertRules() {
         {form.condition === 'between' && (
           <div>
             <label className="block text-xs font-medium text-text-secondary mb-1.5">{t('alertRules.thresholdMax')}</label>
-            <input type="number" value={form.threshold_max} onChange={(e) => setForm({ ...form, threshold_max: e.target.value })} className="w-full px-3 py-2 rounded-lg bg-surface-base border border-border-default text-text-primary text-sm focus:outline-none focus:border-accent" />
+            <input type="number" value={form.threshold_max ?? ''} onChange={(e) => setForm({ ...form, threshold_max: e.target.value })} className="w-full px-3 py-2 rounded-lg bg-surface-base border border-border-default text-text-primary text-sm focus:outline-none focus:border-accent" />
           </div>
         )}
         <div>

@@ -9,6 +9,7 @@ import (
 	"github.com/savvyinsight/agrisense/internal/device"
 	"github.com/savvyinsight/agrisense/internal/field"
 	"github.com/savvyinsight/agrisense/internal/sensor"
+	"github.com/savvyinsight/agrisense/internal/websocket"
 )
 
 type Engine struct {
@@ -167,6 +168,10 @@ func (e *Engine) triggerAlert(rule *alert.AlertRule, data *sensor.SensorData) {
 	alertRecord := &alert.Alert{
 		RuleID:      rule.ID,
 		DeviceID:    dev.ID,
+		DeviceIDStr: data.DeviceID,
+		DeviceName:  dev.Name,
+		RuleName:    rule.Name,
+		FieldID:     dev.FieldID,
 		SensorValue: data.Value,
 		Message:     e.evaluator.FormatMessage(rule, data),
 		Severity:    rule.Severity,
@@ -193,7 +198,16 @@ func (e *Engine) triggerAlert(rule *alert.AlertRule, data *sensor.SensorData) {
 		}
 	}
 
-	// TODO: Send WebSocket notification
+	// Broadcast via WebSocket to the device's user
+	if dev.UserID != nil && *dev.UserID > 0 {
+		wsMsg := map[string]interface{}{
+			"type":    "alert_triggered",
+			"payload": alertRecord,
+		}
+		wsHub := websocket.GetHub()
+		wsHub.BroadcastToUser(*dev.UserID, wsMsg)
+	}
+
 	// TODO: Send email notification
 }
 
@@ -205,6 +219,10 @@ func (e *Engine) updateFieldHealth(fieldID int) error {
 
 	health := field.FieldHealthHealthy
 	for _, a := range activeAlerts {
+		// Only triggered alerts affect field health — acknowledged means handled
+		if a.Status != alert.AlertStatusTriggered {
+			continue
+		}
 		if a.Severity == alert.SeverityCritical {
 			health = field.FieldHealthCritical
 			break

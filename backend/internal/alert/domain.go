@@ -45,7 +45,11 @@ type AlertRule struct {
 type Alert struct {
 	ID             int                    `json:"id"`
 	RuleID         int                    `json:"rule_id"`
-	DeviceID       int                    `json:"device_id"`
+	DeviceID       int                    `json:"-"`                              // internal DB id, not sent to frontend
+	DeviceIDStr    string                 `json:"device_id"`                      // hardware device_id string
+	DeviceName     string                 `json:"device_name,omitempty"`
+	RuleName       string                 `json:"rule_name,omitempty"`
+	FieldID        *int                   `json:"field_id,omitempty"`
 	SensorValue    float64                `json:"sensor_value"`
 	Message        string                 `json:"message"`
 	Severity       AlertSeverity          `json:"severity"`
@@ -77,5 +81,6 @@ type AlertRepository interface {
 	GetActiveAlertsByField(fieldID int) ([]Alert, error)
 	Acknowledge(id int) error
 	Resolve(id int) error
+	ResolveByRuleID(ruleID int) ([]int, error)
 	List(limit, offset int) ([]Alert, int64, error)
 }

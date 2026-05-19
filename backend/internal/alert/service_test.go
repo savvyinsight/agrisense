@@ -60,6 +60,11 @@ func (m *mockAlertRepo) Resolve(id int) error {
 	return m.Called(id).Error(0)
 }
 
+func (m *mockAlertRepo) ResolveByRuleID(ruleID int) ([]int, error) {
+	args := m.Called(ruleID)
+	return args.Get(0).([]int), args.Error(1)
+}
+
 func (m *mockAlertRepo) List(limit, offset int) ([]Alert, int64, error) {
 	args := m.Called(limit, offset)
 	return args.Get(0).([]Alert), args.Get(1).(int64), args.Error(2)

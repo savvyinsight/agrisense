@@ -147,6 +147,7 @@ export interface AlertRule {
   sensor_type_id: number;
   condition: string;
   threshold_value: number | string;
+  threshold_max?: number | string | null;
   duration_seconds: number;
   severity: 'info' | 'warning' | 'critical';
   enabled: boolean;

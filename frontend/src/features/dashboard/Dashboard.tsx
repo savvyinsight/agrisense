@@ -10,13 +10,24 @@ import { FieldCard } from '@/shared/components/FieldCard';
 import { FarmMap } from '@/shared/components/FarmMap';
 import { TrendChart, generateTrendData } from '@/shared/components/TrendChart';
 import { getDevices, getDevicesDataLatest } from '@/features/devices/api';
-import { getActiveAlerts, acknowledgeAlert, getAlertRules } from '@/features/alerts/api';
-import { enrichAlert } from '@/features/alerts/enrichAlert';
+import { getActiveAlerts, acknowledgeAlert } from '@/features/alerts/api';
 import { getZones, startZone, stopZone, type IrrigationZone } from '@/features/irrigation/api';
 import { toast } from '@/shared/components/Toast';
 import { getFields } from '@/features/fields/api';
-import type { Field, Alert2, WebSocketMessage, SensorDataMessage, Device, AlertRule } from '@/shared/types';
+import type { Field, Alert2, WebSocketMessage, Device } from '@/shared/types';
 import { cn } from '@/shared/lib/cn';
+
+function mapSeverity(s: string): Alert2['severity'] {
+  if (s === 'critical') return 'critical';
+  if (s === 'warning' || s === 'high') return 'high';
+  return 'medium';
+}
+
+function mapStatus(s: string): Alert2['status'] {
+  if (s === 'acknowledged') return 'acknowledged';
+  if (s === 'resolved') return 'resolved';
+  return 'active';
+}
 
 export default function Dashboard() {
   const { t } = useTranslation();
@@ -26,68 +37,30 @@ export default function Dashboard() {
   const token = useAuthStore((s) => s.token);
   const [devices, setDevices] = useState<Device[]>([]);
   const [fields, setFields] = useState<Field[]>([]);
-  const [alertRules, setAlertRules] = useState<AlertRule[]>([]);
   const [totalWater, setTotalWater] = useState(0);
   const [zones, setZones] = useState<IrrigationZone[]>([]);
   const [irrigationActionId, setIrrigationActionId] = useState<number | null>(null);
 
+  // Handle WebSocket messages — backend rule engine now broadcasts alert_triggered
   const handleWsMessage = (data: WebSocketMessage) => {
-    const fieldContextMap = fields.reduce((map, f) => {
-      map[f.id] = { field_id: f.id, field_name: f.name, crop: f.crop };
-      return map;
-    }, {} as Record<number, any>);
-
     switch (data.type) {
-      case 'sensor_data': {
-        const p = (data as SensorDataMessage).payload as { device_id: string; sensor_type: string; value: number; timestamp: string };
-        const device = devices.find((d) => d.device_id === p.device_id);
-        const fieldCtx = device?.field_id ? fieldContextMap[device.field_id] : undefined;
-        
-        if (p.sensor_type === 'temperature' && p.value > 30) {
-          const rawAlert: Partial<Alert2> = {
-            device_id: p.device_id,
-            device_name: device?.name,
-            title: `${p.value.toFixed(1)}°C — Temperature high`,
-            severity: p.value > 35 ? 'critical' : 'high',
-            triggered_at: p.timestamp,
-          };
-          addAlert(enrichAlert(rawAlert, alertRules, fieldCtx));
-        } else if (p.sensor_type === 'moisture' && p.value < 30) {
-          const rawAlert: Partial<Alert2> = {
-            device_id: p.device_id,
-            device_name: device?.name,
-            title: `${p.value.toFixed(0)}% — Soil moisture low`,
-            severity: p.value < 20 ? 'critical' : 'high',
-            triggered_at: p.timestamp,
-          };
-          addAlert(enrichAlert(rawAlert, alertRules, fieldCtx));
-        }
-        break;
-      }
-      case 'zone_update': {
-        const zones = (data as any).payload as { id: number; field_id: number; moisture: number; status: string };
-        if (zones.moisture < 30) {
-          const fieldCtx = fieldContextMap[zones.field_id];
-          const rawAlert: Partial<Alert2> = {
-            device_id: `zone_${zones.id}`,
-            title: `Zone moisture critically low (${zones.moisture}%)`,
-            severity: 'high',
-            triggered_at: new Date().toISOString(),
-          };
-          addAlert(enrichAlert(rawAlert, alertRules, fieldCtx));
-        }
-        break;
-      }
       case 'alert_triggered': {
-        const alert = (data as any).payload as { field_id?: number; device_id?: string; severity: string; message: string };
-        const fieldCtx = alert.field_id ? fieldContextMap[alert.field_id] : undefined;
-        const rawAlert: Partial<Alert2> = {
-          device_id: alert.device_id || `alert_${Date.now()}`,
-          title: alert.message,
-          severity: (alert.severity === 'critical' || alert.severity === 'high') ? alert.severity : 'medium',
-          triggered_at: new Date().toISOString(),
+        const p = data.payload as Record<string, unknown>;
+        const newAlert: Alert2 = {
+          id: (p.id as number) || Date.now(),
+          device_id: (p.device_id as string) || '',
+          device_name: p.device_name as string | undefined,
+          rule_name: p.rule_name as string | undefined,
+          field_id: p.field_id as number | undefined,
+          title: (p.message as string) || 'Alert triggered',
+          message: (p.message as string) || '',
+          severity: mapSeverity(p.severity as string),
+          status: mapStatus(p.status as string),
+          triggered_at: (p.triggered_at as string) || new Date().toISOString(),
+          recommended_action: p.severity === 'critical' ? 'Inspect immediately' : 'Monitor situation',
+          confidence: p.severity === 'critical' ? 95 : 85,
         };
-        addAlert(enrichAlert(rawAlert, alertRules, fieldCtx));
+        addAlert(newAlert);
         break;
       }
       case 'device_connected': {
@@ -97,16 +70,17 @@ export default function Dashboard() {
       }
       case 'device_disconnected': {
         const device = (data as any).payload as { device_id: string; name?: string };
-        const fieldCtx = devices.find((d) => d.device_id === device.device_id)?.field_id 
-          ? fieldContextMap[devices.find((d) => d.device_id === device.device_id)!.field_id!] 
-          : undefined;
         const rawAlert: Partial<Alert2> = {
+          id: Date.now(),
           device_id: device.device_id,
+          device_name: device.name,
           title: `Device offline: ${device.name || device.device_id}`,
           severity: 'high',
+          status: 'active',
           triggered_at: new Date().toISOString(),
+          recommended_action: 'Check device connectivity',
         };
-        addAlert(enrichAlert(rawAlert, alertRules, fieldCtx));
+        addAlert(rawAlert as Alert2);
         break;
       }
     }
@@ -116,11 +90,10 @@ export default function Dashboard() {
 
   useEffect(() => {
     (async () => {
-      const [deviceRes, alertRes, fieldRes, rulesRes] = await Promise.all([
-        getDevices(), 
-        getActiveAlerts(), 
+      const [deviceRes, alertRes, fieldRes] = await Promise.all([
+        getDevices(),
+        getActiveAlerts(),
         getFields(),
-        getAlertRules(),
       ]);
       if (deviceRes.success && deviceRes.data) {
         setDevices(deviceRes.data.devices || []);
@@ -129,16 +102,19 @@ export default function Dashboard() {
       }
       if (alertRes.success && alertRes.data) {
         setAlerts((alertRes.data.alerts || []).map((a) => ({
-          id: a.id, device_id: a.device_id, device_name: a.device_name,
-          title: a.message, message: '',
-          severity: a.severity === 'critical' ? 'critical' : a.severity === 'warning' ? 'high' : 'medium',
-          status: a.status === 'acknowledged' ? 'acknowledged' : a.status === 'resolved' ? 'resolved' : 'active',
-          triggered_at: a.triggered_at, confidence: 85,
+          id: a.id,
+          device_id: a.device_id,
+          device_name: a.device_name,
+          title: a.message,
+          message: '',
+          severity: mapSeverity(a.severity),
+          status: mapStatus(a.status),
+          triggered_at: a.triggered_at,
+          confidence: 85,
           recommended_action: a.severity === 'critical' ? 'Inspect immediately' : 'Monitor situation',
         })));
       }
       if (fieldRes.success && fieldRes.data) setFields(fieldRes.data);
-      if (rulesRes.success && rulesRes.data) setAlertRules(rulesRes.data.rules || []);
 
       const zoneRes = await getZones();
       if (zoneRes.success && zoneRes.data) {
@@ -176,8 +152,11 @@ export default function Dashboard() {
 
   const handleAcknowledge = async (id: number) => {
     const res = await acknowledgeAlert(id);
-    if (res.success) { setAlerts(alerts.filter((a) => a.id !== id)); toast('success', t('alerts.alertAcknowledged')); }
-    else toast('error', t('alerts.acknowledgeError'));
+    if (res.success) {
+      const { removeAlert } = useAlertsStore.getState();
+      removeAlert(id);
+      toast('success', t('alerts.alertAcknowledged'));
+    } else toast('error', t('alerts.acknowledgeError'));
   };
 
   const handleZoneAction = async (zoneId: number, action: () => Promise<any>, successMsg: string, errorMsg: string) => {
@@ -202,7 +181,10 @@ export default function Dashboard() {
   const highActive = alerts.filter((a) => a.status === 'active' && a.severity === 'high');
   const mediumActive = alerts.filter((a) => a.status === 'active' && a.severity === 'medium');
   const onlineCount = devices.filter((d) => d.status === 'online').length;
-  const healthPct = devices.length > 0 ? Math.round((onlineCount / devices.length) * 100) : 0;
+  const healthyFieldCount = fields.filter((f) => f.health === 'healthy').length;
+  const warningFieldCount = fields.filter((f) => f.health === 'warning').length;
+  const criticalFieldCount = fields.filter((f) => f.health === 'critical').length;
+  const healthPct = fields.length > 0 ? Math.round((healthyFieldCount / fields.length) * 100) : 0;
   const fieldsNeedingAttention = fields.filter((f) => f.health !== 'healthy');
   const totalActive = alerts.filter((a) => a.status === 'active').length;
   const moistureTrend = useMemo(() => generateTrendData(7, 48, 15, { secondary: { base: 32, variance: 8 } }), []);
@@ -231,7 +213,7 @@ export default function Dashboard() {
 
       {/* ─── TIER 2: Status bar ─── */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3">
-        <StatusCard label={t('dashboard.farmHealth')} value={`${healthPct}%`} status={healthPct === 100 ? 'healthy' : healthPct > 0 ? 'warning' : 'critical'} icon="🌾" subtitle={isConnected ? t('dashboard.live') : t('dashboard.offline')} />
+        <StatusCard label={t('dashboard.farmHealth')} value={`${healthPct}%`} status={criticalFieldCount > 0 ? 'critical' : warningFieldCount > 0 ? 'warning' : 'healthy'} icon="🌾" subtitle={`${healthyFieldCount}/${fields.length} ${t('common.healthy').toLowerCase()}`} />
         <StatusCard label={t('dashboard.criticalAlerts')} value={criticalCount} status={criticalCount > 0 ? 'critical' : 'healthy'} icon="⚡" subtitle={criticalCount > 0 ? t('dashboard.requiresAttention') : t('dashboard.allClear')} onClick={() => navigate('/alerts')} />
         <StatusCard label={t('dashboard.waterUsage')} value={`${(totalWater / 1000).toFixed(1)}k L`} status="info" icon="💧" subtitle={t('dashboard.today')} onClick={() => navigate('/irrigation')} />
         <StatusCard label={t('dashboard.connectivity')} value={`${onlineCount}/${devices.length}`} status={devices.length > 0 && onlineCount === devices.length ? 'healthy' : 'warning'} icon="📡" subtitle={isConnected ? t('dashboard.systemOnline') : t('dashboard.disconnected')} />
@@ -367,12 +349,10 @@ export default function Dashboard() {
             </button>
           </div>
 
-          {/* Irrigation Status Grid - Mobile responsive (1 col mobile, 2 col tablet, 3 col desktop) */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
             {zones.map((zone) => {
               const moisturePct = Math.round((zone.moisture / zone.target_moisture) * 100);
               
-              // Status indicator color: green (optimal), yellow (warning), red (critical)
               let statusColor = 'text-success';
               let statusBg = 'bg-success-bg';
               let statusBorder = 'border-l-success';
@@ -382,12 +362,10 @@ export default function Dashboard() {
                 statusBg = 'bg-critical-bg';
                 statusBorder = 'border-l-critical';
               } else if (moisturePct < 40) {
-                // Critical moisture
                 statusColor = 'text-critical';
                 statusBg = 'bg-critical-bg';
                 statusBorder = 'border-l-critical';
               } else if (moisturePct < 60) {
-                // Warning moisture
                 statusColor = 'text-warning';
                 statusBg = 'bg-warning-bg';
                 statusBorder = 'border-l-warning';
@@ -411,7 +389,6 @@ export default function Dashboard() {
                     'bg-surface-card'
                   )}
                 >
-                  {/* Zone Header */}
                   <div className="flex items-start justify-between mb-3">
                     <div>
                       <h3 className="text-sm font-semibold text-text-primary">{zone.name}</h3>
@@ -433,7 +410,6 @@ export default function Dashboard() {
                     />
                   </div>
 
-                  {/* Moisture Display */}
                   <div className="mb-3">
                     <div className="flex justify-between text-xs text-text-secondary mb-1.5">
                       <span className="font-medium">
@@ -444,7 +420,6 @@ export default function Dashboard() {
                       </span>
                       <span className="text-text-muted">Target</span>
                     </div>
-                    {/* Moisture progress bar */}
                     <div className="h-2 bg-surface-elevated rounded-full overflow-hidden">
                       <div
                         className={cn('h-full rounded-full transition-all', statusColor === 'text-success' ? 'bg-success' : statusColor === 'text-warning' ? 'bg-warning' : 'bg-critical')}
@@ -453,7 +428,6 @@ export default function Dashboard() {
                     </div>
                   </div>
 
-                  {/* Zone Details */}
                   <div className="grid grid-cols-2 gap-2 text-xs text-text-muted mb-3 pb-3 border-b border-border-default">
                     <div>
                       <span className="block text-text-secondary font-medium">{t('common.runtime')}</span>
@@ -465,7 +439,6 @@ export default function Dashboard() {
                     </div>
                   </div>
 
-                  {/* Action Buttons */}
                   <div className="grid grid-cols-2 gap-2">
                     {isAdmin() && zone.status !== 'active' && zone.status !== 'failed' && (
                       <button

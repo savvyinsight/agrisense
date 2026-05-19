@@ -408,6 +408,34 @@ func (r *PostgresAlertRepository) Resolve(id int) error {
 	return err
 }
 
+func (r *PostgresAlertRepository) ResolveByRuleID(ruleID int) ([]int, error) {
+	query := `
+		UPDATE alerts
+		SET status = $1, resolved_at = $2
+		WHERE rule_id = $3 AND status IN ('triggered', 'acknowledged')
+		RETURNING device_id
+	`
+	rows, err := r.DB.Query(query, AlertStatusResolved, time.Now(), ruleID)
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		if err := rows.Close(); err != nil {
+			_ = err
+		}
+	}()
+
+	deviceIDs := make([]int, 0)
+	for rows.Next() {
+		var devID int
+		if err := rows.Scan(&devID); err != nil {
+			return nil, err
+		}
+		deviceIDs = append(deviceIDs, devID)
+	}
+	return deviceIDs, nil
+}
+
 func (r *PostgresAlertRepository) List(limit, offset int) ([]Alert, int64, error) {
 	query := `
         SELECT id, rule_id, device_id, sensor_value, message, severity, 

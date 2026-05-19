@@ -19,7 +19,7 @@ export function enrichAlert(
   let recommendedAction = rawAlert.recommended_action || 'Monitor situation';
 
   if (rule) {
-    severity = (rule.severity === 'critical') ? (rule.severity as any) : 'medium';
+    severity = rule.severity === 'critical' ? 'critical' : rule.severity === 'warning' ? 'high' : 'medium';
     
     // Generate context-aware recommendations
     if (rule.sensor_type_id === 1) { // Temperature sensor
