@@ -17,3 +17,4 @@ frontend/node_modules/
 # Environment (keep example files only)
 .env
 .env.local
+.env.prod

@@ -1,6 +1,6 @@
 .PHONY: dev dev-backend dev-frontend build build-frontend build-backend \
         docker-up docker-down logs migrate test test-backend test-frontend lint frontend-lint \
-        backend-lint tidy help
+        backend-lint tidy deploy deploy-check help
 
 # ─── Development ─────────────────────────────────────────────────────────
 
@@ -64,6 +64,30 @@ backend-lint:                       ## Run golangci-lint
 
 frontend-lint:                      ## Run ESLint
 	cd frontend && npm run lint
+
+# ─── Deployment ────────────────────────────────────────────────────────────
+
+deploy-check:                          ## Verify production environment
+	@echo "Checking prerequisites..."
+	@command -v docker >/dev/null 2>&1 || { echo "ERROR: docker is required"; exit 1; }
+	@test -f .env || { echo "ERROR: .env file not found (copy .env.prod.example to .env)"; exit 1; }
+	@echo "✓ docker found"
+	@echo "✓ .env file found"
+	@echo "All checks passed."
+
+deploy: deploy-check                   ## Build and deploy to production
+	docker compose -f docker-compose.prod.yml build --pull
+	docker compose -f docker-compose.prod.yml up -d --remove-orphans
+	@echo "Deployment complete. Check status with: docker compose -f docker-compose.prod.yml ps"
+
+deploy-logs:                           ## View production logs
+	docker compose -f docker-compose.prod.yml logs -f
+
+deploy-down:                           ## Stop production services
+	docker compose -f docker-compose.prod.yml down
+
+deploy-ps:                             ## Show production service status
+	docker compose -f docker-compose.prod.yml ps
 
 # ─── Utilities ────────────────────────────────────────────────────────────
 

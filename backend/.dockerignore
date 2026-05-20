@@ -1,0 +1,9 @@
+.git
+.gitignore
+*.md
+bin/
+tmp/
+coverage.out
+simulator.log
+.env
+.env.local

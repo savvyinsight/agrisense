@@ -8,10 +8,10 @@ RUN go env -w GOPROXY=https://goproxy.cn,direct
 RUN go mod download
 
 COPY . .
-RUN CGO_ENABLED=0 GOOS=linux go build -o mqtt-handler ./cmd/mqtt-handler
+RUN CGO_ENABLED=0 GOOS=linux go build -o agrisense ./cmd/agrisense
 
 FROM alpine:latest
 RUN apk --no-cache add ca-certificates
 WORKDIR /root/
-COPY --from=builder /app/mqtt-handler .
-CMD ["./mqtt-handler"]
+COPY --from=builder /app/agrisense .
+CMD ["./agrisense"]
