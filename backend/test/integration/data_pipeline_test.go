@@ -11,6 +11,7 @@ import (
 	"github.com/savvyinsight/agrisense/internal/alert"
 	"github.com/savvyinsight/agrisense/internal/data"
 	"github.com/savvyinsight/agrisense/internal/device"
+	"github.com/savvyinsight/agrisense/internal/field"
 	"github.com/savvyinsight/agrisense/internal/infra/redis"
 	"github.com/savvyinsight/agrisense/internal/ruleengine"
 	"github.com/savvyinsight/agrisense/internal/sensor"
@@ -26,6 +27,7 @@ func TestDataPipeline(t *testing.T) {
 	sensorTypeRepo := &sensor.PostgresSensorTypeRepository{DB: testDB}
 	cacheRepo := redis.NewCacheRepository(testRedis)
 	userRepo := &user.PostgresUserRepository{DB: testDB}
+	fieldRepo := &field.PostgresFieldRepository{DB: testDB}
 
 	// Create InfluxDB repository
 	influxConfig := sensor.Config{
@@ -45,6 +47,7 @@ func TestDataPipeline(t *testing.T) {
 		&alert.PostgresAlertRuleRepository{DB: testDB},
 		&alert.PostgresAlertRepository{DB: testDB},
 		deviceRepo,
+		fieldRepo,
 	)
 	if err := ruleEngine.Start(); err != nil {
 		t.Fatalf("Failed to start rule engine: %v", err)
@@ -58,6 +61,7 @@ func TestDataPipeline(t *testing.T) {
 		cacheRepo,
 		influxRepo,
 		ruleEngine,
+		fieldRepo,
 	)
 
 	// Ensure test user exists
@@ -85,7 +89,7 @@ func TestDataPipeline(t *testing.T) {
 			Name:     "Test Device",
 			Type:     device.DeviceTypeSensor,
 			Status:   device.DeviceStatusOnline,
-			UserID:   existingUser.ID,
+			UserID:   &existingUser.ID,
 		}
 		err = deviceRepo.Create(testDevice)
 		if err != nil {

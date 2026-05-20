@@ -16,6 +16,7 @@ import (
 	"github.com/savvyinsight/agrisense/internal/alert"
 	"github.com/savvyinsight/agrisense/internal/data"
 	"github.com/savvyinsight/agrisense/internal/device"
+	"github.com/savvyinsight/agrisense/internal/field"
 	"github.com/savvyinsight/agrisense/internal/infra/redis"
 	"github.com/savvyinsight/agrisense/internal/ruleengine"
 	"github.com/savvyinsight/agrisense/internal/sensor"
@@ -44,6 +45,10 @@ func setupAPIRouter(t *testing.T) (*gin.Engine, *data.Service) {
 	deviceRepo := &device.PostgresDeviceRepository{DB: testDB}
 	sensorTypeRepo := &sensor.PostgresSensorTypeRepository{DB: testDB}
 	cacheRepo := redis.NewCacheRepository(testRedis)
+	fieldRepo := &field.PostgresFieldRepository{DB: testDB}
+	accountRepo := &user.PostgresAccountRepository{DB: testDB}
+	permissionRepo := &user.PostgresPermissionRepository{DB: testDB}
+	invitationRepo := &user.PostgresInvitationRepository{DB: testDB}
 
 	influxRepo, err := sensor.NewRepository(sensor.Config{
 		URL:    testInfluxURL,
@@ -60,6 +65,7 @@ func setupAPIRouter(t *testing.T) (*gin.Engine, *data.Service) {
 		&alert.PostgresAlertRuleRepository{DB: testDB},
 		&alert.PostgresAlertRepository{DB: testDB},
 		deviceRepo,
+		fieldRepo,
 	)
 	require.NoError(t, ruleEngine.Start())
 	t.Cleanup(func() {
@@ -72,9 +78,10 @@ func setupAPIRouter(t *testing.T) (*gin.Engine, *data.Service) {
 		cacheRepo,
 		influxRepo,
 		ruleEngine,
+		fieldRepo,
 	)
 
-	authService := user.NewService(userRepo, "test-secret", time.Hour)
+	authService := user.NewService(userRepo, accountRepo, permissionRepo, invitationRepo, "test-secret", time.Hour)
 	authHandler := user.NewAuthHandler(authService)
 	deviceHandler := device.NewDeviceHandler(deviceRepo)
 	dataHandler := data.NewDataHandler(dataService, deviceRepo)

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/testcontainers/testcontainers-go"
+	"github.com/testcontainers/testcontainers-go/wait"
 )
 
 func setupInfluxDBContainer(t *testing.T) (*Repository, func()) {
@@ -26,12 +27,11 @@ func setupInfluxDBContainer(t *testing.T) (*Repository, func()) {
 			"DOCKER_INFLUXDB_INIT_BUCKET":      "testdb",
 			"DOCKER_INFLUXDB_INIT_ADMIN_TOKEN": "test-token",
 		},
-		// WaitingFor: testcontainers.WithWaitStrategy(
-		// 	testcontainers.WaitForHTTP("/health").
-		// 		WithPort("8086/tcp").
-		// 		WithStatusCodeMatcher(func(status int) bool {
-		// 			return status == 200
-		// 		})),
+		WaitingFor: wait.ForHTTP("/health").
+			WithPort("8086/tcp").
+			WithStatusCodeMatcher(func(status int) bool {
+				return status == 200
+			}),
 	}
 
 	influxContainer, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{

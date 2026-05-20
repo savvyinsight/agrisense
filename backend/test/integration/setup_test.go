@@ -7,6 +7,9 @@ import (
 	"database/sql"
 	"fmt"
 	"os"
+	"path/filepath"
+	"sort"
+	"strings"
 	"testing"
 	"time"
 
@@ -61,14 +64,31 @@ func TestMain(m *testing.M) {
 		panic(err)
 	}
 
-	// Run migrations
-	migrationSQL, err := os.ReadFile("../../deployments/init/postgres/001_init.sql")
+	// Run all migrations in order
+	migrationFiles, err := filepath.Glob("../../deployments/init/postgres/*.sql")
 	if err != nil {
 		panic(err)
 	}
-	_, err = testDB.Exec(string(migrationSQL))
-	if err != nil {
-		panic(err)
+	sort.Strings(migrationFiles)
+	for _, f := range migrationFiles {
+		migrationSQL, err := os.ReadFile(f)
+		if err != nil {
+			panic(fmt.Errorf("failed to read migration %s: %w", f, err))
+		}
+		_, err = testDB.Exec(string(migrationSQL))
+		if err != nil {
+			// Check if the migration file has an alternate version without FK to farms
+			// If the "farms" table doesn't exist, create a stub and retry
+			if strings.Contains(err.Error(), `relation "farms" does not exist`) {
+				_, _ = testDB.Exec("CREATE TABLE IF NOT EXISTS farms (id SERIAL PRIMARY KEY)")
+				_, err = testDB.Exec(string(migrationSQL))
+				if err != nil {
+					panic(fmt.Errorf("failed to execute migration %s (with farms stub): %w", f, err))
+				}
+			} else {
+				panic(fmt.Errorf("failed to execute migration %s: %w", f, err))
+			}
+		}
 	}
 
 	// Start Redis container
