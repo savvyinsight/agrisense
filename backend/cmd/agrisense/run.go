@@ -142,7 +142,7 @@ func runServer(cliCtx *cli.Context) error {
 
 	// Automation service
 	automationService := automation.NewService(
-		automation.PostgresAutomationRuleRepository{DB: pgDB},
+		&automation.PostgresAutomationRuleRepository{DB: pgDB},
 		deviceRepo, controlService,
 	)
 	if err := automationService.Start(); err != nil {

@@ -97,6 +97,13 @@ func (s *Service) ProcessTelemetry(deviceID string, payload []byte) error {
 		}
 	}
 
+	// Evaluate each sensor reading against automation rules
+	if s.automationSvc != nil {
+		for _, reading := range sensorData {
+			s.automationSvc.EvaluateSensorRule(&reading)
+		}
+	}
+
 	return nil
 }
 

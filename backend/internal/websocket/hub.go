@@ -91,7 +91,7 @@ func (h *Hub) BroadcastToUser(userID int, data interface{}) {
 	}
 
 	h.mu.RLock()
-	defer h.mu.Unlock()
+	defer h.mu.RUnlock()
 
 	for client := range h.clients {
 		if client.userID == userID {

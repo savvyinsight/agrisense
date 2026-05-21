@@ -3,19 +3,24 @@ package automation
 import (
 	"fmt"
 	"log"
-	"strings"
+	"sync"
 	"time"
 
+	"github.com/robfig/cron/v3"
 	"github.com/savvyinsight/agrisense/internal/control"
 	"github.com/savvyinsight/agrisense/internal/device"
 	"github.com/savvyinsight/agrisense/internal/sensor"
+	"github.com/savvyinsight/agrisense/internal/websocket"
 )
 
 type Service struct {
-	automationRepo PostgresAutomationRuleRepository
+	automationRepo AutomationRuleRepository
 	deviceRepo     device.DeviceRepository
 	commandService CommandExecutor
 	scheduler      *Scheduler
+
+	mu           sync.Mutex
+	lastExecuted map[int]time.Time
 }
 
 type CommandExecutor interface {
@@ -23,12 +28,13 @@ type CommandExecutor interface {
 }
 
 type Scheduler struct {
-	rules    map[int]*AutomationRule
-	stopChan chan struct{}
+	rules       map[int]*AutomationRule
+	stopChan    chan struct{}
+	executeFunc func(rule *AutomationRule)
 }
 
 func NewService(
-	automationRepo PostgresAutomationRuleRepository,
+	automationRepo AutomationRuleRepository,
 	deviceRepo device.DeviceRepository,
 	commandExecutor CommandExecutor,
 ) *Service {
@@ -36,6 +42,7 @@ func NewService(
 		automationRepo: automationRepo,
 		deviceRepo:     deviceRepo,
 		commandService: commandExecutor,
+		lastExecuted:   make(map[int]time.Time),
 		scheduler:      &Scheduler{rules: make(map[int]*AutomationRule), stopChan: make(chan struct{})},
 	}
 }
@@ -49,6 +56,9 @@ func (s *Service) Start() error {
 	}
 
 	// Start scheduler for cron-based rules
+	s.scheduler.executeFunc = func(rule *AutomationRule) {
+		s.executeAutomationRule(rule, nil)
+	}
 	go s.scheduler.start()
 
 	return nil
@@ -182,8 +192,26 @@ func (s *Service) evaluateCondition(condition AutomationCondition, actualValue, 
 }
 
 func (s *Service) executeAutomationRule(rule *AutomationRule, triggerData *sensor.SensorData) {
-	log.Printf("Executing automation rule: %s (triggered by %s: %.2f)",
-		rule.Name, triggerData.SensorType, triggerData.Value)
+	// Dedup: skip if this rule was executed within the cooldown period
+	cooldown := time.Duration(rule.TriggerDurationSeconds) * time.Second
+	if cooldown == 0 {
+		cooldown = 5 * time.Minute
+	}
+	s.mu.Lock()
+	last, ok := s.lastExecuted[rule.ID]
+	if ok && time.Since(last) < cooldown {
+		s.mu.Unlock()
+		return
+	}
+	s.lastExecuted[rule.ID] = time.Now()
+	s.mu.Unlock()
+
+	if triggerData != nil {
+		log.Printf("Executing automation rule: %s (triggered by %s: %.2f)",
+			rule.Name, triggerData.SensorType, triggerData.Value)
+	} else {
+		log.Printf("Executing scheduled automation rule: %s", rule.Name)
+	}
 
 	// Execute the command
 	command, err := s.commandService.ExecuteCommand(
@@ -200,6 +228,24 @@ func (s *Service) executeAutomationRule(rule *AutomationRule, triggerData *senso
 
 	log.Printf("Automation command executed: %s on device %d (command ID: %d)",
 		rule.ActionCommand, rule.TargetDeviceID, command.ID)
+
+	// Broadcast via WebSocket to the rule owner
+	if rule.UserID > 0 {
+		wsMsg := map[string]interface{}{
+			"type": "automation_executed",
+			"payload": map[string]interface{}{
+				"rule_id":           rule.ID,
+				"rule_name":         rule.Name,
+				"target_device_id":  rule.TargetDeviceID,
+				"action_command":    rule.ActionCommand,
+				"action_parameters": rule.ActionParameters,
+				"command_id":        command.ID,
+				"trigger_type":      rule.TriggerType,
+			},
+		}
+		wsHub := websocket.GetHub()
+		wsHub.BroadcastToUser(rule.UserID, wsMsg)
+	}
 }
 
 func (s *Service) validateRule(rule *AutomationRule) error {
@@ -265,6 +311,9 @@ func (s *Scheduler) start() {
 	ticker := time.NewTicker(1 * time.Minute)
 	defer ticker.Stop()
 
+	// Run an immediate check on startup
+	s.checkScheduledRules()
+
 	for {
 		select {
 		case <-ticker.C:
@@ -288,25 +337,39 @@ func (s *Scheduler) checkScheduledRules() {
 			continue
 		}
 
-		// Simple cron parsing (for now, just check if it's time)
-		// TODO: Implement proper cron parsing
-		if s.isScheduledTime(*rule.ScheduleCron, now, rule.Timezone) {
-			log.Printf("Executing scheduled automation rule: %s", rule.Name)
-			// Note: We need access to the service to execute
-			// This is a simplified implementation
+		if !s.isScheduledTime(*rule.ScheduleCron, now, rule.Timezone) {
+			continue
+		}
+
+		log.Printf("Executing scheduled automation rule: %s", rule.Name)
+		if s.executeFunc != nil {
+			s.executeFunc(rule)
 		}
 	}
 }
 
 func (s *Scheduler) isScheduledTime(cronExpr string, now time.Time, timezone string) bool {
-	// Very basic implementation - check if current minute matches
-	// TODO: Implement proper cron parsing (consider using a cron library)
-	parts := strings.Split(cronExpr, " ")
-	if len(parts) < 5 {
+	parser := cron.NewParser(cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow)
+	schedule, err := parser.Parse(cronExpr)
+	if err != nil {
+		log.Printf("Failed to parse cron expression %q: %v", cronExpr, err)
 		return false
 	}
 
-	// For now, just return false to avoid executing scheduled rules
-	// This needs proper cron implementation
-	return false
+	loc := time.UTC
+	if timezone != "" {
+		if l, err := time.LoadLocation(timezone); err == nil {
+			loc = l
+		} else {
+			log.Printf("Invalid timezone %q for cron rule, using UTC", timezone)
+		}
+	}
+
+	nowInLoc := now.In(loc)
+	prev := schedule.Next(nowInLoc.Add(-2 * time.Minute))
+	next := schedule.Next(prev)
+
+	// Check if the current time falls within the execution window
+	// (within 1 minute of the scheduled time, matching our ticker interval)
+	return !next.After(nowInLoc) && nowInLoc.Sub(next) < time.Minute
 }
