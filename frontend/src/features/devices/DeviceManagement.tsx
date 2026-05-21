@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '@/shared/stores/authStore';
 import { DataTable } from '@/shared/components/DataTable';
@@ -8,6 +8,8 @@ import { getDevices, createDevice, updateDevice, deleteDevice, claimDevice, uncl
 import { getFields } from '@/features/fields/api';
 import type { Device } from '@/shared/types/api';
 import type { Field } from '@/shared/types';
+
+const PAGE_SIZES = [10, 20, 50];
 
 const generateDeviceId = () => {
   const d = new Date();
@@ -41,15 +43,36 @@ export default function DeviceManagement() {
   const [claimError, setClaimError] = useState('');
   const [claiming, setClaiming] = useState(false);
 
-  const load = async () => {
+  const [searchInput, setSearchInput] = useState('');
+  const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [limit, setLimit] = useState(20);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const totalPages = Math.max(1, Math.ceil(total / limit));
+
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      setSearch(searchInput);
+      setPage(1);
+    }, 300);
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+  }, [searchInput]);
+
+  const load = async (q: string, p: number, l: number) => {
     setLoading(true);
-    const [deviceRes, fieldRes] = await Promise.all([getDevices(), getFields()]);
-    if (deviceRes.success) setDevices(deviceRes.data?.devices || []);
+    const [deviceRes, fieldRes] = await Promise.all([getDevices(p, l, undefined, q || undefined), getFields()]);
+    if (deviceRes.success && deviceRes.data) {
+      setDevices(deviceRes.data.devices || []);
+      setTotal(deviceRes.data.total ?? 0);
+    }
     if (fieldRes.success && fieldRes.data) setFields(fieldRes.data);
     setLoading(false);
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(search, page, limit); }, [search, page, limit]);
 
   const openNew = () => { setEditId(null); setForm({ ...emptyForm, device_id: generateDeviceId() }); setOpen(true); };
   const openEdit = (d: Device) => {
@@ -67,7 +90,7 @@ export default function DeviceManagement() {
       config: { reporting_interval: Number(form.config.reporting_interval), temperature_unit: form.config.temperature_unit },
     };
     const res = editId ? await updateDevice(editId, payload) : await createDevice(payload);
-    if (res.success) { toast('success', editId ? t('devices.updated') : t('devices.created')); setOpen(false); load(); }
+    if (res.success) { toast('success', editId ? t('devices.updated') : t('devices.created')); setOpen(false); load(search, page, limit); }
     else setError(res.error || t('devices.failedToSave'));
   };
 
@@ -76,7 +99,7 @@ export default function DeviceManagement() {
   const executeRemove = async () => {
     if (!deleteTarget?.id) return;
     const res = await deleteDevice(deleteTarget.id);
-    if (res.success) { toast('success', t('devices.deleted')); setDeleteTarget(null); load(); }
+    if (res.success) { toast('success', t('devices.deleted')); setDeleteTarget(null); load(search, page, limit); }
   };
 
   const handleClaim = async () => {
@@ -87,7 +110,7 @@ export default function DeviceManagement() {
       toast('success', 'Device claimed successfully');
       setShowClaim(false);
       setClaimDeviceId('');
-      load();
+      load(search, page, limit);
     } else {
       setClaimError(res.error || 'Failed to claim device');
     }
@@ -103,7 +126,7 @@ export default function DeviceManagement() {
     setUnclaimTarget(null);
     if (res.success) {
       toast('success', 'Device unclaimed');
-      load();
+      load(search, page, limit);
     } else {
       toast('error', res.error || 'Failed to unclaim');
     }
@@ -131,6 +154,18 @@ export default function DeviceManagement() {
       </div>
 
       {error && <div className="text-sm p-3 rounded-lg bg-critical-bg text-critical border border-critical/30">{error}</div>}
+
+      <div className="relative">
+        <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
+        <input
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
+          placeholder="Search device ID or name..."
+          className="w-full pl-10 pr-4 py-2 rounded-lg bg-surface-card border border-border-default text-text-primary text-sm focus:outline-none focus:border-accent"
+        />
+      </div>
 
       {loading ? (
         <div className="space-y-2">{[1, 2, 3].map((i) => <div key={i} className="h-12 rounded-lg bg-surface-card border border-border-default animate-pulse" />)}</div>
@@ -161,6 +196,42 @@ export default function DeviceManagement() {
           }
           emptyMessage={t('devices.noDevices')}
         />
+      )}
+
+      {total > 0 && (
+        <div className="flex items-center justify-between text-sm">
+          <div className="flex items-center gap-2">
+            <span className="text-text-muted">{total} device{total !== 1 ? 's' : ''}</span>
+            <select
+              value={limit}
+              onChange={(e) => { setLimit(Number(e.target.value)); setPage(1); }}
+              className="px-2 py-1 rounded border border-border-default bg-surface-card text-text-primary text-xs focus:outline-none focus:border-accent"
+            >
+              {PAGE_SIZES.map((s) => (
+                <option key={s} value={s}>{s} per page</option>
+              ))}
+            </select>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page <= 1}
+              className="px-3 py-1.5 rounded border border-border-default text-text-secondary hover:bg-surface-hover disabled:opacity-40 disabled:cursor-not-allowed text-xs font-medium transition-colors"
+            >
+              ← Previous
+            </button>
+            <span className="text-text-muted text-xs">
+              Page {page} of {totalPages}
+            </span>
+            <button
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page >= totalPages}
+              className="px-3 py-1.5 rounded border border-border-default text-text-secondary hover:bg-surface-hover disabled:opacity-40 disabled:cursor-not-allowed text-xs font-medium transition-colors"
+            >
+              Next →
+            </button>
+          </div>
+        </div>
       )}
 
       <Modal open={open} onClose={() => setOpen(false)} title={editId ? t('devices.editDevice') : t('devices.addDevice')} actions={
