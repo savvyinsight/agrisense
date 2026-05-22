@@ -261,7 +261,7 @@ func TestDeviceRepository(t *testing.T) {
 	location := "Test Location"
 	lat := 12.3456
 	lon := 65.4321
-	device := &device.Device{
+	dev := &device.Device{
 		DeviceID:        "test-device-001",
 		Name:            "Test Device",
 		Type:            device.DeviceTypeSensor,
@@ -274,21 +274,21 @@ func TestDeviceRepository(t *testing.T) {
 		UserID:          &user.ID,
 	}
 
-	err = repo.Create(device)
+	err = repo.Create(dev)
 	if err != nil {
 		t.Fatalf("Failed to create device: %v", err)
 	}
-	if device.ID == 0 {
+	if dev.ID == 0 {
 		t.Fatal("Expected device ID to be set")
 	}
 
 	// GetByID
-	found, err := repo.GetByID(device.ID)
+	found, err := repo.GetByID(dev.ID)
 	if err != nil {
 		t.Fatalf("Failed to get device by ID: %v", err)
 	}
-	if found.DeviceID != device.DeviceID {
-		t.Errorf("Expected DeviceID %s, got %s", device.DeviceID, found.DeviceID)
+	if found.DeviceID != dev.DeviceID {
+		t.Errorf("Expected DeviceID %s, got %s", dev.DeviceID, found.DeviceID)
 	}
 	if found.Location == nil || *found.Location != location {
 		t.Errorf("Expected Location %s, got %v", location, found.Location)
@@ -307,28 +307,28 @@ func TestDeviceRepository(t *testing.T) {
 	}
 
 	// GetByDeviceID
-	found, err = repo.GetByDeviceID(device.DeviceID)
+	found, err = repo.GetByDeviceID(dev.DeviceID)
 	if err != nil {
 		t.Fatalf("Failed to get device by DeviceID: %v", err)
 	}
-	if found.Name != device.Name {
-		t.Errorf("Expected Name %s, got %s", device.Name, found.Name)
+	if found.Name != dev.Name {
+		t.Errorf("Expected Name %s, got %s", dev.Name, found.Name)
 	}
 
 	// Update
-	device.Name = "Updated Device"
+	dev.Name = "Updated Device"
 	updatedLat := 98.7654
 	updatedLon := 54.321
-	device.Latitude = &updatedLat
-	device.Longitude = &updatedLon
-	device.FirmwareVersion = ptrString("1.0.1")
-	device.Config = map[string]interface{}{"interval": 60}
-	err = repo.Update(device)
+	dev.Latitude = &updatedLat
+	dev.Longitude = &updatedLon
+	dev.FirmwareVersion = ptrString("1.0.1")
+	dev.Config = map[string]interface{}{"interval": 60}
+	err = repo.Update(dev)
 	if err != nil {
 		t.Fatalf("Failed to update device: %v", err)
 	}
 
-	updated, err := repo.GetByID(device.ID)
+	updated, err := repo.GetByID(dev.ID)
 	if err != nil {
 		t.Fatalf("Failed to get updated device by ID: %v", err)
 	}
@@ -349,13 +349,13 @@ func TestDeviceRepository(t *testing.T) {
 	}
 
 	// UpdateHeartbeat
-	err = repo.UpdateHeartbeat(device.DeviceID)
+	err = repo.UpdateHeartbeat(dev.DeviceID)
 	if err != nil {
 		t.Fatalf("Failed to update heartbeat: %v", err)
 	}
 
 	// UpdateStatus
-	err = repo.UpdateStatus(device.DeviceID, "online")
+	err = repo.UpdateStatus(dev.DeviceID, "online")
 	if err != nil {
 		t.Fatalf("Failed to update status: %v", err)
 	}
@@ -382,12 +382,12 @@ func TestDeviceRepository(t *testing.T) {
 	}
 
 	// Delete
-	err = repo.Delete(device.ID)
+	err = repo.Delete(dev.ID)
 	if err != nil {
 		t.Fatalf("Failed to delete device: %v", err)
 	}
 
-	_, err = repo.GetByID(device.ID)
+	_, err = repo.GetByID(dev.ID)
 	if err == nil {
 		t.Error("Expected error when getting deleted device, got nil")
 	}
