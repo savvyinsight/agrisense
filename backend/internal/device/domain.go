@@ -35,6 +35,10 @@ type Device struct {
 	UpdatedAt       time.Time              `json:"updated_at"`
 }
 
+type DeviceFilter struct {
+	Search string // case-insensitive match on device_id or name
+}
+
 type DeviceRepository interface {
 	Create(device *Device) error
 	GetByID(id int) (*Device, error)
@@ -44,7 +48,7 @@ type DeviceRepository interface {
 	UpdateStatus(deviceID string, status DeviceStatus) error
 	UpdateHeartbeat(deviceID string) error
 	Delete(id int) error
-	List(userID int, limit, offset int) ([]Device, int64, error)
+	List(userID int, filter DeviceFilter, limit, offset int) ([]Device, int64, error)
 	FindOrCreate(deviceID string) (*Device, error)
 	ClaimDevice(deviceID string, userID, accountID int) error
 	UnclaimDevice(deviceID string) error

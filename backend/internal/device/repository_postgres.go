@@ -294,17 +294,29 @@ func (r *PostgresDeviceRepository) UpdateStatus(deviceID string, status DeviceSt
 	return err
 }
 
-func (r *PostgresDeviceRepository) List(userID int, limit, offset int) ([]Device, int64, error) {
-	query := `
+func (r *PostgresDeviceRepository) List(userID int, filter DeviceFilter, limit, offset int) ([]Device, int64, error) {
+	whereClause := "WHERE user_id = $1 OR (user_id IS NULL AND $1 = 0)"
+	args := []interface{}{userID}
+	paramIdx := 2
+
+	if filter.Search != "" {
+		whereClause += fmt.Sprintf(" AND (device_id ILIKE $%d OR name ILIKE $%d)", paramIdx, paramIdx)
+		args = append(args, "%"+filter.Search+"%")
+		paramIdx++
+	}
+
+	query := fmt.Sprintf(`
         SELECT id, device_id, name, type, location, latitude, longitude, status, last_heartbeat, 
                firmware_version, config, field_id, user_id, created_at, updated_at
         FROM devices 
-        WHERE user_id = $1 OR (user_id IS NULL AND $1 = 0)
+        %s
         ORDER BY id 
-        LIMIT $2 OFFSET $3
-    `
+        LIMIT $%d OFFSET $%d
+    `, whereClause, paramIdx, paramIdx+1)
 
-	rows, err := r.DB.Query(query, userID, limit, offset)
+	args = append(args, limit, offset)
+
+	rows, err := r.DB.Query(query, args...)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -356,8 +368,9 @@ func (r *PostgresDeviceRepository) List(userID int, limit, offset int) ([]Device
 	}
 
 	var total int64
-	countQuery := `SELECT COUNT(*) FROM devices WHERE user_id = $1 OR $1 = 0`
-	err = r.DB.QueryRow(countQuery, userID).Scan(&total)
+	countArgs := args[:len(args)-2] // exclude limit and offset
+	countQuery := fmt.Sprintf(`SELECT COUNT(*) FROM devices %s`, whereClause)
+	err = r.DB.QueryRow(countQuery, countArgs...).Scan(&total)
 	if err != nil {
 		return nil, 0, err
 	}

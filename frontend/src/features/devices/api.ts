@@ -9,10 +9,11 @@ export const getDevices = async (
   page = 1,
   limit = 20,
   status?: string,
+  q?: string,
 ): Promise<DevicesResponse> => {
   try {
     const response = await api.get('/devices', {
-      params: { page, limit, status },
+      params: { page, limit, status, q: q || undefined },
     });
     return { success: true, data: response.data };
   } catch (error) {

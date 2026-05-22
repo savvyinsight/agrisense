@@ -74,7 +74,9 @@ func (h *DeviceHandler) List(c *gin.Context) {
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
 	offset := (page - 1) * limit
 
-	devices, total, err := h.deviceRepo.List(listUserID, limit, offset)
+	filter := DeviceFilter{Search: c.Query("q")}
+
+	devices, total, err := h.deviceRepo.List(listUserID, filter, limit, offset)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
