@@ -118,7 +118,7 @@ func (m *mockDeviceRepo) Update(device *device.Device) error { return nil }
 func (m *mockDeviceRepo) UpdateStatus(deviceID string, status device.DeviceStatus) error { return nil }
 func (m *mockDeviceRepo) UpdateHeartbeat(deviceID string) error { return nil }
 func (m *mockDeviceRepo) Delete(id int) error { return nil }
-func (m *mockDeviceRepo) List(userID int, limit, offset int) ([]device.Device, int64, error) { return nil, 0, nil }
+func (m *mockDeviceRepo) List(userID int, filter device.DeviceFilter, limit, offset int) ([]device.Device, int64, error) { return nil, 0, nil }
 func (m *mockDeviceRepo) FindOrCreate(deviceID string) (*device.Device, error) { return nil, nil }
 func (m *mockDeviceRepo) ClaimDevice(deviceID string, userID, accountID int) error { return nil }
 func (m *mockDeviceRepo) UnclaimDevice(deviceID string) error { return nil }

@@ -370,7 +370,7 @@ func TestDeviceRepository(t *testing.T) {
 	}
 
 	// List
-	listed, total, err := repo.List(user.ID, 10, 0)
+	listed, total, err := repo.List(user.ID, device.DeviceFilter{}, 10, 0)
 	if err != nil {
 		t.Fatalf("Failed to list devices: %v", err)
 	}
