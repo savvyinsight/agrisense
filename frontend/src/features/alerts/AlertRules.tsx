@@ -25,10 +25,16 @@ const conditions = [
   { value: 'between', label: 'between' },
 ];
 
+const inverseCondition: Record<string, string> = { '>': '<', '<': '>', '=': '=', '>=': '<=', '<=': '>=' };
+
 const emptyRule = {
   name: '', device_id: null as number | null, field_id: null as number | null,
   sensor_type_id: 1, condition: '>', threshold_value: '', threshold_max: '' as string | null,
   duration_seconds: 300, severity: 'warning' as 'info' | 'warning' | 'critical', enabled: true,
+  use_recovery: false, recovery_condition: '<', recovery_value: '',
+  use_trend: false, trend_direction: 'decreasing' as 'increasing' | 'decreasing',
+  trend_percentage: '10', trend_window: '30',
+  use_auto_escalation: false, auto_escalation_minutes: '30', auto_escalation_severity: 'critical' as 'warning' | 'critical',
 };
 
 export default function AlertRules() {
@@ -77,6 +83,16 @@ export default function AlertRules() {
       duration_seconds: rule.duration_seconds,
       severity: rule.severity,
       enabled: rule.enabled,
+      use_recovery: !!(rule.recovery_threshold_value != null && rule.recovery_condition),
+      recovery_condition: rule.recovery_condition || inverseCondition[rule.condition] || '<',
+      recovery_value: rule.recovery_threshold_value != null ? String(rule.recovery_threshold_value) : '',
+      use_trend: !!rule.trend_condition,
+      trend_direction: rule.trend_condition?.direction || 'decreasing',
+      trend_percentage: rule.trend_condition ? String(rule.trend_condition.percentage) : '10',
+      trend_window: rule.trend_condition ? String(rule.trend_condition.window_minutes) : '30',
+      use_auto_escalation: !!rule.auto_escalation_enabled,
+      auto_escalation_minutes: rule.auto_escalation_minutes ? String(rule.auto_escalation_minutes) : '30',
+      auto_escalation_severity: rule.auto_escalation_severity || 'critical',
     });
     setError('');
     setOpen(true);
@@ -109,6 +125,37 @@ export default function AlertRules() {
 
     if (form.condition === 'between' && form.threshold_max) {
       payload.threshold_max = parseFloat(form.threshold_max);
+    }
+
+    // Hysteresis
+    if (form.use_recovery && form.recovery_value) {
+      payload.recovery_condition = form.recovery_condition;
+      payload.recovery_threshold_value = parseFloat(form.recovery_value);
+    } else {
+      payload.recovery_condition = null;
+      payload.recovery_threshold_value = null;
+    }
+
+    // Trend condition
+    if (form.use_trend && form.trend_percentage && form.trend_window) {
+      payload.trend_condition = {
+        direction: form.trend_direction,
+        percentage: parseFloat(form.trend_percentage),
+        window_minutes: parseInt(form.trend_window),
+      };
+    } else {
+      payload.trend_condition = null;
+    }
+
+    // Auto-escalation
+    if (form.use_auto_escalation && form.auto_escalation_minutes) {
+      payload.auto_escalation_enabled = true;
+      payload.auto_escalation_minutes = parseInt(form.auto_escalation_minutes);
+      payload.auto_escalation_severity = form.auto_escalation_severity;
+    } else {
+      payload.auto_escalation_enabled = false;
+      payload.auto_escalation_minutes = null;
+      payload.auto_escalation_severity = null;
     }
 
     let res;
@@ -240,6 +287,7 @@ export default function AlertRules() {
         <div>
           <label className="block text-xs font-medium text-text-secondary mb-1.5">{t('alertRules.durationSeconds')}</label>
           <input type="number" value={form.duration_seconds} onChange={(e) => setForm({ ...form, duration_seconds: Number(e.target.value) })} className="w-full px-3 py-2 rounded-lg bg-surface-base border border-border-default text-text-primary text-sm focus:outline-none focus:border-accent" />
+          <p className="text-[10px] text-text-muted mt-1">{t('alertRules.durationHint')}</p>
         </div>
         <div>
           <label className="block text-xs font-medium text-text-secondary mb-1.5">{t('alertRules.severity')}</label>
@@ -249,6 +297,101 @@ export default function AlertRules() {
             <option value="critical">{t('alertRules.high')}</option>
           </select>
         </div>
+
+        {/* Advanced Options */}
+        <details className="pt-2">
+          <summary className="text-sm font-medium text-text-secondary cursor-pointer hover:text-text-primary transition-colors">{t('alertRules.advancedOptions')}</summary>
+          <div className="mt-3 space-y-4 pl-3 border-l-2 border-border-default">
+            {/* Hysteresis */}
+            <div>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" checked={form.use_recovery} onChange={(e) => {
+                  const useRecovery = e.target.checked;
+                  setForm({
+                    ...form,
+                    use_recovery: useRecovery,
+                    recovery_condition: useRecovery ? (inverseCondition[form.condition] || '<') : form.recovery_condition,
+                    recovery_value: useRecovery && !form.recovery_value ? form.threshold_value : form.recovery_value,
+                  });
+                }} className="rounded border-border-default" />
+                <span className="text-xs font-medium text-text-secondary">{t('alertRules.useRecoveryThreshold')}</span>
+              </label>
+              {form.use_recovery && (
+                <div className="mt-2 space-y-2">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[10px] font-medium text-text-muted mb-1">{t('alertRules.recoveryCondition')}</label>
+                      <select value={form.recovery_condition} onChange={(e) => setForm({ ...form, recovery_condition: e.target.value })} className="w-full px-3 py-2 rounded-lg bg-surface-base border border-border-default text-text-primary text-sm focus:outline-none focus:border-accent">
+                        {conditions.filter((c) => c.value !== 'between').map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-medium text-text-muted mb-1">{t('alertRules.recoveryValue')}</label>
+                      <input type="number" value={form.recovery_value} onChange={(e) => setForm({ ...form, recovery_value: e.target.value })} className="w-full px-3 py-2 rounded-lg bg-surface-base border border-border-default text-text-primary text-sm focus:outline-none focus:border-accent" />
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-text-muted">{t('alertRules.hysteresisHint')}</p>
+                </div>
+              )}
+            </div>
+
+            {/* Trend Condition */}
+            <div>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" checked={form.use_trend} onChange={(e) => setForm({ ...form, use_trend: e.target.checked })} className="rounded border-border-default" />
+                <span className="text-xs font-medium text-text-secondary">{t('alertRules.enableTrend')}</span>
+              </label>
+              {form.use_trend && (
+                <div className="mt-2 space-y-2">
+                  <div className="grid grid-cols-3 gap-3">
+                    <div>
+                      <label className="block text-[10px] font-medium text-text-muted mb-1">{t('alertRules.trendDirection')}</label>
+                      <select value={form.trend_direction} onChange={(e) => setForm({ ...form, trend_direction: e.target.value as 'increasing' | 'decreasing' })} className="w-full px-3 py-2 rounded-lg bg-surface-base border border-border-default text-text-primary text-sm focus:outline-none focus:border-accent">
+                        <option value="decreasing">{t('alertRules.trendDecreased')}</option>
+                        <option value="increasing">{t('alertRules.trendIncreasing')}</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-medium text-text-muted mb-1">{t('alertRules.trendPercentage')} (%)</label>
+                      <input type="number" value={form.trend_percentage} onChange={(e) => setForm({ ...form, trend_percentage: e.target.value })} className="w-full px-3 py-2 rounded-lg bg-surface-base border border-border-default text-text-primary text-sm focus:outline-none focus:border-accent" />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-medium text-text-muted mb-1">{t('alertRules.trendWindow')}</label>
+                      <input type="number" value={form.trend_window} onChange={(e) => setForm({ ...form, trend_window: e.target.value })} className="w-full px-3 py-2 rounded-lg bg-surface-base border border-border-default text-text-primary text-sm focus:outline-none focus:border-accent" />
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-text-muted">{t('alertRules.trendHint')}</p>
+                </div>
+              )}
+            </div>
+
+            {/* Auto-Escalation */}
+            <div>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" checked={form.use_auto_escalation} onChange={(e) => setForm({ ...form, use_auto_escalation: e.target.checked })} className="rounded border-border-default" />
+                <span className="text-xs font-medium text-text-secondary">{t('alertRules.enableAutoEscalation')}</span>
+              </label>
+              {form.use_auto_escalation && (
+                <div className="mt-2 space-y-2">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[10px] font-medium text-text-muted mb-1">{t('alertRules.escalateAfter')}</label>
+                      <input type="number" value={form.auto_escalation_minutes} onChange={(e) => setForm({ ...form, auto_escalation_minutes: e.target.value })} className="w-full px-3 py-2 rounded-lg bg-surface-base border border-border-default text-text-primary text-sm focus:outline-none focus:border-accent" />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-medium text-text-muted mb-1">{t('alertRules.escalateToSeverity')}</label>
+                      <select value={form.auto_escalation_severity} onChange={(e) => setForm({ ...form, auto_escalation_severity: e.target.value as 'warning' | 'critical' })} className="w-full px-3 py-2 rounded-lg bg-surface-base border border-border-default text-text-primary text-sm focus:outline-none focus:border-accent">
+                        <option value="warning">{t('alertRules.medium')}</option>
+                        <option value="critical">{t('alertRules.high')}</option>
+                      </select>
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-text-muted">{t('alertRules.escalationHint')}</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </details>
         <div>
           <label className="block text-xs font-medium text-text-secondary mb-1.5">{t('alertRules.status')}</label>
           <select value={String(form.enabled)} onChange={(e) => setForm({ ...form, enabled: e.target.value === 'true' })} className="w-full px-3 py-2 rounded-lg bg-surface-base border border-border-default text-text-primary text-sm focus:outline-none focus:border-accent">
