@@ -85,3 +85,30 @@ export const deleteAlertRule = async (ruleId: number | string): Promise<ApiRespo
     return { success: false, error: handleError(error) };
   }
 };
+
+export const snoozeAlert = async (alertId: number, durationMinutes: number, reason?: string): Promise<ApiResponse<null>> => {
+  try {
+    await api.post(`/alerts/${alertId}/snooze`, { duration_minutes: durationMinutes, reason });
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: handleError(error) };
+  }
+};
+
+export const unsnoozeAlert = async (alertId: number): Promise<ApiResponse<null>> => {
+  try {
+    await api.post(`/alerts/${alertId}/unsnooze`);
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: handleError(error) };
+  }
+};
+
+export const getAlertCorrelations = async (): Promise<ApiResponse<{ correlations: import('@/shared/types').AlertCorrelation[] }>> => {
+  try {
+    const response = await api.get('/alerts/correlations');
+    return { success: true, data: response.data };
+  } catch (error) {
+    return { success: false, error: handleError(error) };
+  }
+};

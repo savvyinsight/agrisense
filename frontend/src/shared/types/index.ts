@@ -63,6 +63,22 @@ export interface Alert2 {
   triggered_at: string;
   acknowledged_at?: string;
   resolved_at?: string;
+  is_flapping?: boolean;
+  flap_count?: number;
+  condition_holding_seconds?: number;
+  condition_required_seconds?: number;
+  correlation_id?: string;
+  root_cause_suggestion?: string;
+  snoozed_until?: string | null;
+}
+
+export interface AlertCorrelation {
+  correlation_id: string;
+  root_cause_alert_id: number;
+  related_alert_ids: number[];
+  suggested_root_cause: string;
+  field_id?: number;
+  created_at: string;
 }
 
 export interface IrrigationEvent {

@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '@/shared/stores/authStore';
 import { useAlertsStore } from '@/shared/stores/alertsStore';
 import { useWebSocket } from '@/shared/hooks/useWebSocket';
-import { getActiveAlerts, getAlertHistory, acknowledgeAlert, resolveAlert, getAlertRules } from '@/features/alerts/api';
+import { getActiveAlerts, getAlertHistory, acknowledgeAlert, resolveAlert, getAlertRules, snoozeAlert, unsnoozeAlert } from '@/features/alerts/api';
 import { groupAlerts, getIssueTypeEmoji } from '@/features/alerts/groupAlerts';
 import { alertNotificationService } from '@/features/alerts/NotificationService';
 import { AlertRuleDetail } from '@/features/alerts/AlertRuleDetail';
@@ -57,6 +57,8 @@ export default function Alerts() {
   const [notificationEnabled, setNotificationEnabled] = useState(false);
   const [acknowledging, setAcknowledging] = useState<Set<number>>(new Set());
   const [resolving, setResolving] = useState<Set<number>>(new Set());
+  const [snoozing, setSnoozing] = useState<Set<number>>(new Set());
+  const [snoozeMenu, setSnoozeMenu] = useState<number | null>(null);
 
   // Single WebSocket handler for alert_triggered messages from backend
   useWebSocket(token, useCallback((data: WebSocketMessage) => {
@@ -183,6 +185,29 @@ export default function Alerts() {
     setResolving((prev) => { const n = new Set(prev); n.delete(id); return n; });
   };
 
+  const handleSnooze = async (id: number, minutes: number) => {
+    if (snoozing.has(id)) return;
+    setSnoozing((prev) => new Set(prev).add(id));
+    setSnoozeMenu(null);
+    const res = await snoozeAlert(id, minutes);
+    if (res.success) {
+      const snoozeUntil = new Date(Date.now() + minutes * 60000).toISOString();
+      updateAlert(id, { snoozed_until: snoozeUntil } as any);
+      toast('success', t('alerts.snoozedFor', { minutes }));
+    } else {
+      toast('error', res.error || 'Failed to snooze');
+    }
+    setSnoozing((prev) => { const n = new Set(prev); n.delete(id); return n; });
+  };
+
+  const handleUnsnooze = async (id: number) => {
+    const res = await unsnoozeAlert(id);
+    if (res.success) {
+      updateAlert(id, { snoozed_until: null } as any);
+      toast('success', t('alerts.unsnoozed'));
+    }
+  };
+
   const loadMore = () => {
     const nextPage = historyPage + 1;
     setHistoryPage(nextPage);
@@ -234,18 +259,40 @@ export default function Alerts() {
       ) : (
         <div className="space-y-4">
           {/* Critical alerts */}
-          {critical.map((a) => (
-            <div key={a.id} className={cn('rounded-lg border border-border-default border-l-[4px] p-4', severityBorder.critical, severityBg.critical)}>
+          {critical.map((a) => {
+            const isSnoozed = a.snoozed_until && new Date(a.snoozed_until) > new Date();
+            return (
+            <div key={a.id} className={cn('rounded-lg border border-border-default border-l-[4px] p-4', severityBorder.critical, severityBg.critical, isSnoozed && 'opacity-60')}>
               <div className="flex items-start gap-3">
                 <span className="text-lg mt-0.5">{severityIcon.critical}</span>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-xs font-bold text-critical uppercase tracking-wider">{t('component.critical')}</span>
+                    {a.is_flapping && (
+                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-warning-bg text-warning border border-warning/30 animate-pulse">
+                        {t('alerts.flapping')} {a.flap_count ? `(${a.flap_count})` : ''}
+                      </span>
+                    )}
+                    {isSnoozed && (
+                      <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-surface-hover text-text-muted border border-border-default">
+                        {t('alerts.snoozedUntil')} {new Date(a.snoozed_until!).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    )}
                     {a.confidence && <span className="text-xs text-text-muted">{a.confidence}%</span>}
                     <span className="text-xs text-text-muted">{new Date(a.triggered_at).toLocaleString()}</span>
                   </div>
                   <p className="text-sm font-semibold text-text-primary mt-1">{a.title}</p>
                   {a.message && <p className="text-sm text-text-secondary mt-1">{a.message}</p>}
+                  {a.condition_holding_seconds != null && a.condition_required_seconds != null && (
+                    <div className="mt-2">
+                      <div className="flex items-center gap-2 text-[10px] text-text-muted mb-1">
+                        <span>{t('alerts.conditionHolding')}: {a.condition_holding_seconds}s / {a.condition_required_seconds}s</span>
+                      </div>
+                      <div className="w-full h-1.5 rounded-full bg-surface-base overflow-hidden">
+                        <div className="h-full rounded-full bg-accent transition-all" style={{ width: `${Math.min(100, (a.condition_holding_seconds / a.condition_required_seconds) * 100)}%` }} />
+                      </div>
+                    </div>
+                  )}
                   {a.recommended_action && (
                     <div className="mt-2 text-sm bg-critical/10 rounded-md p-2.5 border border-critical/20">
                       <span className="font-semibold text-critical text-xs uppercase">{t('component.recommendation')}</span>
@@ -259,11 +306,32 @@ export default function Alerts() {
                     <button onClick={() => handleResolve(a.id)} disabled={resolving.has(a.id)} className="px-3 py-1.5 text-xs font-medium rounded-md bg-success/10 text-success hover:bg-success/20 transition-colors disabled:opacity-50">
                       {resolving.has(a.id) ? '...' : t('alerts.resolve')}
                     </button>
+                    <div className="relative">
+                      {isSnoozed ? (
+                        <button onClick={() => handleUnsnooze(a.id)} className="px-3 py-1.5 text-xs font-medium rounded-md bg-warning/10 text-warning hover:bg-warning/20 transition-colors">
+                          {t('alerts.unsnooze')}
+                        </button>
+                      ) : (
+                        <button onClick={() => setSnoozeMenu(snoozeMenu === a.id ? null : a.id)} className="px-3 py-1.5 text-xs font-medium rounded-md bg-surface-hover text-text-muted hover:text-text-primary hover:bg-border-default transition-colors">
+                          {t('alerts.snooze')}
+                        </button>
+                      )}
+                      {snoozeMenu === a.id && (
+                        <div className="absolute top-full left-0 mt-1 bg-surface-card border border-border-default rounded-lg shadow-lg z-10 py-1 min-w-[120px]">
+                          {[15, 60, 240, 480].map((m) => (
+                            <button key={m} onClick={() => handleSnooze(a.id, m)} className="w-full text-left px-3 py-1.5 text-xs text-text-secondary hover:text-text-primary hover:bg-surface-hover transition-colors">
+                              {m < 60 ? `${m}m` : `${m / 60}h`}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
-          ))}
+            );
+          })}
 
           {/* High alerts */}
           {high.map((a) => (

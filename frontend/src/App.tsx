@@ -12,7 +12,9 @@ import Fields from '@/features/fields/Fields';
 import FieldDetail from '@/features/fields/FieldDetail';
 import Alerts from '@/features/alerts/Alerts';
 import AlertRules from '@/features/alerts/AlertRules';
+import EscalationRules from '@/features/alerts/EscalationRules';
 import AutomationRules from '@/features/automation/AutomationRules';
+import AutomationDashboard from '@/features/automation/AutomationDashboard';
 import Analytics from '@/features/analytics/Analytics';
 import Irrigation from '@/features/irrigation/Irrigation';
 import DeviceManagement from '@/features/devices/DeviceManagement';
@@ -20,6 +22,7 @@ import MapView from '@/features/devices/MapView';
 import Settings from '@/features/settings/Settings';
 import TeamManagement from '@/features/settings/TeamManagement';
 import AuditLogViewer from '@/features/settings/AuditLogViewer';
+import NotificationSettings from '@/features/settings/NotificationSettings';
 import AdminAccounts from '@/features/admin/AdminAccounts';
 import AdminAccountDetail from '@/features/admin/AdminAccountDetail';
 import AdminAuditLog from '@/features/admin/AdminAuditLog';
@@ -74,6 +77,7 @@ export default function App() {
                       <Route path="irrigation" element={<Irrigation />} />
                       <Route path="settings/team" element={<ProtectedRoute requiredRoles={['account_owner', 'farm_manager']} component={TeamManagement} />} />
                       <Route path="settings/audit" element={<ProtectedRoute requiredRoles={['account_owner']} component={AuditLogViewer} />} />
+                      <Route path="settings/notifications" element={<ProtectedRoute requiredRoles={['account_owner', 'farm_manager']} component={NotificationSettings} />} />
                       <Route path="settings" element={<Settings />} />
                       <Route path="admin/accounts" element={<PlatformAdminRoute><AdminAccounts /></PlatformAdminRoute>} />
                       <Route path="admin/accounts/:id" element={<PlatformAdminRoute><AdminAccountDetail /></PlatformAdminRoute>} />
@@ -81,7 +85,9 @@ export default function App() {
                       <Route path="admin/preferences" element={<PlatformAdminRoute><AdminPreferences /></PlatformAdminRoute>} />
                       <Route path="devices" element={<AdminRoute><DeviceManagement /></AdminRoute>} />
                       <Route path="alert-rules" element={<AdminRoute><AlertRules /></AdminRoute>} />
+                      <Route path="escalation-rules" element={<AdminRoute><EscalationRules /></AdminRoute>} />
                       <Route path="automation" element={<AdminRoute><AutomationRules /></AdminRoute>} />
+                      <Route path="automation/dashboard" element={<AdminRoute><AutomationDashboard /></AdminRoute>} />
                       <Route path="" element={<Navigate to="dashboard" replace />} />
                       <Route path="*" element={<NotFound />} />
                     </Routes>

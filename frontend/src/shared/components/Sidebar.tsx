@@ -21,6 +21,9 @@ const navItems: NavItem[] = [
   { label: 'nav.devices', path: '/devices', icon: '📡', adminOnly: true },
   { label: 'nav.alertRules', path: '/alert-rules', icon: '⚙', adminOnly: true },
   { label: 'nav.automation', path: '/automation', icon: '🔄', adminOnly: true },
+  { label: 'nav.automationDashboard', path: '/automation/dashboard', icon: '🎛', adminOnly: true },
+  { label: 'nav.escalationRules', path: '/escalation-rules', icon: '🔔', adminOnly: true },
+  { label: 'nav.notifications', path: '/settings/notifications', icon: '✉', adminOnly: true },
   { label: 'nav.settings', path: '/settings', icon: '⚙', bottom: true },
 ];
 
