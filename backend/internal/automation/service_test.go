@@ -70,6 +70,34 @@ func (f *fakeAutomationRuleRepo) GetByTargetDeviceID(deviceID int) ([]Automation
 	return nil, nil
 }
 
+func (f *fakeAutomationRuleRepo) UpdatePartial(id int, updates map[string]interface{}) error {
+	return nil
+}
+
+func (f *fakeAutomationRuleRepo) IncrementExecutionCount(id int) error {
+	return nil
+}
+
+func (f *fakeAutomationRuleRepo) UpdateLastTriggered(id int) error {
+	return nil
+}
+
+func (f *fakeAutomationRuleRepo) UpdateLastCommandStatus(id int, status string) error {
+	return nil
+}
+
+func (f *fakeAutomationRuleRepo) GetGlobalAutomationEnabled() (bool, error) {
+	return true, nil
+}
+
+func (f *fakeAutomationRuleRepo) SetGlobalAutomationEnabled(enabled bool) error {
+	return nil
+}
+
+func (f *fakeAutomationRuleRepo) GetCommandHistory(ruleID int, limit int) ([]map[string]interface{}, error) {
+	return nil, nil
+}
+
 type fakeDeviceRepo struct {
 	getByIDFunc func(id int) (*device.Device, error)
 }

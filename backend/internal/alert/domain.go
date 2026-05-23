@@ -26,38 +26,57 @@ const (
 )
 
 type AlertRule struct {
-	ID              int            `json:"id"`
-	Name            string         `json:"name"`
-	DeviceID        *int           `json:"device_id,omitempty"`        // nil = all devices
-	FieldID         *int           `json:"field_id,omitempty"`         // nil = all fields (if set, applies to all devices in the field)
-	SensorTypeID    int            `json:"sensor_type_id"`
-	Condition       AlertCondition `json:"condition"`
-	ThresholdValue  *float64       `json:"threshold_value,omitempty"`
-	ThresholdMax    *float64       `json:"threshold_max,omitempty"` // for between
-	DurationSeconds int            `json:"duration_seconds"`        // 0 = immediate
-	Severity        AlertSeverity  `json:"severity"`
-	Enabled         bool           `json:"enabled"`
-	UserID          int            `json:"user_id"`
-	CreatedAt       time.Time      `json:"created_at"`
-	UpdatedAt       time.Time      `json:"updated_at"`
+	ID                      int            `json:"id"`
+	Name                    string         `json:"name"`
+	DeviceID                *int           `json:"device_id,omitempty"`        // nil = all devices
+	FieldID                 *int           `json:"field_id,omitempty"`         // nil = all fields (if set, applies to all devices in the field)
+	SensorTypeID            int            `json:"sensor_type_id"`
+	Condition               AlertCondition `json:"condition"`
+	ThresholdValue          *float64       `json:"threshold_value,omitempty"`
+	ThresholdMax            *float64       `json:"threshold_max,omitempty"` // for between
+	DurationSeconds         int            `json:"duration_seconds"`        // 0 = immediate
+	Severity                AlertSeverity  `json:"severity"`
+	Enabled                 bool           `json:"enabled"`
+	UserID                  int            `json:"user_id"`
+	CreatedAt               time.Time      `json:"created_at"`
+	UpdatedAt               time.Time      `json:"updated_at"`
+	RecoveryThresholdValue  *float64       `json:"recovery_threshold_value,omitempty"`
+	RecoveryCondition       *string        `json:"recovery_condition,omitempty"`
+	TrendCondition          []byte         `json:"trend_condition,omitempty"`
+	AutoEscalationEnabled   bool           `json:"auto_escalation_enabled"`
+	AutoEscalationMinutes   *int           `json:"auto_escalation_minutes,omitempty"`
+	AutoEscalationSeverity  *string        `json:"auto_escalation_severity,omitempty"`
 }
 
 type Alert struct {
-	ID             int                    `json:"id"`
-	RuleID         int                    `json:"rule_id"`
-	DeviceID       int                    `json:"-"`                              // internal DB id, not sent to frontend
-	DeviceIDStr    string                 `json:"device_id"`                      // hardware device_id string
-	DeviceName     string                 `json:"device_name,omitempty"`
-	RuleName       string                 `json:"rule_name,omitempty"`
-	FieldID        *int                   `json:"field_id,omitempty"`
-	SensorValue    float64                `json:"sensor_value"`
-	Message        string                 `json:"message"`
-	Severity       AlertSeverity          `json:"severity"`
-	Status         AlertStatus            `json:"status"`
-	TriggeredAt    time.Time              `json:"triggered_at"`
-	AcknowledgedAt *time.Time             `json:"acknowledged_at,omitempty"`
-	ResolvedAt     *time.Time             `json:"resolved_at,omitempty"`
-	Metadata       map[string]interface{} `json:"metadata,omitempty"`
+	ID                  int                    `json:"id"`
+	RuleID              int                    `json:"rule_id"`
+	DeviceID            int                    `json:"-"`                              // internal DB id, not sent to frontend
+	DeviceIDStr         string                 `json:"device_id"`                      // hardware device_id string
+	DeviceName          string                 `json:"device_name,omitempty"`
+	RuleName            string                 `json:"rule_name,omitempty"`
+	FieldID             *int                   `json:"field_id,omitempty"`
+	SensorValue         float64                `json:"sensor_value"`
+	Message             string                 `json:"message"`
+	Severity            AlertSeverity          `json:"severity"`
+	Status              AlertStatus            `json:"status"`
+	TriggeredAt         time.Time              `json:"triggered_at"`
+	AcknowledgedAt      *time.Time             `json:"acknowledged_at,omitempty"`
+	ResolvedAt          *time.Time             `json:"resolved_at,omitempty"`
+	Metadata            map[string]interface{} `json:"metadata,omitempty"`
+	IsFlapping          bool                   `json:"is_flapping"`
+	FlapCount           int                    `json:"flap_count"`
+	SnoozedUntil        *time.Time             `json:"snoozed_until,omitempty"`
+	SnoozeReason        *string                `json:"snooze_reason,omitempty"`
+	CorrelationID       *string                `json:"correlation_id,omitempty"`
+	RootCauseSuggestion *string                `json:"root_cause_suggestion,omitempty"`
+}
+
+type AlertCorrelation struct {
+	CorrelationID       string  `json:"correlation_id"`
+	RootCauseSuggestion *string `json:"root_cause_suggestion,omitempty"`
+	AlertIDs            []int   `json:"alert_ids"`
+	Count               int     `json:"count"`
 }
 
 type AlertRuleRepository interface {
@@ -68,6 +87,7 @@ type AlertRuleRepository interface {
 	Update(rule *AlertRule) error
 	Delete(id int) error
 	List(userID int) ([]AlertRule, error)
+	GetAutoEscalationRules() ([]AlertRule, error)
 }
 
 type AlertRepository interface {
@@ -83,4 +103,9 @@ type AlertRepository interface {
 	Resolve(id int) error
 	ResolveByRuleID(ruleID int) ([]int, error)
 	List(limit, offset int) ([]Alert, int64, error)
+	SnoozeAlert(id int, until time.Time, reason string) error
+	UnsnoozeAlert(id int) error
+	GetAlertCorrelations() ([]AlertCorrelation, error)
+	UpdateFlapping(id int, isFlapping bool, flapCount int) error
+	UpdateCorrelation(id int, correlationID string, rootCause *string) error
 }

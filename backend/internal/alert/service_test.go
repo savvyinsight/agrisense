@@ -2,6 +2,7 @@ package alert
 
 import (
 	"testing"
+	"time"
 
 	"github.com/savvyinsight/agrisense/internal/device"
 	"github.com/savvyinsight/agrisense/internal/field"
@@ -70,6 +71,27 @@ func (m *mockAlertRepo) List(limit, offset int) ([]Alert, int64, error) {
 	return args.Get(0).([]Alert), args.Get(1).(int64), args.Error(2)
 }
 
+func (m *mockAlertRepo) SnoozeAlert(id int, until time.Time, reason string) error {
+	return m.Called(id, until, reason).Error(0)
+}
+
+func (m *mockAlertRepo) UnsnoozeAlert(id int) error {
+	return m.Called(id).Error(0)
+}
+
+func (m *mockAlertRepo) GetAlertCorrelations() ([]AlertCorrelation, error) {
+	args := m.Called()
+	return args.Get(0).([]AlertCorrelation), args.Error(1)
+}
+
+func (m *mockAlertRepo) UpdateFlapping(id int, isFlapping bool, flapCount int) error {
+	return m.Called(id, isFlapping, flapCount).Error(0)
+}
+
+func (m *mockAlertRepo) UpdateCorrelation(id int, correlationID string, rootCause *string) error {
+	return m.Called(id, correlationID, rootCause).Error(0)
+}
+
 type mockRuleRepo struct {
 	mock.Mock
 }
@@ -103,6 +125,11 @@ func (m *mockRuleRepo) Delete(id int) error {
 
 func (m *mockRuleRepo) List(userID int) ([]AlertRule, error) {
 	args := m.Called(userID)
+	return args.Get(0).([]AlertRule), args.Error(1)
+}
+
+func (m *mockRuleRepo) GetAutoEscalationRules() ([]AlertRule, error) {
+	args := m.Called()
 	return args.Get(0).([]AlertRule), args.Error(1)
 }
 
