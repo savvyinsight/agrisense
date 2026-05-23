@@ -3,6 +3,7 @@ package alert
 import (
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/savvyinsight/agrisense/internal/device"
 	"github.com/savvyinsight/agrisense/internal/field"
@@ -214,4 +215,20 @@ func (s *Service) GetAlertByID(id int) (*Alert, error) {
 	}
 	s.enrichAlert(a)
 	return a, nil
+}
+
+func (s *Service) SnoozeAlert(id int, minutes int, reason string) error {
+	if minutes <= 0 {
+		return fmt.Errorf("snooze duration must be positive")
+	}
+	until := time.Now().Add(time.Duration(minutes) * time.Minute)
+	return s.alertRepo.SnoozeAlert(id, until, reason)
+}
+
+func (s *Service) UnsnoozeAlert(id int) error {
+	return s.alertRepo.UnsnoozeAlert(id)
+}
+
+func (s *Service) GetAlertCorrelations() ([]AlertCorrelation, error) {
+	return s.alertRepo.GetAlertCorrelations()
 }
