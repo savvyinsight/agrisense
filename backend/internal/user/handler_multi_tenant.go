@@ -42,11 +42,11 @@ type GetTeamResponse struct {
 }
 
 type UserWithPermissions struct {
-	ID          int                 `json:"id"`
-	Email       string              `json:"email"`
-	Username    string              `json:"username"`
-	Permissions []UserPermission    `json:"permissions"`
-	CreatedAt   time.Time           `json:"created_at"`
+	ID          int              `json:"id"`
+	Email       string           `json:"email"`
+	Username    string           `json:"username"`
+	Permissions []UserPermission `json:"permissions"`
+	CreatedAt   time.Time        `json:"created_at"`
 }
 
 // InviteUserHandler invites a new user to the account
@@ -74,12 +74,6 @@ func (h *UserHandler) InviteUserHandler(c *gin.Context) {
 	}
 	if err != nil || !hasPermission {
 		c.JSON(http.StatusForbidden, gin.H{"error": "Only account owners and managers can invite users"})
-		return
-	}
-
-	// Check user quota before allowing invitation
-	if err := h.AccountRepo.CheckUserQuota(accountID); err != nil {
-		c.JSON(http.StatusForbidden, gin.H{"error": fmt.Sprintf("User quota exceeded: %v", err)})
 		return
 	}
 
@@ -371,10 +365,10 @@ func (h *UserHandler) GetAuditLogHandler(c *gin.Context) {
 	}
 
 	response := map[string]interface{}{
-		"logs":    logs,
-		"total":   total,
-		"limit":   limit,
-		"offset":  offset,
+		"logs":   logs,
+		"total":  total,
+		"limit":  limit,
+		"offset": offset,
 	}
 
 	c.JSON(http.StatusOK, response)

@@ -24,7 +24,7 @@ func (r *PostgresAccountRepository) CreateAccount(account *Account) error {
 
 	query := `INSERT INTO accounts (name, subscription_tier, owner_id, is_active, max_users, max_devices, created_at, updated_at)
 	          VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`
-	
+
 	now := time.Now()
 	err := r.DB.QueryRow(query, account.Name, account.SubscriptionTier, account.OwnerID, true,
 		account.MaxUsers, account.MaxDevices, now, now).Scan(&account.ID)
@@ -102,7 +102,7 @@ func (r *PostgresAccountRepository) CheckDeviceQuota(accountID int) error {
 func (r *PostgresAccountRepository) GetAccountByID(accountID int) (*Account, error) {
 	query := `SELECT id, name, subscription_tier, owner_id, is_active, max_users, max_devices, created_at, updated_at 
 	          FROM accounts WHERE id = $1`
-	
+
 	var account Account
 	var oid, mu, md sql.NullInt64
 	err := r.DB.QueryRow(query, accountID).Scan(
@@ -112,22 +112,31 @@ func (r *PostgresAccountRepository) GetAccountByID(accountID int) (*Account, err
 	if err != nil {
 		return nil, err
 	}
-	if oid.Valid { v := int(oid.Int64); account.OwnerID = &v }
-	if mu.Valid { v := int(mu.Int64); account.MaxUsers = &v }
-	if md.Valid { v := int(md.Int64); account.MaxDevices = &v }
+	if oid.Valid {
+		v := int(oid.Int64)
+		account.OwnerID = &v
+	}
+	if mu.Valid {
+		v := int(mu.Int64)
+		account.MaxUsers = &v
+	}
+	if md.Valid {
+		v := int(md.Int64)
+		account.MaxDevices = &v
+	}
 	return &account, nil
 }
 
 func (r *PostgresAccountRepository) GetAccountsByOwnerID(ownerID int) ([]Account, error) {
 	query := `SELECT id, name, subscription_tier, owner_id, is_active, max_users, max_devices, created_at, updated_at 
 	          FROM accounts WHERE owner_id = $1 ORDER BY created_at DESC`
-	
+
 	rows, err := r.DB.Query(query, ownerID)
 	if err != nil {
 		return nil, err
 	}
 	defer func() { _ = rows.Close() }()
-	
+
 	var accounts []Account
 	for rows.Next() {
 		var account Account
@@ -139,9 +148,18 @@ func (r *PostgresAccountRepository) GetAccountsByOwnerID(ownerID int) ([]Account
 		if err != nil {
 			return nil, err
 		}
-		if oid.Valid { v := int(oid.Int64); account.OwnerID = &v }
-		if mu.Valid { v := int(mu.Int64); account.MaxUsers = &v }
-		if md.Valid { v := int(md.Int64); account.MaxDevices = &v }
+		if oid.Valid {
+			v := int(oid.Int64)
+			account.OwnerID = &v
+		}
+		if mu.Valid {
+			v := int(mu.Int64)
+			account.MaxUsers = &v
+		}
+		if md.Valid {
+			v := int(md.Int64)
+			account.MaxDevices = &v
+		}
 		accounts = append(accounts, account)
 	}
 	return accounts, rows.Err()
@@ -150,7 +168,7 @@ func (r *PostgresAccountRepository) GetAccountsByOwnerID(ownerID int) ([]Account
 func (r *PostgresAccountRepository) UpdateAccount(account *Account) error {
 	query := `UPDATE accounts SET name = $1, subscription_tier = $2, is_active = $3, max_users = $4, max_devices = $5, updated_at = $6 
 	          WHERE id = $7`
-	
+
 	_, err := r.DB.Exec(query, account.Name, account.SubscriptionTier, account.IsActive, account.MaxUsers, account.MaxDevices, time.Now(), account.ID)
 	return err
 }
@@ -163,17 +181,17 @@ func (r *PostgresAccountRepository) ListAllAccounts(limit, offset int) ([]Accoun
 	if err != nil {
 		return nil, 0, err
 	}
-	
+
 	// Get paginated results (include inactive for admin view)
 	query := `SELECT id, name, subscription_tier, owner_id, is_active, max_users, max_devices, created_at, updated_at 
 	          FROM accounts ORDER BY created_at DESC LIMIT $1 OFFSET $2`
-	
+
 	rows, err := r.DB.Query(query, limit, offset)
 	if err != nil {
 		return nil, 0, err
 	}
 	defer func() { _ = rows.Close() }()
-	
+
 	var accounts []Account
 	for rows.Next() {
 		var account Account
@@ -185,9 +203,18 @@ func (r *PostgresAccountRepository) ListAllAccounts(limit, offset int) ([]Accoun
 		if err != nil {
 			return nil, 0, err
 		}
-		if oid.Valid { v := int(oid.Int64); account.OwnerID = &v }
-		if mu.Valid { v := int(mu.Int64); account.MaxUsers = &v }
-		if md.Valid { v := int(md.Int64); account.MaxDevices = &v }
+		if oid.Valid {
+			v := int(oid.Int64)
+			account.OwnerID = &v
+		}
+		if mu.Valid {
+			v := int(mu.Int64)
+			account.MaxUsers = &v
+		}
+		if md.Valid {
+			v := int(md.Int64)
+			account.MaxDevices = &v
+		}
 		accounts = append(accounts, account)
 	}
 	return accounts, count, rows.Err()
@@ -213,7 +240,7 @@ type PostgresPermissionRepository struct {
 func (r *PostgresPermissionRepository) CreatePermission(perm *UserPermission) error {
 	query := `INSERT INTO user_permissions (user_id, account_id, farm_id, role, granted_by_id, created_at)
 	          VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`
-	
+
 	err := r.DB.QueryRow(query, perm.UserID, perm.AccountID, perm.FarmID, perm.Role, perm.GrantedBy, time.Now()).
 		Scan(&perm.ID)
 	return err
@@ -222,13 +249,13 @@ func (r *PostgresPermissionRepository) CreatePermission(perm *UserPermission) er
 func (r *PostgresPermissionRepository) GetPermissionsByUserID(userID, accountID int) ([]UserPermission, error) {
 	query := `SELECT id, user_id, account_id, farm_id, role, granted_by_id, created_at 
 	          FROM user_permissions WHERE user_id = $1 AND account_id = $2`
-	
+
 	rows, err := r.DB.Query(query, userID, accountID)
 	if err != nil {
 		return nil, err
 	}
 	defer func() { _ = rows.Close() }()
-	
+
 	var permissions []UserPermission
 	for rows.Next() {
 		var perm UserPermission
@@ -244,13 +271,13 @@ func (r *PostgresPermissionRepository) GetPermissionsByUserID(userID, accountID 
 func (r *PostgresPermissionRepository) GetPermissionsByFarmID(farmID, accountID int) ([]UserPermission, error) {
 	query := `SELECT id, user_id, account_id, farm_id, role, granted_by_id, created_at 
 	          FROM user_permissions WHERE farm_id = $1 AND account_id = $2`
-	
+
 	rows, err := r.DB.Query(query, farmID, accountID)
 	if err != nil {
 		return nil, err
 	}
 	defer func() { _ = rows.Close() }()
-	
+
 	var permissions []UserPermission
 	for rows.Next() {
 		var perm UserPermission
@@ -278,19 +305,19 @@ func (r *PostgresPermissionRepository) UpdatePermission(perm *UserPermission) er
 func (r *PostgresPermissionRepository) HasPermission(userID, accountID int, farmID *int, role string) (bool, error) {
 	var query string
 	var args []interface{}
-	
+
 	if farmID == nil {
-		// Check account-level role
-		query = `SELECT COUNT(*) FROM user_permissions 
-		         WHERE user_id = $1 AND account_id = $2 AND (farm_id IS NULL OR farm_id = $3) AND role = $4`
-		args = []interface{}{userID, accountID, nil, role}
+		// Check account-level role (farm_id IS NULL means account-wide permission)
+		query = `SELECT COUNT(*) FROM user_permissions
+		         WHERE user_id = $1 AND account_id = $2 AND farm_id IS NULL AND role = $3`
+		args = []interface{}{userID, accountID, role}
 	} else {
 		// Check farm-level or account-level role
 		query = `SELECT COUNT(*) FROM user_permissions 
 		         WHERE user_id = $1 AND account_id = $2 AND (farm_id IS NULL OR farm_id = $3) AND role = $4`
 		args = []interface{}{userID, accountID, farmID, role}
 	}
-	
+
 	var count int
 	err := r.DB.QueryRow(query, args...).Scan(&count)
 	if err != nil {
@@ -308,8 +335,8 @@ func (r *PostgresInvitationRepository) CreateInvitation(inv *UserInvitation) err
 	query := `INSERT INTO user_invitations 
 	          (account_id, email, role, farm_id, invitation_token, invited_by_id, expires_at, created_at)
 	          VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`
-	
-	err := r.DB.QueryRow(query, inv.AccountID, inv.Email, inv.Role, inv.FarmID, 
+
+	err := r.DB.QueryRow(query, inv.AccountID, inv.Email, inv.Role, inv.FarmID,
 		inv.InvitationToken, inv.InvitedByID, inv.ExpiresAt, time.Now()).Scan(&inv.ID)
 	return err
 }
@@ -318,7 +345,7 @@ func (r *PostgresInvitationRepository) GetInvitationByToken(token string) (*User
 	query := `SELECT id, account_id, email, role, farm_id, invitation_token, invited_by_id, accepted_at, 
 	          accepted_by_user_id, expires_at, created_at 
 	          FROM user_invitations WHERE invitation_token = $1 AND accepted_at IS NULL`
-	
+
 	var inv UserInvitation
 	err := r.DB.QueryRow(query, token).Scan(
 		&inv.ID, &inv.AccountID, &inv.Email, &inv.Role, &inv.FarmID, &inv.InvitationToken, &inv.InvitedByID,
@@ -334,13 +361,13 @@ func (r *PostgresInvitationRepository) GetPendingInvitationsByEmail(email string
 	query := `SELECT id, account_id, email, role, farm_id, invitation_token, invited_by_id, accepted_at, 
 	          accepted_by_user_id, expires_at, created_at 
 	          FROM user_invitations WHERE email = $1 AND accepted_at IS NULL AND expires_at > NOW()`
-	
+
 	rows, err := r.DB.Query(query, email)
 	if err != nil {
 		return nil, err
 	}
 	defer func() { _ = rows.Close() }()
-	
+
 	var invitations []UserInvitation
 	for rows.Next() {
 		var inv UserInvitation
@@ -365,13 +392,13 @@ func (r *PostgresInvitationRepository) ListPendingInvitations(accountID int) ([]
 	          accepted_by_user_id, expires_at, created_at 
 	          FROM user_invitations WHERE account_id = $1 AND accepted_at IS NULL AND expires_at > NOW() 
 	          ORDER BY created_at DESC`
-	
+
 	rows, err := r.DB.Query(query, accountID)
 	if err != nil {
 		return nil, err
 	}
 	defer func() { _ = rows.Close() }()
-	
+
 	var invitations []UserInvitation
 	for rows.Next() {
 		var inv UserInvitation
@@ -419,7 +446,7 @@ func (r *PostgresAuditLogRepository) GetAuditLogs(accountID int, filters map[str
 	          FROM audit_logs WHERE account_id = $1`
 	args := []interface{}{accountID}
 	argIndex := 2
-	
+
 	// Apply filters
 	if resourceType, ok := filters["resource_type"]; ok {
 		query += fmt.Sprintf(` AND resource_type = $%d`, argIndex)
@@ -431,7 +458,7 @@ func (r *PostgresAuditLogRepository) GetAuditLogs(accountID int, filters map[str
 		args = append(args, action)
 		argIndex++
 	}
-	
+
 	// Get count
 	countQuery := `SELECT COUNT(*) FROM (` + query + `) cnt`
 	var count int64
@@ -439,17 +466,17 @@ func (r *PostgresAuditLogRepository) GetAuditLogs(accountID int, filters map[str
 	if err != nil {
 		return nil, 0, err
 	}
-	
+
 	// Add pagination and order
 	query += fmt.Sprintf(` ORDER BY created_at DESC LIMIT $%d OFFSET $%d`, argIndex, argIndex+1)
 	args = append(args, limit, offset)
-	
+
 	rows, err := r.DB.Query(query, args...)
 	if err != nil {
 		return nil, 0, err
 	}
 	defer func() { _ = rows.Close() }()
-	
+
 	var logs []AuditLog
 	for rows.Next() {
 		var log AuditLog
@@ -461,10 +488,19 @@ func (r *PostgresAuditLogRepository) GetAuditLogs(accountID int, filters map[str
 		if err != nil {
 			return nil, 0, err
 		}
-		if uid.Valid { v := int(uid.Int64); log.UserID = &v }
-		if ip.Valid { log.IPAddress = ip.String }
-		if ua.Valid { log.UserAgent = ua.String }
-		if em.Valid { log.ErrorMessage = em.String }
+		if uid.Valid {
+			v := int(uid.Int64)
+			log.UserID = &v
+		}
+		if ip.Valid {
+			log.IPAddress = ip.String
+		}
+		if ua.Valid {
+			log.UserAgent = ua.String
+		}
+		if em.Valid {
+			log.ErrorMessage = em.String
+		}
 		_ = json.Unmarshal(oldB, &log.OldValues)
 		_ = json.Unmarshal(newB, &log.NewValues)
 		logs = append(logs, log)
@@ -480,25 +516,40 @@ func (r *PostgresAuditLogRepository) GetAllAuditLogs(filters map[string]interfac
 	whereAdded := false
 
 	if resourceType, ok := filters["resource_type"]; ok {
-		if !whereAdded { query += ` WHERE`; whereAdded = true } else { query += ` AND` }
+		if !whereAdded {
+			query += ` WHERE`
+			whereAdded = true
+		} else {
+			query += ` AND`
+		}
 		query += fmt.Sprintf(` al.resource_type = $%d`, argIndex)
 		args = append(args, resourceType)
 		argIndex++
 	}
 	if action, ok := filters["action"]; ok {
-		if !whereAdded { query += ` WHERE`; whereAdded = true } else { query += ` AND` }
+		if !whereAdded {
+			query += ` WHERE`
+			whereAdded = true
+		} else {
+			query += ` AND`
+		}
 		query += fmt.Sprintf(` al.action = $%d`, argIndex)
 		args = append(args, action)
 		argIndex++
 	}
 	if accountID, ok := filters["account_id"]; ok {
-		if !whereAdded { query += ` WHERE`; whereAdded = true } else { query += ` AND` }
+		if !whereAdded {
+			query += ` WHERE`
+			whereAdded = true
+		} else {
+			query += ` AND`
+		}
 		query += fmt.Sprintf(` al.account_id = $%d`, argIndex)
 		args = append(args, accountID)
 		argIndex++
 	}
 
-		countQuery := `SELECT COUNT(*) FROM (` + query + `) cnt`
+	countQuery := `SELECT COUNT(*) FROM (` + query + `) cnt`
 	var count int64
 	err := r.DB.QueryRow(countQuery, args...).Scan(&count)
 	if err != nil {
@@ -526,10 +577,19 @@ func (r *PostgresAuditLogRepository) GetAllAuditLogs(filters map[string]interfac
 		if err != nil {
 			return nil, 0, err
 		}
-		if uid.Valid { v := int(uid.Int64); log.UserID = &v }
-		if ip.Valid { log.IPAddress = ip.String }
-		if ua.Valid { log.UserAgent = ua.String }
-		if em.Valid { log.ErrorMessage = em.String }
+		if uid.Valid {
+			v := int(uid.Int64)
+			log.UserID = &v
+		}
+		if ip.Valid {
+			log.IPAddress = ip.String
+		}
+		if ua.Valid {
+			log.UserAgent = ua.String
+		}
+		if em.Valid {
+			log.ErrorMessage = em.String
+		}
 		_ = json.Unmarshal(oldB, &log.OldValues)
 		_ = json.Unmarshal(newB, &log.NewValues)
 		logs = append(logs, log)
@@ -565,10 +625,19 @@ func (r *PostgresAuditLogRepository) GetUserAuditLogs(userID, accountID int, lim
 		if err != nil {
 			return nil, 0, err
 		}
-		if uid.Valid { v := int(uid.Int64); log.UserID = &v }
-		if ip.Valid { log.IPAddress = ip.String }
-		if ua.Valid { log.UserAgent = ua.String }
-		if em.Valid { log.ErrorMessage = em.String }
+		if uid.Valid {
+			v := int(uid.Int64)
+			log.UserID = &v
+		}
+		if ip.Valid {
+			log.IPAddress = ip.String
+		}
+		if ua.Valid {
+			log.UserAgent = ua.String
+		}
+		if em.Valid {
+			log.ErrorMessage = em.String
+		}
 		_ = json.Unmarshal(oldB, &log.OldValues)
 		_ = json.Unmarshal(newB, &log.NewValues)
 		logs = append(logs, log)

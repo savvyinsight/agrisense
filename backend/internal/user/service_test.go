@@ -80,6 +80,7 @@ func (m *mockAccountRepo) UpdateAccount(account *Account) error {
 	args := m.Called(account)
 	return args.Error(0)
 }
+
 type mockInvitationRepo struct{ mock.Mock }
 
 func (m *mockInvitationRepo) CreateInvitation(inv *UserInvitation) error {

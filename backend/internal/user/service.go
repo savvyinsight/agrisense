@@ -19,10 +19,10 @@ type Service struct {
 }
 
 type Claims struct {
-	UserID    int   `json:"user_id"`
+	UserID    int    `json:"user_id"`
 	Email     string `json:"email"`
 	Role      string `json:"role"`
-	AccountID *int  `json:"account_id"`
+	AccountID *int   `json:"account_id"`
 	jwt.RegisteredClaims
 }
 
@@ -32,10 +32,10 @@ type LoginRequest struct {
 }
 
 type RegisterRequest struct {
-	Username         string `json:"username" binding:"required"`
-	Email            string `json:"email" binding:"required,email"`
-	Password         string `json:"password" binding:"required,min=6"`
-	InvitationToken  string `json:"invitation_token"`
+	Username        string `json:"username" binding:"required"`
+	Email           string `json:"email" binding:"required,email"`
+	Password        string `json:"password" binding:"required,min=6"`
+	InvitationToken string `json:"invitation_token"`
 }
 
 type LoginResponse struct {
