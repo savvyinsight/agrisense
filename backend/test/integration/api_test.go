@@ -83,7 +83,7 @@ func setupAPIRouter(t *testing.T) (*gin.Engine, *data.Service) {
 
 	authService := user.NewService(userRepo, accountRepo, permissionRepo, invitationRepo, "test-secret", time.Hour)
 	authHandler := user.NewAuthHandler(authService)
-	deviceHandler := device.NewDeviceHandler(deviceRepo)
+	deviceHandler := device.NewDeviceHandler(deviceRepo, accountRepo)
 	dataHandler := data.NewDataHandler(dataService, deviceRepo)
 
 	r := gin.Default()

@@ -1,19 +1,28 @@
 package device
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"github.com/savvyinsight/agrisense/internal/middleware"
 )
 
-type DeviceHandler struct {
-	deviceRepo DeviceRepository
+// AccountQuotaChecker checks whether an account has reached its device quota.
+type AccountQuotaChecker interface {
+	CheckDeviceQuota(accountID int) error
 }
 
-func NewDeviceHandler(deviceRepo DeviceRepository) *DeviceHandler {
+type DeviceHandler struct {
+	deviceRepo  DeviceRepository
+	accountRepo AccountQuotaChecker
+}
+
+func NewDeviceHandler(deviceRepo DeviceRepository, accountRepo AccountQuotaChecker) *DeviceHandler {
 	return &DeviceHandler{
-		deviceRepo: deviceRepo,
+		deviceRepo:  deviceRepo,
+		accountRepo: accountRepo,
 	}
 }
 
@@ -33,6 +42,21 @@ func (h *DeviceHandler) Create(c *gin.Context) {
 	v := userID.(int)
 	device.UserID = &v
 
+	// Set account ID from context
+	accountID, ok := middleware.MustGetAccountID(c)
+	if !ok {
+		return
+	}
+	device.AccountID = &accountID
+
+	// Check device quota before creating
+	if h.accountRepo != nil {
+		if err := h.accountRepo.CheckDeviceQuota(accountID); err != nil {
+			c.JSON(http.StatusForbidden, gin.H{"error": fmt.Sprintf("Device quota exceeded: %v", err)})
+			return
+		}
+	}
+
 	// Set default status - always offline until device connects
 	device.Status = DeviceStatusOffline
 
@@ -51,9 +75,20 @@ func (h *DeviceHandler) GetByID(c *gin.Context) {
 		return
 	}
 
+	accountID, ok := middleware.MustGetAccountID(c)
+	if !ok {
+		return
+	}
+
 	device, err := h.deviceRepo.GetByID(id)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "device not found"})
+		return
+	}
+
+	// Verify account ownership
+	if device.AccountID == nil || *device.AccountID != accountID {
+		c.JSON(http.StatusForbidden, gin.H{"error": "access denied"})
 		return
 	}
 
@@ -69,6 +104,11 @@ func (h *DeviceHandler) List(c *gin.Context) {
 		listUserID = 0 // admin sees all devices (including unclaimed)
 	}
 
+	accountID, ok := middleware.MustGetAccountID(c)
+	if !ok {
+		return
+	}
+
 	// Parse pagination
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
@@ -76,7 +116,7 @@ func (h *DeviceHandler) List(c *gin.Context) {
 
 	filter := DeviceFilter{Search: c.Query("q")}
 
-	devices, total, err := h.deviceRepo.List(listUserID, filter, limit, offset)
+	devices, total, err := h.deviceRepo.List(accountID, listUserID, filter, limit, offset)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -97,9 +137,20 @@ func (h *DeviceHandler) Update(c *gin.Context) {
 		return
 	}
 
+	accountID, ok := middleware.MustGetAccountID(c)
+	if !ok {
+		return
+	}
+
 	existing, err := h.deviceRepo.GetByID(id)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "device not found"})
+		return
+	}
+
+	// Verify account ownership
+	if existing.AccountID == nil || *existing.AccountID != accountID {
+		c.JSON(http.StatusForbidden, gin.H{"error": "access denied"})
 		return
 	}
 
@@ -149,7 +200,12 @@ func (h *DeviceHandler) Delete(c *gin.Context) {
 		return
 	}
 
-	if err := h.deviceRepo.Delete(id); err != nil {
+	accountID, ok := middleware.MustGetAccountID(c)
+	if !ok {
+		return
+	}
+
+	if err := h.deviceRepo.Delete(id, accountID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -188,10 +244,26 @@ func (h *DeviceHandler) ClaimDeviceHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, claimed)
 }
 
-// UnclaimDeviceHandler resets a device to unclaimed state (admin only)
+// UnclaimDeviceHandler resets a device to unclaimed state
 // POST /api/v1/devices/:id/unclaim
 func (h *DeviceHandler) UnclaimDeviceHandler(c *gin.Context) {
 	deviceID := c.Param("id")
+
+	accountID, ok := middleware.MustGetAccountID(c)
+	if !ok {
+		return
+	}
+
+	// Verify the device belongs to this account before unclaiming
+	existing, err := h.deviceRepo.GetByDeviceID(deviceID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "device not found"})
+		return
+	}
+	if existing.AccountID == nil || *existing.AccountID != accountID {
+		c.JSON(http.StatusForbidden, gin.H{"error": "access denied"})
+		return
+	}
 
 	if err := h.deviceRepo.UnclaimDevice(deviceID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to unclaim device"})

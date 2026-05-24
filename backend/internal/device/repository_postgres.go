@@ -46,8 +46,8 @@ func (r *PostgresDeviceRepository) Create(device *Device) error {
 
 func (r *PostgresDeviceRepository) GetByID(id int) (*Device, error) {
 	query := `
-        SELECT id, device_id, name, type, location, latitude, longitude, status, last_heartbeat, 
-               firmware_version, config, field_id, user_id, created_at, updated_at
+        SELECT id, device_id, name, type, location, latitude, longitude, status, last_heartbeat,
+               firmware_version, config, field_id, user_id, account_id, created_at, updated_at
         FROM devices WHERE id = $1
     `
 
@@ -70,6 +70,7 @@ func (r *PostgresDeviceRepository) GetByID(id int) (*Device, error) {
 		&configJSON,
 		&device.FieldID,
 		&device.UserID,
+		&device.AccountID,
 		&device.CreatedAt,
 		&device.UpdatedAt,
 	)
@@ -97,8 +98,8 @@ func (r *PostgresDeviceRepository) GetByID(id int) (*Device, error) {
 
 func (r *PostgresDeviceRepository) GetByDeviceID(deviceID string) (*Device, error) {
 	query := `
-        SELECT id, device_id, name, type, location, latitude, longitude, status, last_heartbeat, 
-               firmware_version, config, field_id, user_id, created_at, updated_at
+        SELECT id, device_id, name, type, location, latitude, longitude, status, last_heartbeat,
+               firmware_version, config, field_id, user_id, account_id, created_at, updated_at
         FROM devices WHERE device_id = $1
     `
 
@@ -121,6 +122,7 @@ func (r *PostgresDeviceRepository) GetByDeviceID(deviceID string) (*Device, erro
 		&configJSON,
 		&device.FieldID,
 		&device.UserID,
+		&device.AccountID,
 		&device.CreatedAt,
 		&device.UpdatedAt,
 	)
@@ -190,8 +192,8 @@ func (r *PostgresDeviceRepository) UnclaimDevice(deviceID string) error {
 
 func (r *PostgresDeviceRepository) GetByUserID(userID int) ([]Device, error) {
 	query := `
-        SELECT id, device_id, name, type, location, latitude, longitude, status, last_heartbeat, 
-               firmware_version, config, field_id, user_id, created_at, updated_at
+        SELECT id, device_id, name, type, location, latitude, longitude, status, last_heartbeat,
+               firmware_version, config, field_id, user_id, account_id, created_at, updated_at
         FROM devices WHERE user_id = $1 ORDER BY id
     `
 
@@ -226,6 +228,7 @@ func (r *PostgresDeviceRepository) GetByUserID(userID int) ([]Device, error) {
 			&configJSON,
 			&device.FieldID,
 			&device.UserID,
+			&device.AccountID,
 			&device.CreatedAt,
 			&device.UpdatedAt,
 		)
@@ -253,10 +256,10 @@ func (r *PostgresDeviceRepository) GetByUserID(userID int) ([]Device, error) {
 
 func (r *PostgresDeviceRepository) Update(device *Device) error {
 	query := `
-        UPDATE devices 
-        SET name = $1, type = $2, location = $3, latitude = $4, longitude = $5, status = $6, 
+        UPDATE devices
+        SET name = $1, type = $2, location = $3, latitude = $4, longitude = $5, status = $6,
             firmware_version = $7, config = $8, field_id = $9, updated_at = $10
-        WHERE id = $11
+        WHERE id = $11 AND (account_id = $12 OR $12 IS NULL)
     `
 
 	configJSON, err := json.Marshal(device.Config)
@@ -277,6 +280,7 @@ func (r *PostgresDeviceRepository) Update(device *Device) error {
 		device.FieldID,
 		time.Now(),
 		device.ID,
+		device.AccountID,
 	)
 
 	return err
@@ -294,10 +298,10 @@ func (r *PostgresDeviceRepository) UpdateStatus(deviceID string, status DeviceSt
 	return err
 }
 
-func (r *PostgresDeviceRepository) List(userID int, filter DeviceFilter, limit, offset int) ([]Device, int64, error) {
-	whereClause := "WHERE user_id = $1 OR (user_id IS NULL AND $1 = 0)"
-	args := []interface{}{userID}
-	paramIdx := 2
+func (r *PostgresDeviceRepository) List(accountID, userID int, filter DeviceFilter, limit, offset int) ([]Device, int64, error) {
+	whereClause := "WHERE (account_id = $1 OR ($1 = 0)) AND (user_id = $2 OR (user_id IS NULL AND $2 = 0) OR ($2 = 0))"
+	args := []interface{}{accountID, userID}
+	paramIdx := 3
 
 	if filter.Search != "" {
 		whereClause += fmt.Sprintf(" AND (device_id ILIKE $%d OR name ILIKE $%d)", paramIdx, paramIdx)
@@ -306,11 +310,11 @@ func (r *PostgresDeviceRepository) List(userID int, filter DeviceFilter, limit, 
 	}
 
 	query := fmt.Sprintf(`
-        SELECT id, device_id, name, type, location, latitude, longitude, status, last_heartbeat, 
-               firmware_version, config, field_id, user_id, created_at, updated_at
-        FROM devices 
+        SELECT id, device_id, name, type, location, latitude, longitude, status, last_heartbeat,
+               firmware_version, config, field_id, user_id, account_id, created_at, updated_at
+        FROM devices
         %s
-        ORDER BY id 
+        ORDER BY id
         LIMIT $%d OFFSET $%d
     `, whereClause, paramIdx, paramIdx+1)
 
@@ -346,6 +350,7 @@ func (r *PostgresDeviceRepository) List(userID int, filter DeviceFilter, limit, 
 			&configJSON,
 			&device.FieldID,
 			&device.UserID,
+			&device.AccountID,
 			&device.CreatedAt,
 			&device.UpdatedAt,
 		)
@@ -378,9 +383,9 @@ func (r *PostgresDeviceRepository) List(userID int, filter DeviceFilter, limit, 
 	return devices, total, nil
 }
 
-func (r *PostgresDeviceRepository) Delete(id int) error {
-	query := `DELETE FROM devices WHERE id = $1`
-	result, err := r.DB.Exec(query, id)
+func (r *PostgresDeviceRepository) Delete(id, accountID int) error {
+	query := `DELETE FROM devices WHERE id = $1 AND (account_id = $2 OR $2 = 0)`
+	result, err := r.DB.Exec(query, id, accountID)
 	if err != nil {
 		return err
 	}

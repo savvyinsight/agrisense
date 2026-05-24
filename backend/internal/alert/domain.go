@@ -38,6 +38,7 @@ type AlertRule struct {
 	Severity                AlertSeverity  `json:"severity"`
 	Enabled                 bool           `json:"enabled"`
 	UserID                  int            `json:"user_id"`
+	AccountID               *int           `json:"account_id,omitempty"`
 	CreatedAt               time.Time      `json:"created_at"`
 	UpdatedAt               time.Time      `json:"updated_at"`
 	RecoveryThresholdValue  *float64       `json:"recovery_threshold_value,omitempty"`
@@ -63,6 +64,7 @@ type Alert struct {
 	TriggeredAt         time.Time              `json:"triggered_at"`
 	AcknowledgedAt      *time.Time             `json:"acknowledged_at,omitempty"`
 	ResolvedAt          *time.Time             `json:"resolved_at,omitempty"`
+	AccountID           *int                   `json:"account_id,omitempty"`
 	Metadata            map[string]interface{} `json:"metadata,omitempty"`
 	IsFlapping          bool                   `json:"is_flapping"`
 	FlapCount           int                    `json:"flap_count"`
@@ -82,27 +84,27 @@ type AlertCorrelation struct {
 type AlertRuleRepository interface {
 	Create(rule *AlertRule) error
 	GetByID(id int) (*AlertRule, error)
-	GetByDeviceID(deviceID int) ([]AlertRule, error)
-	GetEnabledRules() ([]AlertRule, error)
+	GetByDeviceID(deviceID, accountID int) ([]AlertRule, error)
+	GetEnabledRules(accountID int) ([]AlertRule, error)
 	Update(rule *AlertRule) error
-	Delete(id int) error
-	List(userID int) ([]AlertRule, error)
+	Delete(id, accountID int) error
+	List(accountID, userID int) ([]AlertRule, error)
 	GetAutoEscalationRules() ([]AlertRule, error)
 }
 
 type AlertRepository interface {
 	Create(alert *Alert) error
 	GetByID(id int) (*Alert, error)
-	GetActive() ([]Alert, error)
-	GetActivePaginated(limit, offset int) ([]Alert, int64, error)
-	GetByDeviceID(deviceID int) ([]Alert, error)
+	GetActive(accountID int) ([]Alert, error)
+	GetActivePaginated(accountID int, limit, offset int) ([]Alert, int64, error)
+	GetByDeviceID(deviceID, accountID int) ([]Alert, error)
 	GetByRuleID(ruleID int) ([]Alert, error)
 	GetActiveByRuleAndDevice(ruleID, deviceID int) (*Alert, error)
-	GetActiveAlertsByField(fieldID int) ([]Alert, error)
-	Acknowledge(id int) error
-	Resolve(id int) error
+	GetActiveAlertsByField(fieldID, accountID int) ([]Alert, error)
+	Acknowledge(id, accountID int) error
+	Resolve(id, accountID int) error
 	ResolveByRuleID(ruleID int) ([]int, error)
-	List(limit, offset int) ([]Alert, int64, error)
+	List(accountID int, limit, offset int) ([]Alert, int64, error)
 	SnoozeAlert(id int, until time.Time, reason string) error
 	UnsnoozeAlert(id int) error
 	GetAlertCorrelations() ([]AlertCorrelation, error)

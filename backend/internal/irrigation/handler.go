@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/savvyinsight/agrisense/internal/middleware"
 )
 
 type createZoneRequest struct {
@@ -104,6 +105,15 @@ func (h *IrrigationHandler) Update(c *gin.Context) {
 		return
 	}
 
+	userID, ok := middleware.MustGetUserID(c)
+	if !ok {
+		return
+	}
+	if existing.UserID != userID {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
+		return
+	}
+
 	if existing.Status == ZoneStatusActive {
 		c.JSON(http.StatusConflict, gin.H{"error": "cannot update zone while it is active"})
 		return
@@ -143,6 +153,21 @@ func (h *IrrigationHandler) Delete(c *gin.Context) {
 		return
 	}
 
+	existing, err := h.repo.GetByID(id)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "zone not found"})
+		return
+	}
+
+	userID, ok := middleware.MustGetUserID(c)
+	if !ok {
+		return
+	}
+	if existing.UserID != userID {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
+		return
+	}
+
 	if err := h.repo.Delete(id); err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
@@ -152,7 +177,10 @@ func (h *IrrigationHandler) Delete(c *gin.Context) {
 }
 
 func (h *IrrigationHandler) Start(c *gin.Context) {
-	userID, _ := c.Get("user_id")
+	userID, ok := middleware.MustGetUserID(c)
+	if !ok {
+		return
+	}
 
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
@@ -163,6 +191,11 @@ func (h *IrrigationHandler) Start(c *gin.Context) {
 	zone, err := h.repo.GetByID(id)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "zone not found"})
+		return
+	}
+
+	if zone.UserID != userID {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
 		return
 	}
 
@@ -181,7 +214,6 @@ func (h *IrrigationHandler) Start(c *gin.Context) {
 		return
 	}
 
-	uid := userID.(int)
 	event := IrrigationEvent{
 		ZoneID:      zone.ID,
 		FieldID:     zone.FieldID,
@@ -189,7 +221,7 @@ func (h *IrrigationHandler) Start(c *gin.Context) {
 		Status:      EventStatusRunning,
 		StartTime:   time.Now(),
 		TriggerType: TriggerManual,
-		TriggeredBy: &uid,
+		TriggeredBy: &userID,
 	}
 	if err := h.eventRepo.Create(&event); err != nil {
 		log.Printf("Failed to log irrigation start event: %v", err)
@@ -209,6 +241,15 @@ func (h *IrrigationHandler) Stop(c *gin.Context) {
 	zone, err := h.repo.GetByID(id)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "zone not found"})
+		return
+	}
+
+	userID, ok := middleware.MustGetUserID(c)
+	if !ok {
+		return
+	}
+	if zone.UserID != userID {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
 		return
 	}
 
@@ -248,6 +289,15 @@ func (h *IrrigationHandler) Retry(c *gin.Context) {
 	zone, err := h.repo.GetByID(id)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "zone not found"})
+		return
+	}
+
+	userID, ok := middleware.MustGetUserID(c)
+	if !ok {
+		return
+	}
+	if zone.UserID != userID {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
 		return
 	}
 

@@ -47,8 +47,8 @@ type DeviceRepository interface {
 	Update(device *Device) error
 	UpdateStatus(deviceID string, status DeviceStatus) error
 	UpdateHeartbeat(deviceID string) error
-	Delete(id int) error
-	List(userID int, filter DeviceFilter, limit, offset int) ([]Device, int64, error)
+	Delete(id, accountID int) error
+	List(accountID, userID int, filter DeviceFilter, limit, offset int) ([]Device, int64, error)
 	FindOrCreate(deviceID string) (*Device, error)
 	ClaimDevice(deviceID string, userID, accountID int) error
 	UnclaimDevice(deviceID string) error

@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"github.com/savvyinsight/agrisense/internal/middleware"
 )
 
 type FieldHandler struct {
@@ -51,6 +52,15 @@ func (h *FieldHandler) GetByID(c *gin.Context) {
 		return
 	}
 
+	userID, ok := middleware.MustGetUserID(c)
+	if !ok {
+		return
+	}
+	if field.UserID != userID {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
+		return
+	}
+
 	c.JSON(http.StatusOK, field)
 }
 
@@ -80,6 +90,15 @@ func (h *FieldHandler) Update(c *gin.Context) {
 	existing, err := h.repo.GetByID(id)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "field not found"})
+		return
+	}
+
+	userID, ok := middleware.MustGetUserID(c)
+	if !ok {
+		return
+	}
+	if existing.UserID != userID {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
 		return
 	}
 
@@ -132,6 +151,21 @@ func (h *FieldHandler) Delete(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid field id"})
+		return
+	}
+
+	existing, err := h.repo.GetByID(id)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "field not found"})
+		return
+	}
+
+	userID, ok := middleware.MustGetUserID(c)
+	if !ok {
+		return
+	}
+	if existing.UserID != userID {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
 		return
 	}
 

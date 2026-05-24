@@ -89,11 +89,11 @@ func (f *fakeDeviceRepo) UpdateHeartbeat(deviceID string) error {
 	return nil
 }
 
-func (f *fakeDeviceRepo) Delete(id int) error {
+func (f *fakeDeviceRepo) Delete(id, accountID int) error {
 	return nil
 }
 
-func (f *fakeDeviceRepo) List(userID int, filter device.DeviceFilter, limit, offset int) ([]device.Device, int64, error) {
+func (f *fakeDeviceRepo) List(accountID, userID int, filter device.DeviceFilter, limit, offset int) ([]device.Device, int64, error) {
 	return nil, 0, nil
 }
 func (f *fakeDeviceRepo) FindOrCreate(deviceID string) (*device.Device, error) {

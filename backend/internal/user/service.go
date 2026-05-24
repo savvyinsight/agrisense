@@ -2,6 +2,7 @@ package user
 
 import (
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -79,6 +80,11 @@ func (s *Service) Register(req RegisterRequest) (*User, error) {
 		}
 		if time.Now().After(inv.ExpiresAt) {
 			return nil, errors.New("invitation has expired")
+		}
+
+		// Check user quota before accepting invitation
+		if err := s.accountRepo.CheckUserQuota(inv.AccountID); err != nil {
+			return nil, fmt.Errorf("cannot accept invitation: %w", err)
 		}
 
 		user := &User{

@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"github.com/savvyinsight/agrisense/internal/middleware"
 )
 
 type AlertHandler struct {
@@ -20,6 +21,11 @@ func NewAlertHandler(alertService *Service) *AlertHandler {
 // Rule endpoints
 
 func (h *AlertHandler) CreateRule(c *gin.Context) {
+	accountID, ok := middleware.MustGetAccountID(c)
+	if !ok {
+		return
+	}
+
 	var rule AlertRule
 	if err := c.ShouldBindJSON(&rule); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -28,6 +34,7 @@ func (h *AlertHandler) CreateRule(c *gin.Context) {
 
 	userID, _ := c.Get("user_id")
 	rule.UserID = userID.(int)
+	rule.AccountID = &accountID
 
 	if err := h.alertService.CreateRule(&rule); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -38,6 +45,11 @@ func (h *AlertHandler) CreateRule(c *gin.Context) {
 }
 
 func (h *AlertHandler) GetRule(c *gin.Context) {
+	accountID, ok := middleware.MustGetAccountID(c)
+	if !ok {
+		return
+	}
+
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid rule id"})
@@ -50,13 +62,24 @@ func (h *AlertHandler) GetRule(c *gin.Context) {
 		return
 	}
 
+	// Verify account ownership
+	if rule.AccountID != nil && *rule.AccountID != accountID {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
+		return
+	}
+
 	c.JSON(http.StatusOK, rule)
 }
 
 func (h *AlertHandler) ListRules(c *gin.Context) {
+	accountID, ok := middleware.MustGetAccountID(c)
+	if !ok {
+		return
+	}
+
 	userID, _ := c.Get("user_id")
 
-	rules, err := h.alertService.ListRules(userID.(int))
+	rules, err := h.alertService.ListRules(accountID, userID.(int))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -66,9 +89,26 @@ func (h *AlertHandler) ListRules(c *gin.Context) {
 }
 
 func (h *AlertHandler) UpdateRule(c *gin.Context) {
+	accountID, ok := middleware.MustGetAccountID(c)
+	if !ok {
+		return
+	}
+
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid rule id"})
+		return
+	}
+
+	// Fetch existing rule to verify ownership
+	existing, err := h.alertService.GetRule(id)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+
+	if existing.AccountID != nil && *existing.AccountID != accountID {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
 		return
 	}
 
@@ -78,6 +118,7 @@ func (h *AlertHandler) UpdateRule(c *gin.Context) {
 		return
 	}
 	rule.ID = id
+	rule.AccountID = &accountID
 
 	if err := h.alertService.UpdateRule(&rule); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -88,13 +129,30 @@ func (h *AlertHandler) UpdateRule(c *gin.Context) {
 }
 
 func (h *AlertHandler) DeleteRule(c *gin.Context) {
+	accountID, ok := middleware.MustGetAccountID(c)
+	if !ok {
+		return
+	}
+
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid rule id"})
 		return
 	}
 
-	if err := h.alertService.DeleteRule(id); err != nil {
+	// Fetch existing rule to verify ownership
+	existing, err := h.alertService.GetRule(id)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+
+	if existing.AccountID != nil && *existing.AccountID != accountID {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
+		return
+	}
+
+	if err := h.alertService.DeleteRule(id, accountID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -105,10 +163,15 @@ func (h *AlertHandler) DeleteRule(c *gin.Context) {
 // Alert endpoints
 
 func (h *AlertHandler) GetActiveAlerts(c *gin.Context) {
+	accountID, ok := middleware.MustGetAccountID(c)
+	if !ok {
+		return
+	}
+
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
 
-	alerts, total, err := h.alertService.GetActiveAlertsPaginated(page, limit)
+	alerts, total, err := h.alertService.GetActiveAlertsPaginated(accountID, page, limit)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -123,13 +186,18 @@ func (h *AlertHandler) GetActiveAlerts(c *gin.Context) {
 }
 
 func (h *AlertHandler) GetAlertsByDevice(c *gin.Context) {
+	accountID, ok := middleware.MustGetAccountID(c)
+	if !ok {
+		return
+	}
+
 	deviceID, err := strconv.Atoi(c.Param("deviceId"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid device id"})
 		return
 	}
 
-	alerts, err := h.alertService.GetAlertsByDevice(deviceID)
+	alerts, err := h.alertService.GetAlertsByDevice(deviceID, accountID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -139,13 +207,29 @@ func (h *AlertHandler) GetAlertsByDevice(c *gin.Context) {
 }
 
 func (h *AlertHandler) AcknowledgeAlert(c *gin.Context) {
+	accountID, ok := middleware.MustGetAccountID(c)
+	if !ok {
+		return
+	}
+
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid alert id"})
 		return
 	}
 
-	if err := h.alertService.AcknowledgeAlert(id); err != nil {
+	// Verify account ownership
+	alert, err := h.alertService.GetAlertByID(id)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "alert not found"})
+		return
+	}
+	if alert.AccountID != nil && *alert.AccountID != accountID {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
+		return
+	}
+
+	if err := h.alertService.AcknowledgeAlert(id, accountID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -154,13 +238,29 @@ func (h *AlertHandler) AcknowledgeAlert(c *gin.Context) {
 }
 
 func (h *AlertHandler) ResolveAlert(c *gin.Context) {
+	accountID, ok := middleware.MustGetAccountID(c)
+	if !ok {
+		return
+	}
+
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid alert id"})
 		return
 	}
 
-	if err := h.alertService.ResolveAlert(id); err != nil {
+	// Verify account ownership
+	alert, err := h.alertService.GetAlertByID(id)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "alert not found"})
+		return
+	}
+	if alert.AccountID != nil && *alert.AccountID != accountID {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
+		return
+	}
+
+	if err := h.alertService.ResolveAlert(id, accountID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -169,10 +269,15 @@ func (h *AlertHandler) ResolveAlert(c *gin.Context) {
 }
 
 func (h *AlertHandler) GetAlertHistory(c *gin.Context) {
+	accountID, ok := middleware.MustGetAccountID(c)
+	if !ok {
+		return
+	}
+
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
 
-	alerts, total, err := h.alertService.GetAlertHistory(page, limit)
+	alerts, total, err := h.alertService.GetAlertHistory(accountID, page, limit)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

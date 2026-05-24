@@ -62,7 +62,7 @@ func (e *Engine) Stop() {
 }
 
 func (e *Engine) loadRules() error {
-	rules, err := e.ruleRepo.GetEnabledRules()
+	rules, err := e.ruleRepo.GetEnabledRules(0)
 	if err != nil {
 		return err
 	}
@@ -212,7 +212,7 @@ func (e *Engine) triggerAlert(rule *alert.AlertRule, data *sensor.SensorData) {
 }
 
 func (e *Engine) updateFieldHealth(fieldID int) error {
-	activeAlerts, err := e.alertSvc.GetActiveAlertsByField(fieldID)
+	activeAlerts, err := e.alertSvc.GetActiveAlertsByField(fieldID, 0)
 	if err != nil {
 		return err
 	}

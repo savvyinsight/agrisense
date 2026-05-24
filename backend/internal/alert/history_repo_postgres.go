@@ -8,7 +8,7 @@ import (
 )
 
 const alertColumns = `id, rule_id, device_id, sensor_value, message, severity,
-	status, triggered_at, acknowledged_at, resolved_at, metadata,
+	status, triggered_at, acknowledged_at, resolved_at, account_id, metadata,
 	is_flapping, flap_count, snoozed_until, snooze_reason, correlation_id, root_cause_suggestion`
 
 type PostgresAlertRepository struct {
@@ -20,7 +20,7 @@ func scanAlert(row interface{ Scan(dest ...interface{}) error }, alert *Alert) e
 	err := row.Scan(
 		&alert.ID, &alert.RuleID, &alert.DeviceID, &alert.SensorValue,
 		&alert.Message, &alert.Severity, &alert.Status, &alert.TriggeredAt,
-		&alert.AcknowledgedAt, &alert.ResolvedAt, &metadataJSON,
+		&alert.AcknowledgedAt, &alert.ResolvedAt, &alert.AccountID, &metadataJSON,
 		&alert.IsFlapping, &alert.FlapCount, &alert.SnoozedUntil, &alert.SnoozeReason,
 		&alert.CorrelationID, &alert.RootCauseSuggestion,
 	)
@@ -61,10 +61,17 @@ func (r *PostgresAlertRepository) Create(alert *Alert) error {
 	return err
 }
 
-func (r *PostgresAlertRepository) GetActive() ([]Alert, error) {
-	query := `SELECT ` + alertColumns + ` FROM alerts WHERE status IN ('triggered') ORDER BY triggered_at DESC`
+func (r *PostgresAlertRepository) GetActive(accountID int) ([]Alert, error) {
+	query := `SELECT ` + alertColumns + ` FROM alerts WHERE status IN ('triggered')`
 
-	rows, err := r.DB.Query(query)
+	args := []interface{}{}
+	if accountID > 0 {
+		query += ` AND account_id = $1`
+		args = append(args, accountID)
+	}
+	query += ` ORDER BY triggered_at DESC`
+
+	rows, err := r.DB.Query(query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -82,10 +89,26 @@ func (r *PostgresAlertRepository) GetActive() ([]Alert, error) {
 	return alerts, nil
 }
 
-func (r *PostgresAlertRepository) GetActivePaginated(limit, offset int) ([]Alert, int64, error) {
-	query := `SELECT ` + alertColumns + ` FROM alerts WHERE status IN ('triggered') ORDER BY triggered_at DESC LIMIT $1 OFFSET $2`
+func (r *PostgresAlertRepository) GetActivePaginated(accountID int, limit, offset int) ([]Alert, int64, error) {
+	query := `SELECT ` + alertColumns + ` FROM alerts WHERE status IN ('triggered')`
 
-	rows, err := r.DB.Query(query, limit, offset)
+	countQuery := `SELECT COUNT(*) FROM alerts WHERE status IN ('triggered')`
+
+	args := []interface{}{}
+	countArgs := []interface{}{}
+	if accountID > 0 {
+		query += ` AND account_id = $1`
+		countQuery += ` AND account_id = $1`
+		args = append(args, accountID)
+		countArgs = append(countArgs, accountID)
+	}
+
+	// Add LIMIT and OFFSET with correct positional params
+	argOffset := len(args)
+	query += fmt.Sprintf(` ORDER BY triggered_at DESC LIMIT $%d OFFSET $%d`, argOffset+1, argOffset+2)
+	args = append(args, limit, offset)
+
+	rows, err := r.DB.Query(query, args...)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -101,7 +124,7 @@ func (r *PostgresAlertRepository) GetActivePaginated(limit, offset int) ([]Alert
 	}
 
 	var total int64
-	err = r.DB.QueryRow(`SELECT COUNT(*) FROM alerts WHERE status IN ('triggered')`).Scan(&total)
+	err = r.DB.QueryRow(countQuery, countArgs...).Scan(&total)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -109,10 +132,17 @@ func (r *PostgresAlertRepository) GetActivePaginated(limit, offset int) ([]Alert
 	return alerts, total, nil
 }
 
-func (r *PostgresAlertRepository) GetByDeviceID(deviceID int) ([]Alert, error) {
-	query := `SELECT ` + alertColumns + ` FROM alerts WHERE device_id = $1 ORDER BY triggered_at DESC`
+func (r *PostgresAlertRepository) GetByDeviceID(deviceID, accountID int) ([]Alert, error) {
+	query := `SELECT ` + alertColumns + ` FROM alerts WHERE device_id = $1`
 
-	rows, err := r.DB.Query(query, deviceID)
+	args := []interface{}{deviceID}
+	if accountID > 0 {
+		query += ` AND account_id = $2`
+		args = append(args, accountID)
+	}
+	query += ` ORDER BY triggered_at DESC`
+
+	rows, err := r.DB.Query(query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -180,13 +210,19 @@ func (r *PostgresAlertRepository) GetActiveByRuleAndDevice(ruleID, deviceID int)
 	return &alert, nil
 }
 
-func (r *PostgresAlertRepository) GetActiveAlertsByField(fieldID int) ([]Alert, error) {
+func (r *PostgresAlertRepository) GetActiveAlertsByField(fieldID, accountID int) ([]Alert, error) {
 	query := `SELECT ` + alertColumns + ` FROM alerts a
 		JOIN devices d ON a.device_id = d.id
-		WHERE d.field_id = $1 AND a.status IN ('triggered', 'acknowledged')
-		ORDER BY a.triggered_at DESC`
+		WHERE d.field_id = $1 AND a.status IN ('triggered', 'acknowledged')`
 
-	rows, err := r.DB.Query(query, fieldID)
+	args := []interface{}{fieldID}
+	if accountID > 0 {
+		query += ` AND a.account_id = $2`
+		args = append(args, accountID)
+	}
+	query += ` ORDER BY a.triggered_at DESC`
+
+	rows, err := r.DB.Query(query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -204,15 +240,25 @@ func (r *PostgresAlertRepository) GetActiveAlertsByField(fieldID int) ([]Alert, 
 	return alerts, nil
 }
 
-func (r *PostgresAlertRepository) Acknowledge(id int) error {
+func (r *PostgresAlertRepository) Acknowledge(id, accountID int) error {
 	query := `UPDATE alerts SET status = $1, acknowledged_at = $2 WHERE id = $3`
-	_, err := r.DB.Exec(query, AlertStatusAcknowledged, time.Now(), id)
+	args := []interface{}{AlertStatusAcknowledged, time.Now(), id}
+	if accountID > 0 {
+		query += ` AND account_id = $4`
+		args = append(args, accountID)
+	}
+	_, err := r.DB.Exec(query, args...)
 	return err
 }
 
-func (r *PostgresAlertRepository) Resolve(id int) error {
+func (r *PostgresAlertRepository) Resolve(id, accountID int) error {
 	query := `UPDATE alerts SET status = $1, resolved_at = $2 WHERE id = $3`
-	_, err := r.DB.Exec(query, AlertStatusResolved, time.Now(), id)
+	args := []interface{}{AlertStatusResolved, time.Now(), id}
+	if accountID > 0 {
+		query += ` AND account_id = $4`
+		args = append(args, accountID)
+	}
+	_, err := r.DB.Exec(query, args...)
 	return err
 }
 
@@ -238,10 +284,25 @@ func (r *PostgresAlertRepository) ResolveByRuleID(ruleID int) ([]int, error) {
 	return deviceIDs, nil
 }
 
-func (r *PostgresAlertRepository) List(limit, offset int) ([]Alert, int64, error) {
-	query := `SELECT ` + alertColumns + ` FROM alerts ORDER BY triggered_at DESC LIMIT $1 OFFSET $2`
+func (r *PostgresAlertRepository) List(accountID int, limit, offset int) ([]Alert, int64, error) {
+	query := `SELECT ` + alertColumns + ` FROM alerts WHERE 1=1`
 
-	rows, err := r.DB.Query(query, limit, offset)
+	countQuery := `SELECT COUNT(*) FROM alerts WHERE 1=1`
+
+	args := []interface{}{}
+	countArgs := []interface{}{}
+	if accountID > 0 {
+		query += ` AND account_id = $1`
+		countQuery += ` AND account_id = $1`
+		args = append(args, accountID)
+		countArgs = append(countArgs, accountID)
+	}
+
+	argOffset := len(args)
+	query += fmt.Sprintf(` ORDER BY triggered_at DESC LIMIT $%d OFFSET $%d`, argOffset+1, argOffset+2)
+	args = append(args, limit, offset)
+
+	rows, err := r.DB.Query(query, args...)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -257,7 +318,7 @@ func (r *PostgresAlertRepository) List(limit, offset int) ([]Alert, int64, error
 	}
 
 	var total int64
-	err = r.DB.QueryRow(`SELECT COUNT(*) FROM alerts`).Scan(&total)
+	err = r.DB.QueryRow(countQuery, countArgs...).Scan(&total)
 	if err != nil {
 		return nil, 0, err
 	}

@@ -7,7 +7,7 @@ import (
 )
 
 const alertRuleColumns = `id, name, device_id, field_id, sensor_type_id, condition, threshold_value,
-	threshold_max, duration_seconds, severity, enabled, user_id, created_at, updated_at,
+	threshold_max, duration_seconds, severity, enabled, user_id, account_id, created_at, updated_at,
 	recovery_threshold_value, recovery_condition, trend_condition,
 	auto_escalation_enabled, auto_escalation_minutes, auto_escalation_severity`
 
@@ -19,7 +19,7 @@ func scanAlertRule(row interface{ Scan(dest ...interface{}) error }, rule *Alert
 	return row.Scan(
 		&rule.ID, &rule.Name, &rule.DeviceID, &rule.FieldID, &rule.SensorTypeID,
 		&rule.Condition, &rule.ThresholdValue, &rule.ThresholdMax,
-		&rule.DurationSeconds, &rule.Severity, &rule.Enabled, &rule.UserID,
+		&rule.DurationSeconds, &rule.Severity, &rule.Enabled, &rule.UserID, &rule.AccountID,
 		&rule.CreatedAt, &rule.UpdatedAt,
 		&rule.RecoveryThresholdValue, &rule.RecoveryCondition, &rule.TrendCondition,
 		&rule.AutoEscalationEnabled, &rule.AutoEscalationMinutes, &rule.AutoEscalationSeverity,
@@ -30,10 +30,10 @@ func (r *PostgresAlertRuleRepository) Create(rule *AlertRule) error {
 	query := `
 		INSERT INTO alert_rules (
 			name, device_id, field_id, sensor_type_id, condition, threshold_value,
-			threshold_max, duration_seconds, severity, enabled, user_id, created_at, updated_at,
+			threshold_max, duration_seconds, severity, enabled, user_id, account_id, created_at, updated_at,
 			recovery_threshold_value, recovery_condition, trend_condition,
 			auto_escalation_enabled, auto_escalation_minutes, auto_escalation_severity
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
 		RETURNING id`
 
 	now := time.Now()
@@ -41,7 +41,7 @@ func (r *PostgresAlertRuleRepository) Create(rule *AlertRule) error {
 		query,
 		rule.Name, rule.DeviceID, rule.FieldID, rule.SensorTypeID,
 		rule.Condition, rule.ThresholdValue, rule.ThresholdMax,
-		rule.DurationSeconds, rule.Severity, rule.Enabled, rule.UserID, now, now,
+		rule.DurationSeconds, rule.Severity, rule.Enabled, rule.UserID, rule.AccountID, now, now,
 		rule.RecoveryThresholdValue, rule.RecoveryCondition, rule.TrendCondition,
 		rule.AutoEscalationEnabled, rule.AutoEscalationMinutes, rule.AutoEscalationSeverity,
 	).Scan(&rule.ID)
@@ -60,10 +60,16 @@ func (r *PostgresAlertRuleRepository) GetByID(id int) (*AlertRule, error) {
 	return &rule, nil
 }
 
-func (r *PostgresAlertRuleRepository) GetByDeviceID(deviceID int) ([]AlertRule, error) {
-	query := `SELECT ` + alertRuleColumns + ` FROM alert_rules WHERE device_id = $1 OR device_id IS NULL`
+func (r *PostgresAlertRuleRepository) GetByDeviceID(deviceID, accountID int) ([]AlertRule, error) {
+	query := `SELECT ` + alertRuleColumns + ` FROM alert_rules WHERE (device_id = $1 OR device_id IS NULL)`
 
-	rows, err := r.DB.Query(query, deviceID)
+	args := []interface{}{deviceID}
+	if accountID > 0 {
+		query += ` AND account_id = $2`
+		args = append(args, accountID)
+	}
+
+	rows, err := r.DB.Query(query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -81,10 +87,16 @@ func (r *PostgresAlertRuleRepository) GetByDeviceID(deviceID int) ([]AlertRule, 
 	return rules, nil
 }
 
-func (r *PostgresAlertRuleRepository) GetEnabledRules() ([]AlertRule, error) {
+func (r *PostgresAlertRuleRepository) GetEnabledRules(accountID int) ([]AlertRule, error) {
 	query := `SELECT ` + alertRuleColumns + ` FROM alert_rules WHERE enabled = true`
 
-	rows, err := r.DB.Query(query)
+	args := []interface{}{}
+	if accountID > 0 {
+		query += ` AND account_id = $1`
+		args = append(args, accountID)
+	}
+
+	rows, err := r.DB.Query(query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -112,22 +124,30 @@ func (r *PostgresAlertRuleRepository) Update(rule *AlertRule) error {
 			auto_escalation_enabled = $15, auto_escalation_minutes = $16, auto_escalation_severity = $17
 		WHERE id = $18`
 
-	_, err := r.DB.Exec(
-		query,
+	args := []interface{}{
 		rule.Name, rule.DeviceID, rule.FieldID, rule.SensorTypeID,
 		rule.Condition, rule.ThresholdValue, rule.ThresholdMax,
 		rule.DurationSeconds, rule.Severity, rule.Enabled, time.Now(),
 		rule.RecoveryThresholdValue, rule.RecoveryCondition, rule.TrendCondition,
 		rule.AutoEscalationEnabled, rule.AutoEscalationMinutes, rule.AutoEscalationSeverity,
 		rule.ID,
-	)
+	}
+
+	_, err := r.DB.Exec(query, args...)
 
 	return err
 }
 
-func (r *PostgresAlertRuleRepository) Delete(id int) error {
+func (r *PostgresAlertRuleRepository) Delete(id, accountID int) error {
 	query := `DELETE FROM alert_rules WHERE id = $1`
-	result, err := r.DB.Exec(query, id)
+
+	args := []interface{}{id}
+	if accountID > 0 {
+		query += ` AND account_id = $2`
+		args = append(args, accountID)
+	}
+
+	result, err := r.DB.Exec(query, args...)
 	if err != nil {
 		return err
 	}
@@ -144,10 +164,17 @@ func (r *PostgresAlertRuleRepository) Delete(id int) error {
 	return nil
 }
 
-func (r *PostgresAlertRuleRepository) List(userID int) ([]AlertRule, error) {
-	query := `SELECT ` + alertRuleColumns + ` FROM alert_rules WHERE user_id = $1 ORDER BY id`
+func (r *PostgresAlertRuleRepository) List(accountID, userID int) ([]AlertRule, error) {
+	query := `SELECT ` + alertRuleColumns + ` FROM alert_rules WHERE user_id = $1`
 
-	rows, err := r.DB.Query(query, userID)
+	args := []interface{}{userID}
+	if accountID > 0 {
+		query += ` AND account_id = $2`
+		args = append(args, accountID)
+	}
+	query += ` ORDER BY id`
+
+	rows, err := r.DB.Query(query, args...)
 	if err != nil {
 		return nil, err
 	}

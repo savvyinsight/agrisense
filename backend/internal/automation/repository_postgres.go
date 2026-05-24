@@ -10,7 +10,7 @@ import (
 const automationRuleColumns = `id, name, target_device_id, trigger_type, trigger_sensor_type_id,
 	trigger_condition, trigger_value, trigger_duration_seconds,
 	schedule_cron, timezone, action_command, action_parameters,
-	enabled, user_id, created_at, updated_at,
+	enabled, user_id, account_id, created_at, updated_at,
 	paused, last_triggered_at, execution_count, last_command_status, metadata`
 
 type PostgresAutomationRuleRepository struct {
@@ -23,7 +23,7 @@ func scanAutomationRule(row interface{ Scan(dest ...interface{}) error }, rule *
 		&rule.ID, &rule.Name, &rule.TargetDeviceID, &rule.TriggerType, &rule.TriggerSensorTypeID,
 		&rule.TriggerCondition, &rule.TriggerValue, &rule.TriggerDurationSeconds,
 		&rule.ScheduleCron, &rule.Timezone, &rule.ActionCommand, &actionParamsJSON,
-		&rule.Enabled, &rule.UserID, &rule.CreatedAt, &rule.UpdatedAt,
+		&rule.Enabled, &rule.UserID, &rule.AccountID, &rule.CreatedAt, &rule.UpdatedAt,
 		&rule.Paused, &rule.LastTriggeredAt, &rule.ExecutionCount, &rule.LastCommandStatus, &metadataJSON,
 	)
 	if err != nil {
@@ -48,9 +48,9 @@ func (r *PostgresAutomationRuleRepository) Create(rule *AutomationRule) error {
 			name, target_device_id, trigger_type, trigger_sensor_type_id,
 			trigger_condition, trigger_value, trigger_duration_seconds,
 			schedule_cron, timezone, action_command, action_parameters,
-			enabled, user_id, created_at, updated_at,
+			enabled, user_id, account_id, created_at, updated_at,
 			paused, metadata
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
 		RETURNING id`
 
 	actionParamsJSON, err := json.Marshal(rule.ActionParameters)
@@ -70,7 +70,7 @@ func (r *PostgresAutomationRuleRepository) Create(rule *AutomationRule) error {
 		rule.Name, rule.TargetDeviceID, rule.TriggerType, rule.TriggerSensorTypeID,
 		rule.TriggerCondition, rule.TriggerValue, rule.TriggerDurationSeconds,
 		rule.ScheduleCron, rule.Timezone, rule.ActionCommand, actionParamsJSON,
-		rule.Enabled, rule.UserID, now, now,
+		rule.Enabled, rule.UserID, rule.AccountID, now, now,
 		rule.Paused, metadataJSON).Scan(&rule.ID)
 
 	if err != nil {
@@ -95,10 +95,17 @@ func (r *PostgresAutomationRuleRepository) GetByID(id int) (*AutomationRule, err
 	return &rule, nil
 }
 
-func (r *PostgresAutomationRuleRepository) GetByUserID(userID int) ([]AutomationRule, error) {
-	query := `SELECT ` + automationRuleColumns + ` FROM automation_rules WHERE user_id = $1 ORDER BY created_at DESC`
+func (r *PostgresAutomationRuleRepository) GetByUserID(userID, accountID int) ([]AutomationRule, error) {
+	query := `SELECT ` + automationRuleColumns + ` FROM automation_rules WHERE user_id = $1`
 
-	rows, err := r.DB.Query(query, userID)
+	args := []interface{}{userID}
+	if accountID > 0 {
+		query += ` AND account_id = $2`
+		args = append(args, accountID)
+	}
+	query += ` ORDER BY created_at DESC`
+
+	rows, err := r.DB.Query(query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get automation rules: %w", err)
 	}
@@ -116,10 +123,17 @@ func (r *PostgresAutomationRuleRepository) GetByUserID(userID int) ([]Automation
 	return rules, nil
 }
 
-func (r *PostgresAutomationRuleRepository) GetEnabledRules() ([]AutomationRule, error) {
-	query := `SELECT ` + automationRuleColumns + ` FROM automation_rules WHERE enabled = true AND paused = false ORDER BY created_at DESC`
+func (r *PostgresAutomationRuleRepository) GetEnabledRules(accountID int) ([]AutomationRule, error) {
+	query := `SELECT ` + automationRuleColumns + ` FROM automation_rules WHERE enabled = true AND paused = false`
 
-	rows, err := r.DB.Query(query)
+	args := []interface{}{}
+	if accountID > 0 {
+		query += ` AND account_id = $1`
+		args = append(args, accountID)
+	}
+	query += ` ORDER BY created_at DESC`
+
+	rows, err := r.DB.Query(query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get enabled automation rules: %w", err)
 	}
@@ -171,10 +185,16 @@ func (r *PostgresAutomationRuleRepository) Update(rule *AutomationRule) error {
 	return nil
 }
 
-func (r *PostgresAutomationRuleRepository) Delete(id int) error {
+func (r *PostgresAutomationRuleRepository) Delete(id, accountID int) error {
 	query := `DELETE FROM automation_rules WHERE id = $1`
 
-	result, err := r.DB.Exec(query, id)
+	args := []interface{}{id}
+	if accountID > 0 {
+		query += ` AND account_id = $2`
+		args = append(args, accountID)
+	}
+
+	result, err := r.DB.Exec(query, args...)
 	if err != nil {
 		return fmt.Errorf("failed to delete automation rule: %w", err)
 	}
@@ -191,10 +211,17 @@ func (r *PostgresAutomationRuleRepository) Delete(id int) error {
 	return nil
 }
 
-func (r *PostgresAutomationRuleRepository) GetByTargetDeviceID(deviceID int) ([]AutomationRule, error) {
-	query := `SELECT ` + automationRuleColumns + ` FROM automation_rules WHERE target_device_id = $1 AND enabled = true AND paused = false ORDER BY created_at DESC`
+func (r *PostgresAutomationRuleRepository) GetByTargetDeviceID(deviceID, accountID int) ([]AutomationRule, error) {
+	query := `SELECT ` + automationRuleColumns + ` FROM automation_rules WHERE target_device_id = $1 AND enabled = true AND paused = false`
 
-	rows, err := r.DB.Query(query, deviceID)
+	args := []interface{}{deviceID}
+	if accountID > 0 {
+		query += ` AND account_id = $2`
+		args = append(args, accountID)
+	}
+	query += ` ORDER BY created_at DESC`
+
+	rows, err := r.DB.Query(query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get automation rules for device: %w", err)
 	}
