@@ -71,10 +71,20 @@ func (m *mockDeviceRepo) UnclaimDevice(deviceID string) error {
 	return args.Error(0)
 }
 
+type mockAccountQuotaChecker struct {
+	mock.Mock
+}
+
+func (m *mockAccountQuotaChecker) CheckDeviceQuota(accountID int) error {
+	args := m.Called(accountID)
+	return args.Error(0)
+}
+
 func TestCreate_SetsOfflineStatusAndReturnsCreatedDevice(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	repo := new(mockDeviceRepo)
-	handler := NewDeviceHandler(repo)
+	quotaChecker := new(mockAccountQuotaChecker)
+	handler := NewDeviceHandler(repo, quotaChecker)
 
 	requestBody := `{"device_id":"device-123","name":"Field Sensor","type":"sensor"}`
 	req := httptest.NewRequest(http.MethodPost, "/devices", strings.NewReader(requestBody))
@@ -85,6 +95,7 @@ func TestCreate_SetsOfflineStatusAndReturnsCreatedDevice(t *testing.T) {
 	c.Set("user_id", 42)
 	c.Set("account_id", 99)
 
+	quotaChecker.On("CheckDeviceQuota", 99).Return(nil)
 	repo.On("Create", mock.AnythingOfType("*device.Device")).Return(nil).Run(func(args mock.Arguments) {
 		dev := args.Get(0).(*Device)
 		dev.ID = 1
@@ -102,12 +113,13 @@ func TestCreate_SetsOfflineStatusAndReturnsCreatedDevice(t *testing.T) {
 	assert.Equal(t, DeviceStatusOffline, created.Status)
 	assert.Equal(t, 42, *created.UserID)
 	repo.AssertExpectations(t)
+	quotaChecker.AssertExpectations(t)
 }
 
 func TestList_ReturnsPaginatedDevices(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	repo := new(mockDeviceRepo)
-	handler := NewDeviceHandler(repo)
+	handler := NewDeviceHandler(repo, nil)
 
 	uid5 := 5
 	devices := []Device{{ID: 1, DeviceID: "device-abc", Name: "Sensor", Type: DeviceTypeSensor, Status: DeviceStatusOffline, UserID: &uid5}}

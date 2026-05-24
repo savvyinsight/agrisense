@@ -202,7 +202,7 @@ func runServer(cliCtx *cli.Context) error {
 
 	// ── 6. Create HTTP handlers ────────────────────────────────────
 	authHandler := user.NewAuthHandler(authService)
-	deviceHandler := device.NewDeviceHandler(deviceRepo)
+	deviceHandler := device.NewDeviceHandler(deviceRepo, accountRepo)
 	dataHandler := data.NewDataHandler(dataService, deviceRepo)
 	alertHandler := alert.NewAlertHandler(alertService)
 	controlHandler := control.NewControlHandler(controlService)
@@ -276,13 +276,13 @@ func runServer(cliCtx *cli.Context) error {
 		// Device routes
 		devices := api.Group("/devices")
 		{
-	devices.POST("", deviceHandler.Create)
-		devices.GET("", deviceHandler.List)
-		devices.POST("/claim", deviceHandler.ClaimDeviceHandler)
-		devices.GET("/:id", deviceHandler.GetByID)
-		devices.PUT("/:id", deviceHandler.Update)
-		devices.DELETE("/:id", deviceHandler.Delete)
-		devices.POST("/:id/unclaim", deviceHandler.UnclaimDeviceHandler)
+			devices.POST("", middleware.GinRequireRole(permissionRepo, "account_owner", "farm_manager"), deviceHandler.Create)
+			devices.GET("", deviceHandler.List)
+			devices.POST("/claim", middleware.GinRequireRole(permissionRepo, "account_owner", "farm_manager"), deviceHandler.ClaimDeviceHandler)
+			devices.GET("/:id", deviceHandler.GetByID)
+			devices.PUT("/:id", middleware.GinRequireRole(permissionRepo, "account_owner", "farm_manager"), deviceHandler.Update)
+			devices.DELETE("/:id", middleware.GinRequireRole(permissionRepo, "account_owner", "farm_manager"), deviceHandler.Delete)
+			devices.POST("/:id/unclaim", middleware.GinRequireRole(permissionRepo, "account_owner", "farm_manager"), deviceHandler.UnclaimDeviceHandler)
 		}
 
 		// Data routes
@@ -301,15 +301,15 @@ func runServer(cliCtx *cli.Context) error {
 		{
 			alerts.GET("/active", alertHandler.GetActiveAlerts)
 			alerts.GET("/history", alertHandler.GetAlertHistory)
-			alerts.POST("/rules", alertHandler.CreateRule)
+			alerts.POST("/rules", middleware.GinRequireRole(permissionRepo, "account_owner", "farm_manager"), alertHandler.CreateRule)
 			alerts.GET("/rules", alertHandler.ListRules)
 			alerts.GET("/rules/:id", alertHandler.GetRule)
-			alerts.PUT("/rules/:id", alertHandler.UpdateRule)
-			alerts.DELETE("/rules/:id", alertHandler.DeleteRule)
-			alerts.POST("/:id/acknowledge", alertHandler.AcknowledgeAlert)
-			alerts.POST("/:id/resolve", alertHandler.ResolveAlert)
-			alerts.POST("/:id/snooze", alertHandler.SnoozeAlert)
-			alerts.POST("/:id/unsnooze", alertHandler.UnsnoozeAlert)
+			alerts.PUT("/rules/:id", middleware.GinRequireRole(permissionRepo, "account_owner", "farm_manager"), alertHandler.UpdateRule)
+			alerts.DELETE("/rules/:id", middleware.GinRequireRole(permissionRepo, "account_owner", "farm_manager"), alertHandler.DeleteRule)
+			alerts.POST("/:id/acknowledge", middleware.GinRequireRole(permissionRepo, "account_owner", "farm_manager", "operator"), alertHandler.AcknowledgeAlert)
+			alerts.POST("/:id/resolve", middleware.GinRequireRole(permissionRepo, "account_owner", "farm_manager", "operator"), alertHandler.ResolveAlert)
+			alerts.POST("/:id/snooze", middleware.GinRequireRole(permissionRepo, "account_owner", "farm_manager", "operator"), alertHandler.SnoozeAlert)
+			alerts.POST("/:id/unsnooze", middleware.GinRequireRole(permissionRepo, "account_owner", "farm_manager", "operator"), alertHandler.UnsnoozeAlert)
 			alerts.GET("/correlations", alertHandler.GetAlertCorrelations)
 			alerts.GET("/:id/escalation-history", escHandler.GetHistory)
 		}
@@ -317,11 +317,11 @@ func runServer(cliCtx *cli.Context) error {
 		// Automation routes
 		automation := api.Group("/automation")
 		{
-			automation.POST("/rules", automationHandler.CreateRule)
+			automation.POST("/rules", middleware.GinRequireRole(permissionRepo, "account_owner", "farm_manager"), automationHandler.CreateRule)
 			automation.GET("/rules", automationHandler.ListRules)
 			automation.GET("/rules/:id", automationHandler.GetRule)
-			automation.PUT("/rules/:id", automationHandler.UpdateRule)
-			automation.DELETE("/rules/:id", automationHandler.DeleteRule)
+			automation.PUT("/rules/:id", middleware.GinRequireRole(permissionRepo, "account_owner", "farm_manager"), automationHandler.UpdateRule)
+			automation.DELETE("/rules/:id", middleware.GinRequireRole(permissionRepo, "account_owner", "farm_manager"), automationHandler.DeleteRule)
 			automation.PUT("/rules/:id/pause", automationHandler.PauseRule)
 			automation.PUT("/rules/:id/resume", automationHandler.ResumeRule)
 			automation.POST("/rules/:id/execute", automationHandler.ExecuteNow)
@@ -354,23 +354,23 @@ func runServer(cliCtx *cli.Context) error {
 		// Field routes
 		fields := api.Group("/fields")
 		{
-			fields.POST("", fieldHandler.Create)
+			fields.POST("", middleware.GinRequireRole(permissionRepo, "account_owner", "farm_manager"), fieldHandler.Create)
 			fields.GET("", fieldHandler.List)
 			fields.GET("/:id", fieldHandler.GetByID)
-			fields.PUT("/:id", fieldHandler.Update)
-			fields.DELETE("/:id", fieldHandler.Delete)
+			fields.PUT("/:id", middleware.GinRequireRole(permissionRepo, "account_owner", "farm_manager"), fieldHandler.Update)
+			fields.DELETE("/:id", middleware.GinRequireRole(permissionRepo, "account_owner", "farm_manager"), fieldHandler.Delete)
 		}
 
 		// Irrigation routes
 		irrigationRoutes := api.Group("/irrigation/zones")
 		{
 			irrigationRoutes.GET("", irrigationHandler.List)
-			irrigationRoutes.POST("", irrigationHandler.Create)
-			irrigationRoutes.PUT("/:id", irrigationHandler.Update)
-			irrigationRoutes.DELETE("/:id", irrigationHandler.Delete)
-			irrigationRoutes.POST("/:id/start", irrigationHandler.Start)
-			irrigationRoutes.POST("/:id/stop", irrigationHandler.Stop)
-			irrigationRoutes.POST("/:id/retry", irrigationHandler.Retry)
+			irrigationRoutes.POST("", middleware.GinRequireRole(permissionRepo, "account_owner", "farm_manager"), irrigationHandler.Create)
+			irrigationRoutes.PUT("/:id", middleware.GinRequireRole(permissionRepo, "account_owner", "farm_manager"), irrigationHandler.Update)
+			irrigationRoutes.DELETE("/:id", middleware.GinRequireRole(permissionRepo, "account_owner", "farm_manager"), irrigationHandler.Delete)
+			irrigationRoutes.POST("/:id/start", middleware.GinRequireRole(permissionRepo, "account_owner", "farm_manager", "operator"), irrigationHandler.Start)
+			irrigationRoutes.POST("/:id/stop", middleware.GinRequireRole(permissionRepo, "account_owner", "farm_manager", "operator"), irrigationHandler.Stop)
+			irrigationRoutes.POST("/:id/retry", middleware.GinRequireRole(permissionRepo, "account_owner", "farm_manager", "operator"), irrigationHandler.Retry)
 			irrigationRoutes.GET("/events", irrigationHandler.ListEvents)
 		}
 
@@ -383,7 +383,7 @@ func runServer(cliCtx *cli.Context) error {
 		// Control routes
 		deviceGroup := api.Group("/devices/:id")
 		{
-			deviceGroup.POST("/commands", controlHandler.SendCommand)
+			deviceGroup.POST("/commands", middleware.GinRequireRole(permissionRepo, "account_owner", "farm_manager", "operator"), controlHandler.SendCommand)
 			deviceGroup.GET("/commands", controlHandler.ListDeviceCommands)
 			deviceGroup.GET("/commands/:cmdId", controlHandler.GetCommandStatus)
 		}

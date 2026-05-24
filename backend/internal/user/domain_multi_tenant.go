@@ -106,6 +106,8 @@ type AccountRepository interface {
 	ListAllAccounts(limit, offset int) ([]Account, int64, error)
 	GetUserCountByAccount(accountID int) (int64, error)
 	GetDeviceCountByAccount(accountID int) (int64, error)
+	CheckUserQuota(accountID int) error
+	CheckDeviceQuota(accountID int) error
 }
 
 // PermissionRepository interface

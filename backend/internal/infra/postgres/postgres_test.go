@@ -108,7 +108,13 @@ func setupPostgresContainer(t *testing.T) (*sql.DB, func()) {
         account_id INTEGER,
         field_id INTEGER,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        recovery_threshold_value DOUBLE PRECISION,
+        recovery_condition TEXT,
+        trend_condition JSONB,
+        auto_escalation_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+        auto_escalation_minutes INTEGER,
+        auto_escalation_severity TEXT
     );
 
     CREATE TABLE alerts (
@@ -123,7 +129,13 @@ func setupPostgresContainer(t *testing.T) (*sql.DB, func()) {
         triggered_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         acknowledged_at TIMESTAMP,
         resolved_at TIMESTAMP,
-        metadata JSONB
+        metadata JSONB,
+        is_flapping BOOLEAN NOT NULL DEFAULT FALSE,
+        flap_count INTEGER NOT NULL DEFAULT 0,
+        snoozed_until TIMESTAMPTZ,
+        snooze_reason TEXT,
+        correlation_id UUID,
+        root_cause_suggestion TEXT
     );
 
     CREATE TABLE control_commands (

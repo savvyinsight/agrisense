@@ -125,6 +125,14 @@ func (m *mockAccountRepo) GetDeviceCountByAccount(accountID int) (int64, error) 
 	args := m.Called(accountID)
 	return args.Get(0).(int64), args.Error(1)
 }
+func (m *mockAccountRepo) CheckUserQuota(accountID int) error {
+	args := m.Called(accountID)
+	return args.Error(0)
+}
+func (m *mockAccountRepo) CheckDeviceQuota(accountID int) error {
+	args := m.Called(accountID)
+	return args.Error(0)
+}
 
 // Mock PermissionRepository
 type mockPermissionRepo struct{ mock.Mock }

@@ -283,11 +283,9 @@ func (h *AdminHandler) CreateUserInAccountHandler(c *gin.Context) {
 	}
 
 	// Check quota
-	if repo, ok := h.AccountRepo.(*PostgresAccountRepository); ok {
-		if err := repo.CheckUserQuota(accountID); err != nil {
-			c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
-			return
-		}
+	if err := h.AccountRepo.CheckUserQuota(accountID); err != nil {
+		c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
+		return
 	}
 
 	hashed, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)

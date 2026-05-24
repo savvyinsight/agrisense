@@ -77,6 +77,12 @@ func (h *UserHandler) InviteUserHandler(c *gin.Context) {
 		return
 	}
 
+	// Check user quota before allowing invitation
+	if err := h.AccountRepo.CheckUserQuota(accountID); err != nil {
+		c.JSON(http.StatusForbidden, gin.H{"error": fmt.Sprintf("User quota exceeded: %v", err)})
+		return
+	}
+
 	var req InviteUserRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})

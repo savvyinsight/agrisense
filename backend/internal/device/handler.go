@@ -1,6 +1,7 @@
 package device
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -8,13 +9,20 @@ import (
 	"github.com/savvyinsight/agrisense/internal/middleware"
 )
 
-type DeviceHandler struct {
-	deviceRepo DeviceRepository
+// AccountQuotaChecker checks whether an account has reached its device quota.
+type AccountQuotaChecker interface {
+	CheckDeviceQuota(accountID int) error
 }
 
-func NewDeviceHandler(deviceRepo DeviceRepository) *DeviceHandler {
+type DeviceHandler struct {
+	deviceRepo  DeviceRepository
+	accountRepo AccountQuotaChecker
+}
+
+func NewDeviceHandler(deviceRepo DeviceRepository, accountRepo AccountQuotaChecker) *DeviceHandler {
 	return &DeviceHandler{
-		deviceRepo: deviceRepo,
+		deviceRepo:  deviceRepo,
+		accountRepo: accountRepo,
 	}
 }
 
@@ -40,6 +48,14 @@ func (h *DeviceHandler) Create(c *gin.Context) {
 		return
 	}
 	device.AccountID = &accountID
+
+	// Check device quota before creating
+	if h.accountRepo != nil {
+		if err := h.accountRepo.CheckDeviceQuota(accountID); err != nil {
+			c.JSON(http.StatusForbidden, gin.H{"error": fmt.Sprintf("Device quota exceeded: %v", err)})
+			return
+		}
+	}
 
 	// Set default status - always offline until device connects
 	device.Status = DeviceStatusOffline

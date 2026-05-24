@@ -366,7 +366,7 @@ type AutomationDashboardData struct {
 }
 
 func (s *Service) GetDashboard(userID int) (*AutomationDashboardData, error) {
-	rules, err := s.automationRepo.GetByUserID(userID)
+	rules, err := s.automationRepo.GetByUserID(userID, 0)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get rules: %w", err)
 	}
