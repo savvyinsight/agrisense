@@ -33,6 +33,7 @@ type AutomationRule struct {
 	ActionParameters       map[string]interface{} `json:"action_parameters,omitempty"`
 	Enabled                bool                   `json:"enabled"`
 	UserID                 int                    `json:"user_id"`
+	AccountID              *int                   `json:"account_id,omitempty"`
 	CreatedAt              time.Time              `json:"created_at"`
 	UpdatedAt              time.Time              `json:"updated_at"`
 	Paused                 bool                   `json:"paused"`

@@ -38,6 +38,7 @@ type AlertRule struct {
 	Severity                AlertSeverity  `json:"severity"`
 	Enabled                 bool           `json:"enabled"`
 	UserID                  int            `json:"user_id"`
+	AccountID               *int           `json:"account_id,omitempty"`
 	CreatedAt               time.Time      `json:"created_at"`
 	UpdatedAt               time.Time      `json:"updated_at"`
 	RecoveryThresholdValue  *float64       `json:"recovery_threshold_value,omitempty"`
@@ -63,6 +64,7 @@ type Alert struct {
 	TriggeredAt         time.Time              `json:"triggered_at"`
 	AcknowledgedAt      *time.Time             `json:"acknowledged_at,omitempty"`
 	ResolvedAt          *time.Time             `json:"resolved_at,omitempty"`
+	AccountID           *int                   `json:"account_id,omitempty"`
 	Metadata            map[string]interface{} `json:"metadata,omitempty"`
 	IsFlapping          bool                   `json:"is_flapping"`
 	FlapCount           int                    `json:"flap_count"`

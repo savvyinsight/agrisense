@@ -25,6 +25,7 @@ type Command struct {
 	DeliveredAt *time.Time             `json:"delivered_at,omitempty"`
 	ExecutedAt  *time.Time             `json:"executed_at,omitempty"`
 	UserID      *int                   `json:"user_id,omitempty"` // nil = auto/rule
+	AccountID   *int                   `json:"account_id,omitempty"`
 	Metadata    map[string]interface{} `json:"metadata,omitempty"`
 }
 
