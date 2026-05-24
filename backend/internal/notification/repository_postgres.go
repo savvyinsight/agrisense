@@ -48,7 +48,7 @@ func (r *PostgresChannelRepository) List() ([]Channel, error) {
 	}
 	defer func() { _ = rows.Close() }()
 
-	var channels []Channel
+	channels := make([]Channel, 0)
 	for rows.Next() {
 		var ch Channel
 		if err := rows.Scan(&ch.ID, &ch.Type, &ch.Name, &ch.Config, &ch.Enabled, &ch.CreatedAt, &ch.UpdatedAt); err != nil {
@@ -110,7 +110,7 @@ func (r *PostgresRoutingRuleRepository) List() ([]RoutingRule, error) {
 	}
 	defer func() { _ = rows.Close() }()
 
-	var rules []RoutingRule
+	rules := make([]RoutingRule, 0)
 	for rows.Next() {
 		var rule RoutingRule
 		if err := rows.Scan(&rule.ID, &rule.Severity, &rule.ChannelIDs, &rule.CreatedAt, &rule.UpdatedAt); err != nil {

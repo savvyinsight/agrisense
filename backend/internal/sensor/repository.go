@@ -45,7 +45,7 @@ func (r *PostgresSensorTypeRepository) GetSensorTypes() ([]SensorType, error) {
 		}
 	}()
 
-	var sensors []SensorType
+	sensors := make([]SensorType, 0)
 	for rows.Next() {
 		var sensor SensorType
 		err := rows.Scan(

@@ -73,7 +73,7 @@ func (r *Repository) Query(deviceID string, sensorType string, start, end time.T
 		return nil, fmt.Errorf("failed to query InfluxDB: %w", err)
 	}
 
-	var data []SensorData
+	data := make([]SensorData, 0)
 	for result.Next() {
 		record := result.Record()
 		data = append(data, SensorData{
@@ -110,7 +110,7 @@ func (r *Repository) QueryAggregate(deviceID string, sensorType string, start, e
 		return nil, fmt.Errorf("failed to query InfluxDB: %w", err)
 	}
 
-	var data []AggregatedData
+	data := make([]AggregatedData, 0)
 	for result.Next() {
 		record := result.Record()
 

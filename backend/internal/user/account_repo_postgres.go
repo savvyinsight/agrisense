@@ -137,7 +137,7 @@ func (r *PostgresAccountRepository) GetAccountsByOwnerID(ownerID int) ([]Account
 	}
 	defer func() { _ = rows.Close() }()
 
-	var accounts []Account
+	accounts := make([]Account, 0)
 	for rows.Next() {
 		var account Account
 		var oid, mu, md sql.NullInt64
@@ -192,7 +192,7 @@ func (r *PostgresAccountRepository) ListAllAccounts(limit, offset int) ([]Accoun
 	}
 	defer func() { _ = rows.Close() }()
 
-	var accounts []Account
+	accounts := make([]Account, 0)
 	for rows.Next() {
 		var account Account
 		var oid, mu, md sql.NullInt64
@@ -256,7 +256,7 @@ func (r *PostgresPermissionRepository) GetPermissionsByUserID(userID, accountID 
 	}
 	defer func() { _ = rows.Close() }()
 
-	var permissions []UserPermission
+	permissions := make([]UserPermission, 0)
 	for rows.Next() {
 		var perm UserPermission
 		err := rows.Scan(&perm.ID, &perm.UserID, &perm.AccountID, &perm.FarmID, &perm.Role, &perm.GrantedBy, &perm.CreatedAt)
@@ -278,7 +278,7 @@ func (r *PostgresPermissionRepository) GetPermissionsByFarmID(farmID, accountID 
 	}
 	defer func() { _ = rows.Close() }()
 
-	var permissions []UserPermission
+	permissions := make([]UserPermission, 0)
 	for rows.Next() {
 		var perm UserPermission
 		err := rows.Scan(&perm.ID, &perm.UserID, &perm.AccountID, &perm.FarmID, &perm.Role, &perm.GrantedBy, &perm.CreatedAt)
@@ -368,7 +368,7 @@ func (r *PostgresInvitationRepository) GetPendingInvitationsByEmail(email string
 	}
 	defer func() { _ = rows.Close() }()
 
-	var invitations []UserInvitation
+	invitations := make([]UserInvitation, 0)
 	for rows.Next() {
 		var inv UserInvitation
 		err := rows.Scan(&inv.ID, &inv.AccountID, &inv.Email, &inv.Role, &inv.FarmID, &inv.InvitationToken,
@@ -399,7 +399,7 @@ func (r *PostgresInvitationRepository) ListPendingInvitations(accountID int) ([]
 	}
 	defer func() { _ = rows.Close() }()
 
-	var invitations []UserInvitation
+	invitations := make([]UserInvitation, 0)
 	for rows.Next() {
 		var inv UserInvitation
 		err := rows.Scan(&inv.ID, &inv.AccountID, &inv.Email, &inv.Role, &inv.FarmID, &inv.InvitationToken,
@@ -477,7 +477,7 @@ func (r *PostgresAuditLogRepository) GetAuditLogs(accountID int, filters map[str
 	}
 	defer func() { _ = rows.Close() }()
 
-	var logs []AuditLog
+	logs := make([]AuditLog, 0)
 	for rows.Next() {
 		var log AuditLog
 		var uid sql.NullInt64
@@ -566,7 +566,7 @@ func (r *PostgresAuditLogRepository) GetAllAuditLogs(filters map[string]interfac
 	}
 	defer func() { _ = rows.Close() }()
 
-	var logs []AuditLog
+	logs := make([]AuditLog, 0)
 	for rows.Next() {
 		var log AuditLog
 		var uid sql.NullInt64
@@ -614,7 +614,7 @@ func (r *PostgresAuditLogRepository) GetUserAuditLogs(userID, accountID int, lim
 	}
 	defer func() { _ = rows.Close() }()
 
-	var logs []AuditLog
+	logs := make([]AuditLog, 0)
 	for rows.Next() {
 		var log AuditLog
 		var uid sql.NullInt64

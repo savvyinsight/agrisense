@@ -207,7 +207,7 @@ func (r *PostgresDeviceRepository) GetByUserID(userID int) ([]Device, error) {
 		}
 	}()
 
-	var devices []Device
+	devices := make([]Device, 0)
 	for rows.Next() {
 		var device Device
 		var configJSON []byte

@@ -105,7 +105,7 @@ func (r *PostgresFieldRepository) List(userID int) ([]Field, error) {
 	}
 	defer func() { _ = rows.Close() }()
 
-	var fields []Field
+	fields := make([]Field, 0)
 	for rows.Next() {
 		var f Field
 		var crop, area sql.NullString

@@ -15,7 +15,9 @@ type PostgresAlertRepository struct {
 	DB *sql.DB
 }
 
-func scanAlert(row interface{ Scan(dest ...interface{}) error }, alert *Alert) error {
+func scanAlert(row interface {
+	Scan(dest ...interface{}) error
+}, alert *Alert) error {
 	var metadataJSON []byte
 	err := row.Scan(
 		&alert.ID, &alert.RuleID, &alert.DeviceID, &alert.SensorValue,
@@ -77,7 +79,7 @@ func (r *PostgresAlertRepository) GetActive(accountID int) ([]Alert, error) {
 	}
 	defer func() { _ = rows.Close() }()
 
-	var alerts []Alert
+	alerts := make([]Alert, 0)
 	for rows.Next() {
 		var alert Alert
 		if err := scanAlert(rows, &alert); err != nil {
@@ -114,7 +116,7 @@ func (r *PostgresAlertRepository) GetActivePaginated(accountID int, limit, offse
 	}
 	defer func() { _ = rows.Close() }()
 
-	var alerts []Alert
+	alerts := make([]Alert, 0)
 	for rows.Next() {
 		var alert Alert
 		if err := scanAlert(rows, &alert); err != nil {
@@ -148,7 +150,7 @@ func (r *PostgresAlertRepository) GetByDeviceID(deviceID, accountID int) ([]Aler
 	}
 	defer func() { _ = rows.Close() }()
 
-	var alerts []Alert
+	alerts := make([]Alert, 0)
 	for rows.Next() {
 		var alert Alert
 		if err := scanAlert(rows, &alert); err != nil {
@@ -169,7 +171,7 @@ func (r *PostgresAlertRepository) GetByRuleID(ruleID int) ([]Alert, error) {
 	}
 	defer func() { _ = rows.Close() }()
 
-	var alerts []Alert
+	alerts := make([]Alert, 0)
 	for rows.Next() {
 		var alert Alert
 		if err := scanAlert(rows, &alert); err != nil {
@@ -228,7 +230,7 @@ func (r *PostgresAlertRepository) GetActiveAlertsByField(fieldID, accountID int)
 	}
 	defer func() { _ = rows.Close() }()
 
-	var alerts []Alert
+	alerts := make([]Alert, 0)
 	for rows.Next() {
 		var alert Alert
 		if err := scanAlert(rows, &alert); err != nil {
@@ -308,7 +310,7 @@ func (r *PostgresAlertRepository) List(accountID int, limit, offset int) ([]Aler
 	}
 	defer func() { _ = rows.Close() }()
 
-	var alerts []Alert
+	alerts := make([]Alert, 0)
 	for rows.Next() {
 		var alert Alert
 		if err := scanAlert(rows, &alert); err != nil {
@@ -352,7 +354,7 @@ func (r *PostgresAlertRepository) GetAlertCorrelations() ([]AlertCorrelation, er
 	}
 	defer func() { _ = rows.Close() }()
 
-	var correlations []AlertCorrelation
+	correlations := make([]AlertCorrelation, 0)
 	for rows.Next() {
 		var c AlertCorrelation
 		var alertIDs []int64
