@@ -209,7 +209,7 @@ func runServer(cliCtx *cli.Context) error {
 	automationHandler := automation.NewAutomationHandler(automationService)
 	fieldHandler := field.NewFieldHandler(fieldRepo)
 	irrigationHandler := irrigation.NewIrrigationHandler(irrigationRepo, irrigationEventRepo, irrigationCmdAdapter{controlService})
-	analyticsHandler := analytics.NewAnalyticsHandler(analyticsService)
+	analyticsHandler := analytics.NewAnalyticsHandler(analyticsService, deviceRepo)
 	notifHandler := notification.NewHandler(notifService)
 	escHandler := escalation.NewHandler(escalationService)
 	

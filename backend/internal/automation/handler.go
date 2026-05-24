@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"github.com/savvyinsight/agrisense/internal/middleware"
 )
 
 type AutomationHandler struct {
@@ -33,6 +34,11 @@ type CreateAutomationRuleRequest struct {
 }
 
 func (h *AutomationHandler) CreateRule(c *gin.Context) {
+	accountID, ok := middleware.MustGetAccountID(c)
+	if !ok {
+		return
+	}
+
 	var req CreateAutomationRuleRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -103,6 +109,7 @@ func (h *AutomationHandler) CreateRule(c *gin.Context) {
 		ActionParameters:       req.ActionParameters,
 		Enabled:                enabled,
 		UserID:                 userID.(int),
+		AccountID:              &accountID,
 	}
 
 	if err := h.automationService.CreateRule(rule); err != nil {
@@ -114,13 +121,18 @@ func (h *AutomationHandler) CreateRule(c *gin.Context) {
 }
 
 func (h *AutomationHandler) ListRules(c *gin.Context) {
+	accountID, ok := middleware.MustGetAccountID(c)
+	if !ok {
+		return
+	}
+
 	userID, exists := c.Get("user_id")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "user not authenticated"})
 		return
 	}
 
-	rules, err := h.automationService.GetRulesByUser(userID.(int))
+	rules, err := h.automationService.GetRulesByUser(userID.(int), accountID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -130,6 +142,11 @@ func (h *AutomationHandler) ListRules(c *gin.Context) {
 }
 
 func (h *AutomationHandler) GetRule(c *gin.Context) {
+	accountID, ok := middleware.MustGetAccountID(c)
+	if !ok {
+		return
+	}
+
 	idStr := c.Param("id")
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
@@ -143,10 +160,9 @@ func (h *AutomationHandler) GetRule(c *gin.Context) {
 		return
 	}
 
-	// Check if user owns this rule
-	userID, exists := c.Get("user_id")
-	if !exists || rule.UserID != userID.(int) {
-		c.JSON(http.StatusForbidden, gin.H{"error": "access denied"})
+	// Verify account ownership
+	if rule.AccountID != nil && *rule.AccountID != accountID {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
 		return
 	}
 
@@ -154,6 +170,11 @@ func (h *AutomationHandler) GetRule(c *gin.Context) {
 }
 
 func (h *AutomationHandler) UpdateRule(c *gin.Context) {
+	accountID, ok := middleware.MustGetAccountID(c)
+	if !ok {
+		return
+	}
+
 	idStr := c.Param("id")
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
@@ -174,10 +195,9 @@ func (h *AutomationHandler) UpdateRule(c *gin.Context) {
 		return
 	}
 
-	// Check if user owns this rule
-	userID, exists := c.Get("user_id")
-	if !exists || rule.UserID != userID.(int) {
-		c.JSON(http.StatusForbidden, gin.H{"error": "access denied"})
+	// Verify account ownership
+	if rule.AccountID != nil && *rule.AccountID != accountID {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
 		return
 	}
 
@@ -232,6 +252,11 @@ func (h *AutomationHandler) UpdateRule(c *gin.Context) {
 }
 
 func (h *AutomationHandler) DeleteRule(c *gin.Context) {
+	accountID, ok := middleware.MustGetAccountID(c)
+	if !ok {
+		return
+	}
+
 	idStr := c.Param("id")
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
@@ -246,14 +271,13 @@ func (h *AutomationHandler) DeleteRule(c *gin.Context) {
 		return
 	}
 
-	// Check if user owns this rule
-	userID, exists := c.Get("user_id")
-	if !exists || rule.UserID != userID.(int) {
-		c.JSON(http.StatusForbidden, gin.H{"error": "access denied"})
+	// Verify account ownership
+	if rule.AccountID != nil && *rule.AccountID != accountID {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
 		return
 	}
 
-	if err := h.automationService.DeleteRule(id); err != nil {
+	if err := h.automationService.DeleteRule(id, accountID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}

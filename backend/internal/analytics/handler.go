@@ -6,14 +6,17 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/savvyinsight/agrisense/internal/device"
+	"github.com/savvyinsight/agrisense/internal/middleware"
 )
 
 type AnalyticsHandler struct {
 	analyticsService *Service
+	deviceRepo       device.DeviceRepository
 }
 
-func NewAnalyticsHandler(analyticsService *Service) *AnalyticsHandler {
-	return &AnalyticsHandler{analyticsService: analyticsService}
+func NewAnalyticsHandler(analyticsService *Service, deviceRepo device.DeviceRepository) *AnalyticsHandler {
+	return &AnalyticsHandler{analyticsService: analyticsService, deviceRepo: deviceRepo}
 }
 
 func (h *AnalyticsHandler) GetReport(c *gin.Context) {
@@ -26,6 +29,22 @@ func (h *AnalyticsHandler) GetReport(c *gin.Context) {
 	deviceID, err := strconv.Atoi(deviceIDStr)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "device_id must be an integer"})
+		return
+	}
+
+	// Verify device belongs to the user's account
+	dev, err := h.deviceRepo.GetByID(deviceID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "device not found"})
+		return
+	}
+
+	accountID, ok := middleware.MustGetAccountID(c)
+	if !ok {
+		return
+	}
+	if dev.AccountID == nil || *dev.AccountID != accountID {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
 		return
 	}
 

@@ -47,12 +47,12 @@ func (m *mockDeviceRepo) UpdateHeartbeat(deviceID string) error {
 	return nil
 }
 
-func (m *mockDeviceRepo) Delete(id int) error {
-	return m.Called(id).Error(0)
+func (m *mockDeviceRepo) Delete(id, accountID int) error {
+	return m.Called(id, accountID).Error(0)
 }
 
-func (m *mockDeviceRepo) List(userID int, filter DeviceFilter, limit, offset int) ([]Device, int64, error) {
-	args := m.Called(userID, filter, limit, offset)
+func (m *mockDeviceRepo) List(accountID, userID int, filter DeviceFilter, limit, offset int) ([]Device, int64, error) {
+	args := m.Called(accountID, userID, filter, limit, offset)
 	return args.Get(0).([]Device), args.Get(1).(int64), args.Error(2)
 }
 func (m *mockDeviceRepo) FindOrCreate(deviceID string) (*Device, error) {
@@ -83,6 +83,7 @@ func TestCreate_SetsOfflineStatusAndReturnsCreatedDevice(t *testing.T) {
 	c, _ := gin.CreateTestContext(w)
 	c.Request = req
 	c.Set("user_id", 42)
+	c.Set("account_id", 99)
 
 	repo.On("Create", mock.AnythingOfType("*device.Device")).Return(nil).Run(func(args mock.Arguments) {
 		dev := args.Get(0).(*Device)
@@ -110,13 +111,14 @@ func TestList_ReturnsPaginatedDevices(t *testing.T) {
 
 	uid5 := 5
 	devices := []Device{{ID: 1, DeviceID: "device-abc", Name: "Sensor", Type: DeviceTypeSensor, Status: DeviceStatusOffline, UserID: &uid5}}
-	repo.On("List", 5, DeviceFilter{}, 20, 0).Return(devices, int64(1), nil)
+	repo.On("List", 10, 5, DeviceFilter{}, 20, 0).Return(devices, int64(1), nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/devices", nil)
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
 	c.Request = req
 	c.Set("user_id", 5)
+	c.Set("account_id", 10)
 
 	handler.List(c)
 

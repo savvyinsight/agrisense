@@ -14,11 +14,11 @@ import (
 type fakeAutomationRuleRepo struct {
 	createFunc             func(rule *AutomationRule) error
 	getByIDFunc            func(id int) (*AutomationRule, error)
-	getByUserIDFunc        func(userID int) ([]AutomationRule, error)
-	getEnabledRulesFunc    func() ([]AutomationRule, error)
+	getByUserIDFunc        func(userID, accountID int) ([]AutomationRule, error)
+	getEnabledRulesFunc    func(accountID int) ([]AutomationRule, error)
 	updateFunc             func(rule *AutomationRule) error
-	deleteFunc             func(id int) error
-	getByTargetDeviceIDFunc func(deviceID int) ([]AutomationRule, error)
+	deleteFunc             func(id, accountID int) error
+	getByTargetDeviceIDFunc func(deviceID, accountID int) ([]AutomationRule, error)
 }
 
 func (f *fakeAutomationRuleRepo) Create(rule *AutomationRule) error {
@@ -35,16 +35,16 @@ func (f *fakeAutomationRuleRepo) GetByID(id int) (*AutomationRule, error) {
 	return nil, errors.New("not found")
 }
 
-func (f *fakeAutomationRuleRepo) GetByUserID(userID int) ([]AutomationRule, error) {
+func (f *fakeAutomationRuleRepo) GetByUserID(userID, accountID int) ([]AutomationRule, error) {
 	if f.getByUserIDFunc != nil {
-		return f.getByUserIDFunc(userID)
+		return f.getByUserIDFunc(userID, accountID)
 	}
 	return nil, nil
 }
 
-func (f *fakeAutomationRuleRepo) GetEnabledRules() ([]AutomationRule, error) {
+func (f *fakeAutomationRuleRepo) GetEnabledRules(accountID int) ([]AutomationRule, error) {
 	if f.getEnabledRulesFunc != nil {
-		return f.getEnabledRulesFunc()
+		return f.getEnabledRulesFunc(accountID)
 	}
 	return nil, nil
 }
@@ -56,16 +56,16 @@ func (f *fakeAutomationRuleRepo) Update(rule *AutomationRule) error {
 	return nil
 }
 
-func (f *fakeAutomationRuleRepo) Delete(id int) error {
+func (f *fakeAutomationRuleRepo) Delete(id, accountID int) error {
 	if f.deleteFunc != nil {
-		return f.deleteFunc(id)
+		return f.deleteFunc(id, accountID)
 	}
 	return nil
 }
 
-func (f *fakeAutomationRuleRepo) GetByTargetDeviceID(deviceID int) ([]AutomationRule, error) {
+func (f *fakeAutomationRuleRepo) GetByTargetDeviceID(deviceID, accountID int) ([]AutomationRule, error) {
 	if f.getByTargetDeviceIDFunc != nil {
-		return f.getByTargetDeviceIDFunc(deviceID)
+		return f.getByTargetDeviceIDFunc(deviceID, accountID)
 	}
 	return nil, nil
 }
@@ -114,8 +114,8 @@ func (f *fakeDeviceRepo) GetByUserID(userID int) ([]device.Device, error)      {
 func (f *fakeDeviceRepo) Update(device *device.Device) error                    { return nil }
 func (f *fakeDeviceRepo) UpdateStatus(deviceID string, status device.DeviceStatus) error { return nil }
 func (f *fakeDeviceRepo) UpdateHeartbeat(deviceID string) error                 { return nil }
-func (f *fakeDeviceRepo) Delete(id int) error                                   { return nil }
-func (f *fakeDeviceRepo) List(userID int, filter device.DeviceFilter, limit, offset int) ([]device.Device, int64, error) {
+func (f *fakeDeviceRepo) Delete(id, accountID int) error                          { return nil }
+func (f *fakeDeviceRepo) List(accountID, userID int, filter device.DeviceFilter, limit, offset int) ([]device.Device, int64, error) {
 	return nil, 0, nil
 }
 func (f *fakeDeviceRepo) FindOrCreate(deviceID string) (*device.Device, error) { return nil, nil }
@@ -460,14 +460,14 @@ func TestGetRulesByUser(t *testing.T) {
 		{ID: 2, Name: "rule2"},
 	}
 	repo := fakeAutomationRuleRepo{
-		getByUserIDFunc: func(userID int) ([]AutomationRule, error) {
+		getByUserIDFunc: func(userID, accountID int) ([]AutomationRule, error) {
 			assert.Equal(t, 42, userID)
 			return expectedRules, nil
 		},
 	}
 
 	s := NewService(&repo, &fakeDeviceRepo{}, &fakeCommandExecutor{})
-	rules, err := s.GetRulesByUser(42)
+	rules, err := s.GetRulesByUser(42, 1)
 
 	assert.NoError(t, err)
 	assert.Equal(t, expectedRules, rules)
@@ -557,7 +557,7 @@ func TestUpdateRule(t *testing.T) {
 			updated = true
 			return nil
 		},
-		getEnabledRulesFunc: func() ([]AutomationRule, error) {
+		getEnabledRulesFunc: func(accountID int) ([]AutomationRule, error) {
 			return nil, nil
 		},
 	}
@@ -580,18 +580,18 @@ func TestUpdateRule(t *testing.T) {
 func TestDeleteRule(t *testing.T) {
 	deleted := false
 	repo := fakeAutomationRuleRepo{
-		deleteFunc: func(id int) error {
+		deleteFunc: func(id, accountID int) error {
 			deleted = true
 			assert.Equal(t, 1, id)
 			return nil
 		},
-		getEnabledRulesFunc: func() ([]AutomationRule, error) {
+		getEnabledRulesFunc: func(accountID int) ([]AutomationRule, error) {
 			return nil, nil
 		},
 	}
 
 	s := NewService(&repo, &fakeDeviceRepo{}, &fakeCommandExecutor{})
-	err := s.DeleteRule(1)
+	err := s.DeleteRule(1, 1)
 
 	assert.NoError(t, err)
 	assert.True(t, deleted)

@@ -67,6 +67,7 @@ func (r *PostgresCommandRepository) GetByID(id int) (*Command, error) {
 		&cmd.DeliveredAt,
 		&cmd.ExecutedAt,
 		&cmd.UserID,
+		&cmd.AccountID,
 		&metadataJSON,
 	)
 

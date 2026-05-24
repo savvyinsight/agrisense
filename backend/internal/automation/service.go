@@ -69,7 +69,7 @@ func (s *Service) Stop() {
 }
 
 func (s *Service) loadRules() error {
-	rules, err := s.automationRepo.GetEnabledRules()
+	rules, err := s.automationRepo.GetEnabledRules(0)
 	if err != nil {
 		return err
 	}
@@ -106,8 +106,8 @@ func (s *Service) CreateRule(rule *AutomationRule) error {
 	return nil
 }
 
-func (s *Service) GetRulesByUser(userID int) ([]AutomationRule, error) {
-	return s.automationRepo.GetByUserID(userID)
+func (s *Service) GetRulesByUser(userID, accountID int) ([]AutomationRule, error) {
+	return s.automationRepo.GetByUserID(userID, accountID)
 }
 
 func (s *Service) GetRuleByID(id int) (*AutomationRule, error) {
@@ -134,8 +134,8 @@ func (s *Service) UpdateRule(rule *AutomationRule) error {
 	return nil
 }
 
-func (s *Service) DeleteRule(id int) error {
-	if err := s.automationRepo.Delete(id); err != nil {
+func (s *Service) DeleteRule(id, accountID int) error {
+	if err := s.automationRepo.Delete(id, accountID); err != nil {
 		return err
 	}
 

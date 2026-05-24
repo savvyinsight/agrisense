@@ -370,7 +370,7 @@ func TestDeviceRepository(t *testing.T) {
 	}
 
 	// List
-	listed, total, err := repo.List(user.ID, device.DeviceFilter{}, 10, 0)
+	listed, total, err := repo.List(0, user.ID, device.DeviceFilter{}, 10, 0)
 	if err != nil {
 		t.Fatalf("Failed to list devices: %v", err)
 	}
@@ -382,7 +382,7 @@ func TestDeviceRepository(t *testing.T) {
 	}
 
 	// Delete
-	err = repo.Delete(dev.ID)
+	err = repo.Delete(dev.ID, 0)
 	if err != nil {
 		t.Fatalf("Failed to delete device: %v", err)
 	}
@@ -453,7 +453,7 @@ func TestAlertRuleRepository(t *testing.T) {
 	}
 
 	// GetByDeviceID
-	rules, err := repo.GetByDeviceID(device.ID)
+	rules, err := repo.GetByDeviceID(device.ID, 0)
 	if err != nil {
 		t.Fatalf("Failed to get rules by device ID: %v", err)
 	}
@@ -462,7 +462,7 @@ func TestAlertRuleRepository(t *testing.T) {
 	}
 
 	// GetEnabledRules
-	enabled, err := repo.GetEnabledRules()
+	enabled, err := repo.GetEnabledRules(0)
 	if err != nil {
 		t.Fatalf("Failed to get enabled rules: %v", err)
 	}
@@ -479,7 +479,7 @@ func TestAlertRuleRepository(t *testing.T) {
 	}
 
 	// List
-	listed, err := repo.List(user.ID)
+	listed, err := repo.List(0, user.ID)
 	if err != nil {
 		t.Fatalf("Failed to list rules: %v", err)
 	}
@@ -488,7 +488,7 @@ func TestAlertRuleRepository(t *testing.T) {
 	}
 
 	// Delete
-	err = repo.Delete(rule.ID)
+	err = repo.Delete(rule.ID, 0)
 	if err != nil {
 		t.Fatalf("Failed to delete rule: %v", err)
 	}
@@ -572,7 +572,7 @@ func TestAlertRepository(t *testing.T) {
 	}
 
 	// GetActive
-	active, err := repo.GetActive()
+	active, err := repo.GetActive(0)
 	if err != nil {
 		t.Fatalf("Failed to get active alerts: %v", err)
 	}
@@ -581,7 +581,7 @@ func TestAlertRepository(t *testing.T) {
 	}
 
 	// GetByDeviceID
-	deviceAlerts, err := repo.GetByDeviceID(device.ID)
+	deviceAlerts, err := repo.GetByDeviceID(device.ID, 0)
 	if err != nil {
 		t.Fatalf("Failed to get alerts by device ID: %v", err)
 	}
@@ -599,19 +599,19 @@ func TestAlertRepository(t *testing.T) {
 	}
 
 	// Acknowledge
-	err = repo.Acknowledge(alert.ID)
+	err = repo.Acknowledge(alert.ID, 0)
 	if err != nil {
 		t.Fatalf("Failed to acknowledge alert: %v", err)
 	}
 
 	// Resolve
-	err = repo.Resolve(alert.ID)
+	err = repo.Resolve(alert.ID, 0)
 	if err != nil {
 		t.Fatalf("Failed to resolve alert: %v", err)
 	}
 
 	// List
-	alerts, total, err := repo.List(10, 0)
+	alerts, total, err := repo.List(0, 10, 0)
 	if err != nil {
 		t.Fatalf("Failed to list alerts: %v", err)
 	}

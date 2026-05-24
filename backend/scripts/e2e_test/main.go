@@ -123,7 +123,7 @@ func main() {
 	time.Sleep(500 * time.Millisecond)
 
 	// Check alerts
-	activeAlerts, _ := alertRepo.GetActiveAlertsByField(fieldID)
+	activeAlerts, _ := alertRepo.GetActiveAlertsByField(fieldID, 0)
 	if len(activeAlerts) == 0 {
 		log.Fatal("✗ FAIL: No alerts triggered!")
 	}
@@ -148,7 +148,7 @@ func main() {
 
 	// Step 7: Test dedup
 	log.Println("\n=== TEST 2: Same data again → should NOT create duplicate alert ===")
-	before, _ := alertRepo.GetActiveAlertsByField(fieldID)
+	before, _ := alertRepo.GetActiveAlertsByField(fieldID, 0)
 	countBefore := len(before)
 
 	engine.Evaluate(&sensor.SensorData{
@@ -159,7 +159,7 @@ func main() {
 	})
 	time.Sleep(300 * time.Millisecond)
 
-	after, _ := alertRepo.GetActiveAlertsByField(fieldID)
+	after, _ := alertRepo.GetActiveAlertsByField(fieldID, 0)
 	countAfter := len(after)
 	if countAfter != countBefore {
 		log.Fatalf("✗ FAIL: Dedup failed! Before=%d, After=%d", countBefore, countAfter)
@@ -168,9 +168,9 @@ func main() {
 
 	// Step 8: Test field health recompute on resolve (simulating alert.Service.ResolveAlert)
 	log.Println("\n=== TEST 3: Resolve alert → field health should reset to healthy ===")
-	_ = alertRepo.Resolve(activeAlerts[0].ID)
+	_ = alertRepo.Resolve(activeAlerts[0].ID, 0)
 
-	alertsAfter, _ := alertRepo.GetActiveAlertsByField(fieldID)
+	alertsAfter, _ := alertRepo.GetActiveAlertsByField(fieldID, 0)
 	health := field.FieldHealthHealthy
 	for _, a := range alertsAfter {
 		if a.Severity == alert.SeverityCritical {
@@ -220,7 +220,7 @@ func main() {
 	})
 	time.Sleep(500 * time.Millisecond)
 
-	alertsAfter2, _ := alertRepo.GetActiveAlertsByField(fieldID)
+	alertsAfter2, _ := alertRepo.GetActiveAlertsByField(fieldID, 0)
 	hasWarning := false
 	for _, a := range alertsAfter2 {
 		log.Printf("  Alert ID=%d: severity=%s, status=%s, msg=%s", a.ID, a.Severity, a.Status, a.Message)

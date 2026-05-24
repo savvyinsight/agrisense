@@ -256,10 +256,10 @@ func (r *PostgresDeviceRepository) GetByUserID(userID int) ([]Device, error) {
 
 func (r *PostgresDeviceRepository) Update(device *Device) error {
 	query := `
-        UPDATE devices 
-        SET name = $1, type = $2, location = $3, latitude = $4, longitude = $5, status = $6, 
+        UPDATE devices
+        SET name = $1, type = $2, location = $3, latitude = $4, longitude = $5, status = $6,
             firmware_version = $7, config = $8, field_id = $9, updated_at = $10
-        WHERE id = $11
+        WHERE id = $11 AND (account_id = $12 OR $12 IS NULL)
     `
 
 	configJSON, err := json.Marshal(device.Config)
@@ -280,6 +280,7 @@ func (r *PostgresDeviceRepository) Update(device *Device) error {
 		device.FieldID,
 		time.Now(),
 		device.ID,
+		device.AccountID,
 	)
 
 	return err
@@ -297,10 +298,10 @@ func (r *PostgresDeviceRepository) UpdateStatus(deviceID string, status DeviceSt
 	return err
 }
 
-func (r *PostgresDeviceRepository) List(userID int, filter DeviceFilter, limit, offset int) ([]Device, int64, error) {
-	whereClause := "WHERE user_id = $1 OR (user_id IS NULL AND $1 = 0)"
-	args := []interface{}{userID}
-	paramIdx := 2
+func (r *PostgresDeviceRepository) List(accountID, userID int, filter DeviceFilter, limit, offset int) ([]Device, int64, error) {
+	whereClause := "WHERE (account_id = $1 OR ($1 = 0)) AND (user_id = $2 OR (user_id IS NULL AND $2 = 0) OR ($2 = 0))"
+	args := []interface{}{accountID, userID}
+	paramIdx := 3
 
 	if filter.Search != "" {
 		whereClause += fmt.Sprintf(" AND (device_id ILIKE $%d OR name ILIKE $%d)", paramIdx, paramIdx)
@@ -382,9 +383,9 @@ func (r *PostgresDeviceRepository) List(userID int, filter DeviceFilter, limit, 
 	return devices, total, nil
 }
 
-func (r *PostgresDeviceRepository) Delete(id int) error {
-	query := `DELETE FROM devices WHERE id = $1`
-	result, err := r.DB.Exec(query, id)
+func (r *PostgresDeviceRepository) Delete(id, accountID int) error {
+	query := `DELETE FROM devices WHERE id = $1 AND (account_id = $2 OR $2 = 0)`
+	result, err := r.DB.Exec(query, id, accountID)
 	if err != nil {
 		return err
 	}

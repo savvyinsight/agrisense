@@ -84,27 +84,27 @@ type AlertCorrelation struct {
 type AlertRuleRepository interface {
 	Create(rule *AlertRule) error
 	GetByID(id int) (*AlertRule, error)
-	GetByDeviceID(deviceID int) ([]AlertRule, error)
-	GetEnabledRules() ([]AlertRule, error)
+	GetByDeviceID(deviceID, accountID int) ([]AlertRule, error)
+	GetEnabledRules(accountID int) ([]AlertRule, error)
 	Update(rule *AlertRule) error
-	Delete(id int) error
-	List(userID int) ([]AlertRule, error)
+	Delete(id, accountID int) error
+	List(accountID, userID int) ([]AlertRule, error)
 	GetAutoEscalationRules() ([]AlertRule, error)
 }
 
 type AlertRepository interface {
 	Create(alert *Alert) error
 	GetByID(id int) (*Alert, error)
-	GetActive() ([]Alert, error)
-	GetActivePaginated(limit, offset int) ([]Alert, int64, error)
-	GetByDeviceID(deviceID int) ([]Alert, error)
+	GetActive(accountID int) ([]Alert, error)
+	GetActivePaginated(accountID int, limit, offset int) ([]Alert, int64, error)
+	GetByDeviceID(deviceID, accountID int) ([]Alert, error)
 	GetByRuleID(ruleID int) ([]Alert, error)
 	GetActiveByRuleAndDevice(ruleID, deviceID int) (*Alert, error)
-	GetActiveAlertsByField(fieldID int) ([]Alert, error)
-	Acknowledge(id int) error
-	Resolve(id int) error
+	GetActiveAlertsByField(fieldID, accountID int) ([]Alert, error)
+	Acknowledge(id, accountID int) error
+	Resolve(id, accountID int) error
 	ResolveByRuleID(ruleID int) ([]int, error)
-	List(limit, offset int) ([]Alert, int64, error)
+	List(accountID int, limit, offset int) ([]Alert, int64, error)
 	SnoozeAlert(id int, until time.Time, reason string) error
 	UnsnoozeAlert(id int) error
 	GetAlertCorrelations() ([]AlertCorrelation, error)

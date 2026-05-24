@@ -46,11 +46,11 @@ type AutomationRule struct {
 type AutomationRuleRepository interface {
 	Create(rule *AutomationRule) error
 	GetByID(id int) (*AutomationRule, error)
-	GetByUserID(userID int) ([]AutomationRule, error)
-	GetEnabledRules() ([]AutomationRule, error)
+	GetByUserID(userID, accountID int) ([]AutomationRule, error)
+	GetEnabledRules(accountID int) ([]AutomationRule, error)
 	Update(rule *AutomationRule) error
-	Delete(id int) error
-	GetByTargetDeviceID(deviceID int) ([]AutomationRule, error)
+	Delete(id, accountID int) error
+	GetByTargetDeviceID(deviceID, accountID int) ([]AutomationRule, error)
 	UpdatePartial(id int, updates map[string]interface{}) error
 	IncrementExecutionCount(id int) error
 	UpdateLastTriggered(id int) error

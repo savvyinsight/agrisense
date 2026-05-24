@@ -9,6 +9,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/savvyinsight/agrisense/internal/device"
+	"github.com/savvyinsight/agrisense/internal/middleware"
 )
 
 type DataHandler struct {
@@ -23,6 +24,19 @@ func NewDataHandler(dataService *Service, deviceRepo device.DeviceRepository) *D
 	}
 }
 
+// checkDeviceAccount verifies the device belongs to the requesting user's account.
+func (h *DataHandler) checkDeviceAccount(c *gin.Context, dev *device.Device) bool {
+	accountID, ok := middleware.MustGetAccountID(c)
+	if !ok {
+		return false
+	}
+	if dev.AccountID == nil || *dev.AccountID != accountID {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
+		return false
+	}
+	return true
+}
+
 func (h *DataHandler) GetLatest(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
@@ -30,9 +44,13 @@ func (h *DataHandler) GetLatest(c *gin.Context) {
 		return
 	}
 
-	device, err := h.deviceRepo.GetByID(id)
+	dev, err := h.deviceRepo.GetByID(id)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "device not found"})
+		return
+	}
+
+	if !h.checkDeviceAccount(c, dev) {
 		return
 	}
 
@@ -41,7 +59,7 @@ func (h *DataHandler) GetLatest(c *gin.Context) {
 		sensorType = "temperature" // Default
 	}
 
-	reading, err := h.dataService.GetLatestReading(device.DeviceID, sensorType)
+	reading, err := h.dataService.GetLatestReading(dev.DeviceID, sensorType)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
@@ -57,13 +75,17 @@ func (h *DataHandler) GetHistorical(c *gin.Context) {
 		return
 	}
 
-	device, err := h.deviceRepo.GetByID(id)
+	dev, err := h.deviceRepo.GetByID(id)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "device not found"})
 		return
 	}
 
-	deviceID := device.DeviceID
+	if !h.checkDeviceAccount(c, dev) {
+		return
+	}
+
+	deviceID := dev.DeviceID
 	sensorType := c.Query("sensor_type")
 
 	log.Printf("GetHistorical called: device=%s, type=%s", deviceID, sensorType)
@@ -149,13 +171,17 @@ func (h *DataHandler) GetAggregated(c *gin.Context) {
 		return
 	}
 
-	device, err := h.deviceRepo.GetByID(id)
+	dev, err := h.deviceRepo.GetByID(id)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "device not found"})
 		return
 	}
 
-	deviceID := device.DeviceID
+	if !h.checkDeviceAccount(c, dev) {
+		return
+	}
+
+	deviceID := dev.DeviceID
 	sensorType := c.Query("sensor_type")
 	interval := c.DefaultQuery("interval", "1h")
 
