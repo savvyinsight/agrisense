@@ -8,7 +8,7 @@ import (
 )
 
 const alertColumns = `id, rule_id, device_id, sensor_value, message, severity,
-	status, triggered_at, acknowledged_at, resolved_at, metadata,
+	status, triggered_at, acknowledged_at, resolved_at, account_id, metadata,
 	is_flapping, flap_count, snoozed_until, snooze_reason, correlation_id, root_cause_suggestion`
 
 type PostgresAlertRepository struct {
@@ -20,7 +20,7 @@ func scanAlert(row interface{ Scan(dest ...interface{}) error }, alert *Alert) e
 	err := row.Scan(
 		&alert.ID, &alert.RuleID, &alert.DeviceID, &alert.SensorValue,
 		&alert.Message, &alert.Severity, &alert.Status, &alert.TriggeredAt,
-		&alert.AcknowledgedAt, &alert.ResolvedAt, &metadataJSON,
+		&alert.AcknowledgedAt, &alert.ResolvedAt, &alert.AccountID, &metadataJSON,
 		&alert.IsFlapping, &alert.FlapCount, &alert.SnoozedUntil, &alert.SnoozeReason,
 		&alert.CorrelationID, &alert.RootCauseSuggestion,
 	)

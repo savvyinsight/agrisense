@@ -7,7 +7,7 @@ import (
 )
 
 const alertRuleColumns = `id, name, device_id, field_id, sensor_type_id, condition, threshold_value,
-	threshold_max, duration_seconds, severity, enabled, user_id, created_at, updated_at,
+	threshold_max, duration_seconds, severity, enabled, user_id, account_id, created_at, updated_at,
 	recovery_threshold_value, recovery_condition, trend_condition,
 	auto_escalation_enabled, auto_escalation_minutes, auto_escalation_severity`
 
@@ -19,7 +19,7 @@ func scanAlertRule(row interface{ Scan(dest ...interface{}) error }, rule *Alert
 	return row.Scan(
 		&rule.ID, &rule.Name, &rule.DeviceID, &rule.FieldID, &rule.SensorTypeID,
 		&rule.Condition, &rule.ThresholdValue, &rule.ThresholdMax,
-		&rule.DurationSeconds, &rule.Severity, &rule.Enabled, &rule.UserID,
+		&rule.DurationSeconds, &rule.Severity, &rule.Enabled, &rule.UserID, &rule.AccountID,
 		&rule.CreatedAt, &rule.UpdatedAt,
 		&rule.RecoveryThresholdValue, &rule.RecoveryCondition, &rule.TrendCondition,
 		&rule.AutoEscalationEnabled, &rule.AutoEscalationMinutes, &rule.AutoEscalationSeverity,
@@ -30,10 +30,10 @@ func (r *PostgresAlertRuleRepository) Create(rule *AlertRule) error {
 	query := `
 		INSERT INTO alert_rules (
 			name, device_id, field_id, sensor_type_id, condition, threshold_value,
-			threshold_max, duration_seconds, severity, enabled, user_id, created_at, updated_at,
+			threshold_max, duration_seconds, severity, enabled, user_id, account_id, created_at, updated_at,
 			recovery_threshold_value, recovery_condition, trend_condition,
 			auto_escalation_enabled, auto_escalation_minutes, auto_escalation_severity
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
 		RETURNING id`
 
 	now := time.Now()
@@ -41,7 +41,7 @@ func (r *PostgresAlertRuleRepository) Create(rule *AlertRule) error {
 		query,
 		rule.Name, rule.DeviceID, rule.FieldID, rule.SensorTypeID,
 		rule.Condition, rule.ThresholdValue, rule.ThresholdMax,
-		rule.DurationSeconds, rule.Severity, rule.Enabled, rule.UserID, now, now,
+		rule.DurationSeconds, rule.Severity, rule.Enabled, rule.UserID, rule.AccountID, now, now,
 		rule.RecoveryThresholdValue, rule.RecoveryCondition, rule.TrendCondition,
 		rule.AutoEscalationEnabled, rule.AutoEscalationMinutes, rule.AutoEscalationSeverity,
 	).Scan(&rule.ID)

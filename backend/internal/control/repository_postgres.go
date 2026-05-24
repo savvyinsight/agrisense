@@ -13,8 +13,8 @@ type PostgresCommandRepository struct {
 func (r *PostgresCommandRepository) Create(cmd *Command) error {
 	query := `
         INSERT INTO control_commands (
-            device_id, command, parameters, status, created_at, user_id, metadata
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+            device_id, command, parameters, status, created_at, user_id, account_id, metadata
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
         RETURNING id
     `
 
@@ -37,6 +37,7 @@ func (r *PostgresCommandRepository) Create(cmd *Command) error {
 		cmd.Status,
 		now,
 		cmd.UserID,
+		cmd.AccountID,
 		metadataJSON,
 	).Scan(&cmd.ID)
 
@@ -47,7 +48,7 @@ func (r *PostgresCommandRepository) Create(cmd *Command) error {
 func (r *PostgresCommandRepository) GetByID(id int) (*Command, error) {
 	query := `
         SELECT id, device_id, command, parameters, status, created_at, 
-               sent_at, delivered_at, executed_at, user_id, metadata
+               sent_at, delivered_at, executed_at, user_id, account_id, metadata
         FROM control_commands WHERE id = $1
     `
 
@@ -89,7 +90,7 @@ func (r *PostgresCommandRepository) GetByID(id int) (*Command, error) {
 func (r *PostgresCommandRepository) GetByDeviceID(deviceID int, limit int) ([]Command, error) {
 	query := `
         SELECT id, device_id, command, parameters, status, created_at, 
-               sent_at, delivered_at, executed_at, user_id, metadata
+               sent_at, delivered_at, executed_at, user_id, account_id, metadata
         FROM control_commands 
         WHERE device_id = $1
         ORDER BY created_at DESC
@@ -123,6 +124,7 @@ func (r *PostgresCommandRepository) GetByDeviceID(deviceID int, limit int) ([]Co
 			&cmd.DeliveredAt,
 			&cmd.ExecutedAt,
 			&cmd.UserID,
+			&cmd.AccountID,
 			&metadataJSON,
 		)
 		if err != nil {
@@ -174,7 +176,7 @@ func (r *PostgresCommandRepository) UpdateDelivery(id int, sentAt, deliveredAt, 
 func (r *PostgresCommandRepository) GetPending(deviceID int) ([]Command, error) {
 	query := `
         SELECT id, device_id, command, parameters, status, created_at, 
-               sent_at, delivered_at, executed_at, user_id, metadata
+               sent_at, delivered_at, executed_at, user_id, account_id, metadata
         FROM control_commands 
         WHERE device_id = $1 AND status IN ('pending', 'sent')
         ORDER BY created_at ASC
@@ -207,6 +209,7 @@ func (r *PostgresCommandRepository) GetPending(deviceID int) ([]Command, error) 
 			&cmd.DeliveredAt,
 			&cmd.ExecutedAt,
 			&cmd.UserID,
+			&cmd.AccountID,
 			&metadataJSON,
 		)
 		if err != nil {
