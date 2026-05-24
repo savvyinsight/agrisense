@@ -108,7 +108,7 @@ func (r *PostgresCommandRepository) GetByDeviceID(deviceID int, limit int) ([]Co
 		}
 	}()
 
-	var commands []Command
+	commands := make([]Command, 0)
 	for rows.Next() {
 		var cmd Command
 		var parametersJSON []byte
@@ -193,7 +193,7 @@ func (r *PostgresCommandRepository) GetPending(deviceID int) ([]Command, error) 
 		}
 	}()
 
-	var commands []Command
+	commands := make([]Command, 0)
 	for rows.Next() {
 		var cmd Command
 		var parametersJSON []byte

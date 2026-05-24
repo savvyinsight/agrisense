@@ -80,7 +80,7 @@ func (r *PostgresEscalationRuleRepository) List() ([]EscalationRule, error) {
 	}
 	defer func() { _ = rows.Close() }()
 
-	var rules []EscalationRule
+	rules := make([]EscalationRule, 0)
 	for rows.Next() {
 		var rule EscalationRule
 		if err := rows.Scan(&rule.ID, &rule.Name, &rule.TriggerSeverity, &rule.Enabled, &rule.CreatedAt, &rule.UpdatedAt); err != nil {
@@ -173,7 +173,7 @@ func (r *PostgresEscalationRuleRepository) getLevels(ruleID int) ([]EscalationLe
 	}
 	defer func() { _ = rows.Close() }()
 
-	var levels []EscalationLevel
+	levels := make([]EscalationLevel, 0)
 	for rows.Next() {
 		var level EscalationLevel
 		if err := rows.Scan(&level.ID, &level.RuleID, &level.LevelOrder, &level.DelayMinutes, &level.Severity, &level.ChannelIDs); err != nil {
@@ -208,7 +208,7 @@ func (r *PostgresEscalationHistoryRepository) GetByAlertID(alertID int) ([]Escal
 	}
 	defer func() { _ = rows.Close() }()
 
-	var entries []EscalationHistoryEntry
+	entries := make([]EscalationHistoryEntry, 0)
 	for rows.Next() {
 		var entry EscalationHistoryEntry
 		if err := rows.Scan(&entry.ID, &entry.AlertID, &entry.RuleID, &entry.LevelOrder,

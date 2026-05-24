@@ -68,7 +68,7 @@ func (r *PostgresUserRepository) List(limit, offset int) ([]User, int64, error) 
 		}
 	}()
 
-	var users []User
+	users := make([]User, 0)
 	for rows.Next() {
 		var user User
 		err := rows.Scan(&user.ID, &user.Username, &user.Email, &user.Role, &user.AccountID, &user.CreatedAt, &user.UpdatedAt)
@@ -99,7 +99,7 @@ func (r *PostgresUserRepository) GetByAccountID(accountID int, limit, offset int
 		}
 	}()
 
-	var users []User
+	users := make([]User, 0)
 	for rows.Next() {
 		var user User
 		err := rows.Scan(&user.ID, &user.Username, &user.Email, &user.Role, &user.AccountID, &user.CreatedAt, &user.UpdatedAt)

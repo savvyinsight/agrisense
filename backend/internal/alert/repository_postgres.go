@@ -75,7 +75,7 @@ func (r *PostgresAlertRuleRepository) GetByDeviceID(deviceID, accountID int) ([]
 	}
 	defer func() { _ = rows.Close() }()
 
-	var rules []AlertRule
+	rules := make([]AlertRule, 0)
 	for rows.Next() {
 		var rule AlertRule
 		if err := scanAlertRule(rows, &rule); err != nil {
@@ -102,7 +102,7 @@ func (r *PostgresAlertRuleRepository) GetEnabledRules(accountID int) ([]AlertRul
 	}
 	defer func() { _ = rows.Close() }()
 
-	var rules []AlertRule
+	rules := make([]AlertRule, 0)
 	for rows.Next() {
 		var rule AlertRule
 		if err := scanAlertRule(rows, &rule); err != nil {
@@ -180,7 +180,7 @@ func (r *PostgresAlertRuleRepository) List(accountID, userID int) ([]AlertRule, 
 	}
 	defer func() { _ = rows.Close() }()
 
-	var rules []AlertRule
+	rules := make([]AlertRule, 0)
 	for rows.Next() {
 		var rule AlertRule
 		if err := scanAlertRule(rows, &rule); err != nil {
@@ -201,7 +201,7 @@ func (r *PostgresAlertRuleRepository) GetAutoEscalationRules() ([]AlertRule, err
 	}
 	defer func() { _ = rows.Close() }()
 
-	var rules []AlertRule
+	rules := make([]AlertRule, 0)
 	for rows.Next() {
 		var rule AlertRule
 		if err := scanAlertRule(rows, &rule); err != nil {

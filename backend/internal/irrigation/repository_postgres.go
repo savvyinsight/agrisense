@@ -33,7 +33,7 @@ func (r *PostgresIrrigationZoneRepository) ListByFieldID(fieldID int, userID int
 	}
 	defer func() { _ = rows.Close() }()
 
-	var zones []IrrigationZone
+	zones := make([]IrrigationZone, 0)
 	for rows.Next() {
 		var z IrrigationZone
 		var lat, lng sql.NullFloat64

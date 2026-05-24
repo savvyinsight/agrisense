@@ -35,8 +35,8 @@ export default function EscalationRules() {
   const load = useCallback(async () => {
     setLoading(true);
     const [rulesRes, settingsRes] = await Promise.all([getEscalationRules(), getNotificationSettings()]);
-    if (rulesRes.success && rulesRes.data) setRules(rulesRes.data.rules);
-    if (settingsRes.success && settingsRes.data) setChannels(settingsRes.data.channels);
+    if (rulesRes.success && rulesRes.data) setRules(rulesRes.data.rules || []);
+    if (settingsRes.success && settingsRes.data) setChannels(settingsRes.data.channels || []);
     setLoading(false);
   }, []);
 
@@ -59,7 +59,8 @@ export default function EscalationRules() {
     setEditingRule(rule);
     setName(rule.name);
     setTriggerSeverity(rule.trigger_severity);
-    setLevels(rule.levels.length > 0 ? rule.levels.map((l) => ({ ...l })) : [{ delay_minutes: 15, severity: 'warning', channel_ids: [] }]);
+    const ruleLevels = rule.levels || [];
+    setLevels(ruleLevels.length > 0 ? ruleLevels.map((l) => ({ ...l })) : [{ delay_minutes: 15, severity: 'warning', channel_ids: [] }]);
     setEnabled(rule.enabled);
     setShowModal(true);
   };
@@ -138,7 +139,7 @@ export default function EscalationRules() {
       key: 'levels',
       header: t('escalation.levels'),
       render: (rule: EscalationRule) => (
-        <span className="text-text-secondary">{rule.levels.length} {rule.levels.length === 1 ? t('escalation.level') : t('escalation.levels')}</span>
+        <span className="text-text-secondary">{(rule.levels || []).length} {(rule.levels || []).length === 1 ? t('escalation.level') : t('escalation.levels')}</span>
       ),
     },
     {
@@ -265,7 +266,7 @@ export default function EscalationRules() {
                   <div>
                     <label className="block text-xs text-text-muted mb-1">{t('escalation.channels')}</label>
                     <div className="flex flex-wrap gap-2">
-                      {channels.filter((c) => c.enabled).map((ch) => {
+                      {(channels || []).filter((c) => c.enabled).map((ch) => {
                         const active = level.channel_ids.includes(ch.id);
                         return (
                           <button
@@ -277,7 +278,7 @@ export default function EscalationRules() {
                           </button>
                         );
                       })}
-                      {channels.filter((c) => c.enabled).length === 0 && (
+                      {(channels || []).filter((c) => c.enabled).length === 0 && (
                         <span className="text-xs text-text-muted">{t('escalation.noChannels')}</span>
                       )}
                     </div>

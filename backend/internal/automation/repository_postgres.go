@@ -111,7 +111,7 @@ func (r *PostgresAutomationRuleRepository) GetByUserID(userID, accountID int) ([
 	}
 	defer func() { _ = rows.Close() }()
 
-	var rules []AutomationRule
+	rules := make([]AutomationRule, 0)
 	for rows.Next() {
 		var rule AutomationRule
 		if err := scanAutomationRule(rows, &rule); err != nil {
@@ -139,7 +139,7 @@ func (r *PostgresAutomationRuleRepository) GetEnabledRules(accountID int) ([]Aut
 	}
 	defer func() { _ = rows.Close() }()
 
-	var rules []AutomationRule
+	rules := make([]AutomationRule, 0)
 	for rows.Next() {
 		var rule AutomationRule
 		if err := scanAutomationRule(rows, &rule); err != nil {
@@ -227,7 +227,7 @@ func (r *PostgresAutomationRuleRepository) GetByTargetDeviceID(deviceID, account
 	}
 	defer func() { _ = rows.Close() }()
 
-	var rules []AutomationRule
+	rules := make([]AutomationRule, 0)
 	for rows.Next() {
 		var rule AutomationRule
 		if err := scanAutomationRule(rows, &rule); err != nil {
@@ -312,7 +312,7 @@ func (r *PostgresAutomationRuleRepository) GetCommandHistory(ruleID int, limit i
 	}
 	defer func() { _ = rows.Close() }()
 
-	var commands []map[string]interface{}
+	commands := make([]map[string]interface{}, 0)
 	for rows.Next() {
 		var (
 			id                             int
