@@ -42,11 +42,11 @@ type GetTeamResponse struct {
 }
 
 type UserWithPermissions struct {
-	ID          int                 `json:"id"`
-	Email       string              `json:"email"`
-	Username    string              `json:"username"`
-	Permissions []UserPermission    `json:"permissions"`
-	CreatedAt   time.Time           `json:"created_at"`
+	ID          int              `json:"id"`
+	Email       string           `json:"email"`
+	Username    string           `json:"username"`
+	Permissions []UserPermission `json:"permissions"`
+	CreatedAt   time.Time        `json:"created_at"`
 }
 
 // InviteUserHandler invites a new user to the account
@@ -365,10 +365,10 @@ func (h *UserHandler) GetAuditLogHandler(c *gin.Context) {
 	}
 
 	response := map[string]interface{}{
-		"logs":    logs,
-		"total":   total,
-		"limit":   limit,
-		"offset":  offset,
+		"logs":   logs,
+		"total":  total,
+		"limit":  limit,
+		"offset": offset,
 	}
 
 	c.JSON(http.StatusOK, response)

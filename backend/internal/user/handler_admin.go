@@ -49,7 +49,7 @@ func (h *AdminHandler) ListAccountsHandler(c *gin.Context) {
 
 	accounts, total, err := h.AccountRepo.ListAllAccounts(limit, offset)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H	{"error": "Failed to list accounts"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to list accounts"})
 		return
 	}
 
