@@ -24,6 +24,7 @@ import (
 	"github.com/savvyinsight/agrisense/internal/control"
 	"github.com/savvyinsight/agrisense/internal/data"
 	"github.com/savvyinsight/agrisense/internal/device"
+	"github.com/savvyinsight/agrisense/internal/escalation"
 	"github.com/savvyinsight/agrisense/internal/field"
 	"github.com/savvyinsight/agrisense/internal/infra/postgres"
 	"github.com/savvyinsight/agrisense/internal/irrigation"
@@ -31,6 +32,7 @@ import (
 	"github.com/savvyinsight/agrisense/internal/middleware"
 	"github.com/savvyinsight/agrisense/internal/mqtt"
 	mqtthandlers "github.com/savvyinsight/agrisense/internal/mqtt/handlers"
+	"github.com/savvyinsight/agrisense/internal/notification"
 	"github.com/savvyinsight/agrisense/internal/ruleengine"
 	"github.com/savvyinsight/agrisense/internal/sensor"
 	"github.com/savvyinsight/agrisense/internal/user"
@@ -154,6 +156,16 @@ func runServer(cliCtx *cli.Context) error {
 	// Alert service
 	alertService := alert.NewService(alertRepo, alertRuleRepo, deviceRepo, fieldRepo)
 
+	// Notification service
+	notifChannelRepo := &notification.PostgresChannelRepository{DB: pgDB}
+	notifRoutingRepo := &notification.PostgresRoutingRuleRepository{DB: pgDB}
+	notifService := notification.NewService(notifChannelRepo, notifRoutingRepo)
+
+	// Escalation service
+	escRuleRepo := &escalation.PostgresEscalationRuleRepository{DB: pgDB}
+	escHistoryRepo := &escalation.PostgresEscalationHistoryRepository{DB: pgDB}
+	escalationService := escalation.NewService(escRuleRepo, escHistoryRepo)
+
 	// Analytics service
 	analyticsService := analytics.NewService(deviceRepo, sensorTypeRepo,
 		dataService.GetHistoricalData,
@@ -198,6 +210,8 @@ func runServer(cliCtx *cli.Context) error {
 	fieldHandler := field.NewFieldHandler(fieldRepo)
 	irrigationHandler := irrigation.NewIrrigationHandler(irrigationRepo, irrigationEventRepo, irrigationCmdAdapter{controlService})
 	analyticsHandler := analytics.NewAnalyticsHandler(analyticsService)
+	notifHandler := notification.NewHandler(notifService)
+	escHandler := escalation.NewHandler(escalationService)
 	
 	// Multi-tenant RBAC handler
 	userHandler := &user.UserHandler{
@@ -294,6 +308,10 @@ func runServer(cliCtx *cli.Context) error {
 			alerts.DELETE("/rules/:id", alertHandler.DeleteRule)
 			alerts.POST("/:id/acknowledge", alertHandler.AcknowledgeAlert)
 			alerts.POST("/:id/resolve", alertHandler.ResolveAlert)
+			alerts.POST("/:id/snooze", alertHandler.SnoozeAlert)
+			alerts.POST("/:id/unsnooze", alertHandler.UnsnoozeAlert)
+			alerts.GET("/correlations", alertHandler.GetAlertCorrelations)
+			alerts.GET("/:id/escalation-history", escHandler.GetHistory)
 		}
 
 		// Automation routes
@@ -304,6 +322,33 @@ func runServer(cliCtx *cli.Context) error {
 			automation.GET("/rules/:id", automationHandler.GetRule)
 			automation.PUT("/rules/:id", automationHandler.UpdateRule)
 			automation.DELETE("/rules/:id", automationHandler.DeleteRule)
+			automation.PUT("/rules/:id/pause", automationHandler.PauseRule)
+			automation.PUT("/rules/:id/resume", automationHandler.ResumeRule)
+			automation.POST("/rules/:id/execute", automationHandler.ExecuteNow)
+			automation.GET("/rules/:id/commands", automationHandler.GetCommandHistory)
+			automation.GET("/dashboard", automationHandler.GetDashboard)
+			automation.POST("/global-toggle", automationHandler.SetGlobalAutomation)
+		}
+
+		// Notification routes
+		notifications := api.Group("/notifications")
+		{
+			notifications.GET("/settings", notifHandler.GetSettings)
+			notifications.POST("/channels", notifHandler.CreateChannel)
+			notifications.PUT("/channels/:id", notifHandler.UpdateChannel)
+			notifications.DELETE("/channels/:id", notifHandler.DeleteChannel)
+			notifications.PUT("/routing/:id", notifHandler.UpdateRoutingRule)
+			notifications.POST("/channels/:id/test", notifHandler.TestChannel)
+		}
+
+		// Escalation routes
+		escRoutes := api.Group("/alerts/escalation-rules")
+		{
+			escRoutes.GET("", escHandler.ListRules)
+			escRoutes.POST("", escHandler.CreateRule)
+			escRoutes.GET("/:id", escHandler.GetRule)
+			escRoutes.PUT("/:id", escHandler.UpdateRule)
+			escRoutes.DELETE("/:id", escHandler.DeleteRule)
 		}
 
 		// Field routes

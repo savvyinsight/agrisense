@@ -35,6 +35,11 @@ type AutomationRule struct {
 	UserID                 int                    `json:"user_id"`
 	CreatedAt              time.Time              `json:"created_at"`
 	UpdatedAt              time.Time              `json:"updated_at"`
+	Paused                 bool                   `json:"paused"`
+	LastTriggeredAt        *time.Time             `json:"last_triggered_at,omitempty"`
+	ExecutionCount         int                    `json:"execution_count"`
+	LastCommandStatus      *string                `json:"last_command_status,omitempty"`
+	Metadata               map[string]interface{} `json:"metadata,omitempty"`
 }
 
 type AutomationRuleRepository interface {
@@ -45,4 +50,11 @@ type AutomationRuleRepository interface {
 	Update(rule *AutomationRule) error
 	Delete(id int) error
 	GetByTargetDeviceID(deviceID int) ([]AutomationRule, error)
+	UpdatePartial(id int, updates map[string]interface{}) error
+	IncrementExecutionCount(id int) error
+	UpdateLastTriggered(id int) error
+	UpdateLastCommandStatus(id int, status string) error
+	GetGlobalAutomationEnabled() (bool, error)
+	SetGlobalAutomationEnabled(enabled bool) error
+	GetCommandHistory(ruleID int, limit int) ([]map[string]interface{}, error)
 }

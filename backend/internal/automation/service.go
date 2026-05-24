@@ -303,6 +303,122 @@ func (s *Service) getSensorTypeID(sensorType string) int {
 	}
 }
 
+func (s *Service) PauseRule(id int) error {
+	rule, err := s.automationRepo.GetByID(id)
+	if err != nil {
+		return fmt.Errorf("rule not found: %w", err)
+	}
+	rule.Paused = true
+	if err := s.automationRepo.Update(rule); err != nil {
+		return err
+	}
+	return s.loadRules()
+}
+
+func (s *Service) ResumeRule(id int) error {
+	rule, err := s.automationRepo.GetByID(id)
+	if err != nil {
+		return fmt.Errorf("rule not found: %w", err)
+	}
+	rule.Paused = false
+	if err := s.automationRepo.Update(rule); err != nil {
+		return err
+	}
+	return s.loadRules()
+}
+
+func (s *Service) ExecuteNow(id int) (*control.Command, error) {
+	rule, err := s.automationRepo.GetByID(id)
+	if err != nil {
+		return nil, fmt.Errorf("rule not found: %w", err)
+	}
+
+	if !rule.Enabled {
+		return nil, fmt.Errorf("rule is disabled")
+	}
+
+	cmd, err := s.commandService.ExecuteCommand(
+		rule.TargetDeviceID,
+		rule.ActionCommand,
+		rule.ActionParameters,
+		&rule.UserID,
+	)
+	if err != nil {
+		_ = s.automationRepo.UpdateLastCommandStatus(id, "failed")
+		return nil, fmt.Errorf("failed to execute command: %w", err)
+	}
+
+	_ = s.automationRepo.IncrementExecutionCount(id)
+	_ = s.automationRepo.UpdateLastTriggered(id)
+	_ = s.automationRepo.UpdateLastCommandStatus(id, string(cmd.Status))
+
+	return cmd, nil
+}
+
+type AutomationDashboardData struct {
+	TotalRules            int                      `json:"total_rules"`
+	ActiveRules           int                      `json:"active_rules"`
+	PausedRules           int                      `json:"paused_rules"`
+	FailedRules           int                      `json:"failed_rules"`
+	RecentExecutions      []map[string]interface{} `json:"recent_executions"`
+	FieldSummaries        []map[string]interface{} `json:"field_summaries"`
+	GlobalAutomationEnabled bool                   `json:"global_automation_enabled"`
+}
+
+func (s *Service) GetDashboard(userID int) (*AutomationDashboardData, error) {
+	rules, err := s.automationRepo.GetByUserID(userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get rules: %w", err)
+	}
+
+	globalEnabled, err := s.automationRepo.GetGlobalAutomationEnabled()
+	if err != nil {
+		globalEnabled = true // default
+	}
+
+	data := &AutomationDashboardData{
+		GlobalAutomationEnabled: globalEnabled,
+	}
+
+	for _, rule := range rules {
+		data.TotalRules++
+		if rule.Paused {
+			data.PausedRules++
+		} else if rule.Enabled {
+			data.ActiveRules++
+		}
+		if rule.LastCommandStatus != nil && *rule.LastCommandStatus == "failed" {
+			data.FailedRules++
+		}
+	}
+
+	// Get recent executions from all rules
+	recentExecs := make([]map[string]interface{}, 0)
+	for _, rule := range rules {
+		cmds, err := s.automationRepo.GetCommandHistory(rule.ID, 5)
+		if err != nil {
+			continue
+		}
+		for _, cmd := range cmds {
+			cmd["rule_name"] = rule.Name
+			cmd["rule_id"] = rule.ID
+			recentExecs = append(recentExecs, cmd)
+		}
+	}
+	data.RecentExecutions = recentExecs
+	data.FieldSummaries = []map[string]interface{}{}
+
+	return data, nil
+}
+
+func (s *Service) SetGlobalAutomation(enabled bool) error {
+	return s.automationRepo.SetGlobalAutomationEnabled(enabled)
+}
+
+func (s *Service) GetCommandHistory(ruleID int, limit int) ([]map[string]interface{}, error) {
+	return s.automationRepo.GetCommandHistory(ruleID, limit)
+}
+
 // Scheduler handles cron-based automation rules
 func (s *Scheduler) start() {
 	log.Println("Starting automation scheduler...")

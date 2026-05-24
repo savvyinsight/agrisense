@@ -185,3 +185,52 @@ func (h *AlertHandler) GetAlertHistory(c *gin.Context) {
 		"limit":  limit,
 	})
 }
+
+func (h *AlertHandler) SnoozeAlert(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid alert id"})
+		return
+	}
+
+	var req struct {
+		Minutes int    `json:"minutes" binding:"required"`
+		Reason  string `json:"reason"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if err := h.alertService.SnoozeAlert(id, req.Minutes, req.Reason); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"status": "snoozed"})
+}
+
+func (h *AlertHandler) UnsnoozeAlert(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid alert id"})
+		return
+	}
+
+	if err := h.alertService.UnsnoozeAlert(id); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"status": "unsnoozed"})
+}
+
+func (h *AlertHandler) GetAlertCorrelations(c *gin.Context) {
+	correlations, err := h.alertService.GetAlertCorrelations()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"correlations": correlations})
+}
