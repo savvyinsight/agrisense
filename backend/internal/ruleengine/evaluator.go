@@ -2,6 +2,7 @@ package ruleengine
 
 import (
 	"fmt"
+	"math"
 
 	"github.com/savvyinsight/agrisense/internal/alert"
 	"github.com/savvyinsight/agrisense/internal/sensor"
@@ -27,7 +28,7 @@ func (e *Evaluator) Evaluate(rule *alert.AlertRule, data *sensor.SensorData) boo
 			return true
 		}
 	case alert.ConditionEQ:
-		if data.Value == *rule.ThresholdValue {
+		if math.Abs(data.Value-*rule.ThresholdValue) < 1e-9 {
 			return true
 		}
 	case alert.ConditionGTE:
@@ -46,6 +47,22 @@ func (e *Evaluator) Evaluate(rule *alert.AlertRule, data *sensor.SensorData) boo
 		}
 	}
 
+	return false
+}
+
+func (e *Evaluator) CheckRecovery(recoveryCondition alert.AlertCondition, recoveryValue float64, currentValue float64) bool {
+	switch recoveryCondition {
+	case alert.ConditionGT:
+		return currentValue > recoveryValue
+	case alert.ConditionLT:
+		return currentValue < recoveryValue
+	case alert.ConditionEQ:
+		return math.Abs(currentValue-recoveryValue) < 1e-9
+	case alert.ConditionGTE:
+		return currentValue >= recoveryValue
+	case alert.ConditionLTE:
+		return currentValue <= recoveryValue
+	}
 	return false
 }
 

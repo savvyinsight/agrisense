@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"fmt"
 	"log"
 	"time"
 
@@ -78,27 +77,20 @@ func (sm *StatusManager) checkLoop() {
 }
 
 // checkOfflineDevices marks devices as offline if they haven't sent heartbeats recently
-// Note: This is a simple implementation. Consider getting all devices from DB and checking timestamps.
 func (sm *StatusManager) checkOfflineDevices() error {
-	log.Println("Checking for offline devices...")
-
-	// TODO: Implement if you have a method to get all devices in the repository
-	// For now, this is a placeholder that logs the check.
-	// You'll need to either:
-	// 1. Add a GetAll() method to DeviceRepository interface
-	// 2. Add a MarkOfflineByLastHeartbeat(timeout) method that does this check in SQL
-	// 3. Maintain an in-memory cache of known devices
-
+	count, err := sm.deviceRepo.MarkOfflineByHeartbeat(sm.heartbeatTimeout)
+	if err != nil {
+		return err
+	}
+	if count > 0 {
+		log.Printf("Marked %d device(s) as offline (no heartbeat since %v)", count, sm.heartbeatTimeout)
+	}
 	return nil
 }
 
 // MarkDeviceOffline explicitly marks a device as offline
 func (sm *StatusManager) MarkDeviceOffline(deviceID string) error {
-	if deviceRepo == nil {
-		return fmt.Errorf("device repository not initialized")
-	}
-
-	if err := deviceRepo.UpdateStatus(deviceID, device.DeviceStatusOffline); err != nil {
+	if err := sm.deviceRepo.UpdateStatus(deviceID, device.DeviceStatusOffline); err != nil {
 		log.Printf("Failed to mark device %s as offline: %v", deviceID, err)
 		return err
 	}
@@ -109,11 +101,7 @@ func (sm *StatusManager) MarkDeviceOffline(deviceID string) error {
 
 // MarkDeviceOnline explicitly marks a device as online
 func (sm *StatusManager) MarkDeviceOnline(deviceID string) error {
-	if deviceRepo == nil {
-		return fmt.Errorf("device repository not initialized")
-	}
-
-	if err := deviceRepo.UpdateStatus(deviceID, device.DeviceStatusOnline); err != nil {
+	if err := sm.deviceRepo.UpdateStatus(deviceID, device.DeviceStatusOnline); err != nil {
 		log.Printf("Failed to mark device %s as online: %v", deviceID, err)
 		return err
 	}

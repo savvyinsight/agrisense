@@ -70,6 +70,9 @@ func (m *mockDeviceRepo) UnclaimDevice(deviceID string) error {
 	args := m.Called(deviceID)
 	return args.Error(0)
 }
+func (m *mockDeviceRepo) MarkOfflineByHeartbeat(timeout time.Duration) (int, error) {
+	return 0, nil
+}
 
 type mockAccountQuotaChecker struct {
 	mock.Mock

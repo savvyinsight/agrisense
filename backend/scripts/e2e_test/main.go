@@ -57,6 +57,7 @@ func main() {
 	deviceRepo := &device.PostgresDeviceRepository{DB: pgDB}
 	alertRuleRepo := &alert.PostgresAlertRuleRepository{DB: pgDB}
 	alertRepo := &alert.PostgresAlertRepository{DB: pgDB}
+	sensorTypeRepo := &sensor.PostgresSensorTypeRepository{DB: pgDB}
 
 	// Step 1: Create user
 	var userID int
@@ -105,7 +106,7 @@ func main() {
 	log.Printf("✓ Created alert rule ID=%d: soil_moisture < 30 → critical", rule.ID)
 
 	// Step 5: Start rule engine
-	engine := ruleengine.NewEngine(alertRuleRepo, alertRepo, deviceRepo, fieldRepo)
+	engine := ruleengine.NewEngine(alertRuleRepo, alertRepo, deviceRepo, fieldRepo, sensorTypeRepo)
 	if err := engine.Start(); err != nil {
 		log.Fatalf("Failed to start rule engine: %v", err)
 	}
@@ -207,7 +208,7 @@ func main() {
 	_ = alertRuleRepo.Create(rule2)
 
 	// Reload rules
-	engine = ruleengine.NewEngine(alertRuleRepo, alertRepo, deviceRepo, fieldRepo)
+	engine = ruleengine.NewEngine(alertRuleRepo, alertRepo, deviceRepo, fieldRepo, sensorTypeRepo)
 	_ = engine.Start()
 	time.Sleep(200 * time.Millisecond)
 

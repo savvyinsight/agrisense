@@ -66,6 +66,7 @@ func setupAPIRouter(t *testing.T) (*gin.Engine, *data.Service) {
 		&alert.PostgresAlertRepository{DB: testDB},
 		deviceRepo,
 		fieldRepo,
+		sensorTypeRepo,
 	)
 	require.NoError(t, ruleEngine.Start())
 	t.Cleanup(func() {

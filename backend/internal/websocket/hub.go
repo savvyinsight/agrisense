@@ -60,17 +60,21 @@ func (h *Hub) run() {
 			log.Printf("WebSocket client unregistered: user %d, total clients: %d", client.userID, len(h.clients))
 		case message := <-h.broadcast:
 			log.Printf("Hub broadcasting to %d clients", len(h.clients))
-			h.mu.RLock()
+			h.mu.Lock()
+			var dead []*Client
 			for client := range h.clients {
 				select {
 				case client.send <- message:
 				default:
-					close(client.send)
-					delete(h.clients, client)
-					delete(h.userClients, client.userID)
+					dead = append(dead, client)
 				}
 			}
-			h.mu.RUnlock()
+			for _, client := range dead {
+				close(client.send)
+				delete(h.clients, client)
+				delete(h.userClients, client.userID)
+			}
+			h.mu.Unlock()
 		}
 	}
 }
@@ -90,18 +94,23 @@ func (h *Hub) BroadcastToUser(userID int, data interface{}) {
 		return
 	}
 
-	h.mu.RLock()
-	defer h.mu.RUnlock()
+	h.mu.Lock()
+	defer h.mu.Unlock()
 
+	var dead []*Client
 	for client := range h.clients {
 		if client.userID == userID {
 			select {
 			case client.send <- payload:
 			default:
-				close(client.send)
-				delete(h.clients, client)
+				dead = append(dead, client)
 			}
 		}
+	}
+	for _, client := range dead {
+		close(client.send)
+		delete(h.clients, client)
+		delete(h.userClients, client.userID)
 	}
 }
 

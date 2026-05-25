@@ -3,6 +3,7 @@ package automation
 import (
 	"fmt"
 	"log"
+	"math"
 	"sync"
 	"time"
 
@@ -17,34 +18,46 @@ type Service struct {
 	automationRepo AutomationRuleRepository
 	deviceRepo     device.DeviceRepository
 	commandService CommandExecutor
+	sensorTypeRepo sensor.SensorTypeRepository
 	scheduler      *Scheduler
 
-	mu           sync.Mutex
-	lastExecuted map[int]time.Time
+	mu              sync.Mutex
+	lastExecuted    map[int]time.Time
+	sensorTypeCache map[string]int
+
+	globalMu                sync.RWMutex
+	globalAutomationEnabled bool
 }
 
 type CommandExecutor interface {
-	ExecuteCommand(deviceID int, command string, parameters map[string]interface{}, userID *int) (*control.Command, error)
+	ExecuteCommand(deviceID int, command string, parameters map[string]interface{}, userID *int, onStatusChange func(commandID int, status string)) (*control.Command, error)
 }
 
 type Scheduler struct {
 	rules       map[int]*AutomationRule
 	stopChan    chan struct{}
 	executeFunc func(rule *AutomationRule)
+	lastFired   map[int]time.Time // rule ID -> last fired scheduled time
 }
 
 func NewService(
 	automationRepo AutomationRuleRepository,
 	deviceRepo device.DeviceRepository,
 	commandExecutor CommandExecutor,
+	sensorTypeRepo sensor.SensorTypeRepository,
 ) *Service {
-	return &Service{
-		automationRepo: automationRepo,
-		deviceRepo:     deviceRepo,
-		commandService: commandExecutor,
-		lastExecuted:   make(map[int]time.Time),
-		scheduler:      &Scheduler{rules: make(map[int]*AutomationRule), stopChan: make(chan struct{})},
+	s := &Service{
+		automationRepo:          automationRepo,
+		deviceRepo:              deviceRepo,
+		commandService:          commandExecutor,
+		sensorTypeRepo:          sensorTypeRepo,
+		lastExecuted:            make(map[int]time.Time),
+		sensorTypeCache:         make(map[string]int),
+		globalAutomationEnabled: true,
+		scheduler:               &Scheduler{rules: make(map[int]*AutomationRule), stopChan: make(chan struct{}), lastFired: make(map[int]time.Time)},
 	}
+	s.loadSensorTypeCache()
+	return s
 }
 
 func (s *Service) Start() error {
@@ -54,6 +67,17 @@ func (s *Service) Start() error {
 	if err := s.loadRules(); err != nil {
 		return fmt.Errorf("failed to load automation rules: %w", err)
 	}
+
+	// Refresh sensor type cache
+	s.loadSensorTypeCache()
+
+	// Load global automation setting
+	enabled, err := s.automationRepo.GetGlobalAutomationEnabled()
+	if err != nil {
+		log.Printf("Warning: failed to get global automation setting, defaulting to enabled: %v", err)
+		enabled = true
+	}
+	s.globalAutomationEnabled = enabled
 
 	// Start scheduler for cron-based rules
 	s.scheduler.executeFunc = func(rule *AutomationRule) {
@@ -79,8 +103,28 @@ func (s *Service) loadRules() error {
 		s.scheduler.rules[rule.ID] = &rule
 	}
 
+	// Restore cooldown state from persisted last_triggered_at
+	s.mu.Lock()
+	for _, rule := range rules {
+		if rule.LastTriggeredAt != nil {
+			s.lastExecuted[rule.ID] = *rule.LastTriggeredAt
+		}
+	}
+	s.mu.Unlock()
+
 	log.Printf("Loaded %d automation rules", len(rules))
 	return nil
+}
+
+func (s *Service) loadSensorTypeCache() {
+	sensorTypes, err := s.sensorTypeRepo.GetSensorTypes()
+	if err != nil {
+		log.Printf("Warning: failed to load sensor types: %v", err)
+		return
+	}
+	for _, st := range sensorTypes {
+		s.sensorTypeCache[st.Name] = st.ID
+	}
 }
 
 func (s *Service) CreateRule(rule *AutomationRule) error {
@@ -148,26 +192,31 @@ func (s *Service) DeleteRule(id, accountID int) error {
 }
 
 func (s *Service) EvaluateSensorRule(data *sensor.SensorData) {
-	// Find automation rules that might be triggered by this sensor data
-	// For now, we'll check all enabled rules (can be optimized later)
+	// Look up device to determine account ownership
+	dev, err := s.deviceRepo.GetByDeviceID(data.DeviceID)
+	if err != nil {
+		log.Printf("Device %s not found for sensor evaluation: %v", data.DeviceID, err)
+		return
+	}
+	if dev.AccountID == nil {
+		return // unclaimed device — no account to scope to
+	}
+
 	for _, rule := range s.scheduler.rules {
 		if rule.TriggerType != TriggerTypeSensor {
 			continue
 		}
-
-		// Check if this rule applies to this sensor type
+		// Only evaluate rules belonging to the same account
+		if rule.AccountID == nil || *rule.AccountID != *dev.AccountID {
+			continue
+		}
 		if rule.TriggerSensorTypeID == nil {
 			continue
 		}
-
-		// Get sensor type ID from sensor name (this should be cached)
 		sensorTypeID := s.getSensorTypeID(data.SensorType)
 		if sensorTypeID != *rule.TriggerSensorTypeID {
 			continue
 		}
-
-		// For now, implement simple threshold evaluation
-		// TODO: Add duration-based evaluation
 		if s.evaluateCondition(rule.TriggerCondition, data.Value, *rule.TriggerValue) {
 			s.executeAutomationRule(rule, data)
 		}
@@ -181,7 +230,7 @@ func (s *Service) evaluateCondition(condition AutomationCondition, actualValue, 
 	case AutomationConditionLT:
 		return actualValue < thresholdValue
 	case AutomationConditionEQ:
-		return actualValue == thresholdValue
+		return math.Abs(actualValue-thresholdValue) < 1e-9
 	case AutomationConditionGTE:
 		return actualValue >= thresholdValue
 	case AutomationConditionLTE:
@@ -191,7 +240,19 @@ func (s *Service) evaluateCondition(condition AutomationCondition, actualValue, 
 	}
 }
 
+func (s *Service) isGlobalAutomationEnabled() bool {
+	s.globalMu.RLock()
+	defer s.globalMu.RUnlock()
+	return s.globalAutomationEnabled
+}
+
 func (s *Service) executeAutomationRule(rule *AutomationRule, triggerData *sensor.SensorData) {
+	// Check global kill-switch
+	if !s.isGlobalAutomationEnabled() {
+		log.Printf("Global automation disabled, skipping rule: %s", rule.Name)
+		return
+	}
+
 	// Dedup: skip if this rule was executed within the cooldown period
 	cooldown := time.Duration(rule.TriggerDurationSeconds) * time.Second
 	if cooldown == 0 {
@@ -219,6 +280,9 @@ func (s *Service) executeAutomationRule(rule *AutomationRule, triggerData *senso
 		rule.ActionCommand,
 		rule.ActionParameters,
 		&rule.UserID,
+		func(_ int, status string) {
+			_ = s.automationRepo.UpdateLastCommandStatus(rule.ID, status)
+		},
 	)
 
 	if err != nil {
@@ -228,6 +292,9 @@ func (s *Service) executeAutomationRule(rule *AutomationRule, triggerData *senso
 
 	log.Printf("Automation command executed: %s on device %d (command ID: %d)",
 		rule.ActionCommand, rule.TargetDeviceID, command.ID)
+
+	_ = s.automationRepo.IncrementExecutionCount(rule.ID)
+	_ = s.automationRepo.UpdateLastTriggered(rule.ID)
 
 	// Broadcast via WebSocket to the rule owner
 	if rule.UserID > 0 {
@@ -287,20 +354,10 @@ func (s *Service) validateRule(rule *AutomationRule) error {
 }
 
 func (s *Service) getSensorTypeID(sensorType string) int {
-	// This should be cached/mapped from sensor_type_repo
-	// For now, hardcode common types
-	switch sensorType {
-	case "temperature":
-		return 1
-	case "humidity":
-		return 2
-	case "soil_moisture":
-		return 3
-	case "light_intensity":
-		return 4
-	default:
-		return 0
+	if id, ok := s.sensorTypeCache[sensorType]; ok {
+		return id
 	}
+	return 0
 }
 
 func (s *Service) PauseRule(id int) error {
@@ -342,6 +399,7 @@ func (s *Service) ExecuteNow(id int) (*control.Command, error) {
 		rule.ActionCommand,
 		rule.ActionParameters,
 		&rule.UserID,
+		nil,
 	)
 	if err != nil {
 		_ = s.automationRepo.UpdateLastCommandStatus(id, "failed")
@@ -356,13 +414,13 @@ func (s *Service) ExecuteNow(id int) (*control.Command, error) {
 }
 
 type AutomationDashboardData struct {
-	TotalRules            int                      `json:"total_rules"`
-	ActiveRules           int                      `json:"active_rules"`
-	PausedRules           int                      `json:"paused_rules"`
-	FailedRules           int                      `json:"failed_rules"`
-	RecentExecutions      []map[string]interface{} `json:"recent_executions"`
-	FieldSummaries        []map[string]interface{} `json:"field_summaries"`
-	GlobalAutomationEnabled bool                   `json:"global_automation_enabled"`
+	TotalRules              int                      `json:"total_rules"`
+	ActiveRules             int                      `json:"active_rules"`
+	PausedRules             int                      `json:"paused_rules"`
+	FailedRules             int                      `json:"failed_rules"`
+	RecentExecutions        []map[string]interface{} `json:"recent_executions"`
+	FieldSummaries          []map[string]interface{} `json:"field_summaries"`
+	GlobalAutomationEnabled bool                     `json:"global_automation_enabled"`
 }
 
 func (s *Service) GetDashboard(userID int) (*AutomationDashboardData, error) {
@@ -412,7 +470,13 @@ func (s *Service) GetDashboard(userID int) (*AutomationDashboardData, error) {
 }
 
 func (s *Service) SetGlobalAutomation(enabled bool) error {
-	return s.automationRepo.SetGlobalAutomationEnabled(enabled)
+	if err := s.automationRepo.SetGlobalAutomationEnabled(enabled); err != nil {
+		return err
+	}
+	s.globalMu.Lock()
+	s.globalAutomationEnabled = enabled
+	s.globalMu.Unlock()
+	return nil
 }
 
 func (s *Service) GetCommandHistory(ruleID int, limit int) ([]map[string]interface{}, error) {
@@ -453,23 +517,30 @@ func (s *Scheduler) checkScheduledRules() {
 			continue
 		}
 
-		if !s.isScheduledTime(*rule.ScheduleCron, now, rule.Timezone) {
+		scheduledTime, ok := s.getScheduledTimeIfDue(*rule.ScheduleCron, now, rule.Timezone)
+		if !ok {
+			continue
+		}
+
+		// Skip if we already fired for this scheduled time
+		if lastFired, exists := s.lastFired[rule.ID]; exists && !lastFired.Before(scheduledTime) {
 			continue
 		}
 
 		log.Printf("Executing scheduled automation rule: %s", rule.Name)
+		s.lastFired[rule.ID] = scheduledTime
 		if s.executeFunc != nil {
 			s.executeFunc(rule)
 		}
 	}
 }
 
-func (s *Scheduler) isScheduledTime(cronExpr string, now time.Time, timezone string) bool {
+func (s *Scheduler) getScheduledTimeIfDue(cronExpr string, now time.Time, timezone string) (time.Time, bool) {
 	parser := cron.NewParser(cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow)
 	schedule, err := parser.Parse(cronExpr)
 	if err != nil {
 		log.Printf("Failed to parse cron expression %q: %v", cronExpr, err)
-		return false
+		return time.Time{}, false
 	}
 
 	loc := time.UTC
@@ -482,10 +553,20 @@ func (s *Scheduler) isScheduledTime(cronExpr string, now time.Time, timezone str
 	}
 
 	nowInLoc := now.In(loc)
-	prev := schedule.Next(nowInLoc.Add(-2 * time.Minute))
-	next := schedule.Next(prev)
 
-	// Check if the current time falls within the execution window
-	// (within 1 minute of the scheduled time, matching our ticker interval)
-	return !next.After(nowInLoc) && nowInLoc.Sub(next) < time.Minute
+	// Get the most recent scheduled time before now
+	prev := schedule.Next(nowInLoc.Add(-2 * time.Minute))
+	scheduledTime := schedule.Next(prev)
+
+	// If the scheduled time is in the future, not due yet
+	if scheduledTime.After(nowInLoc) {
+		return time.Time{}, false
+	}
+
+	// If more than 2 minutes have passed since the scheduled time, too late (skip)
+	if nowInLoc.Sub(scheduledTime) > 2*time.Minute {
+		return time.Time{}, false
+	}
+
+	return scheduledTime, true
 }

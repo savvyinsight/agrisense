@@ -92,6 +92,19 @@ func (m *mockAlertRepo) UpdateCorrelation(id int, correlationID string, rootCaus
 	return m.Called(id, correlationID, rootCause).Error(0)
 }
 
+func (m *mockAlertRepo) GetRecentSnoozedByRuleAndDevice(ruleID, deviceID int) (*Alert, error) {
+	args := m.Called(ruleID, deviceID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*Alert), args.Error(1)
+}
+
+func (m *mockAlertRepo) GetRecentByDeviceID(deviceID int, since time.Time) ([]Alert, error) {
+	args := m.Called(deviceID, since)
+	return args.Get(0).([]Alert), args.Error(1)
+}
+
 type mockRuleRepo struct {
 	mock.Mock
 }
@@ -149,6 +162,7 @@ func (m *mockDeviceRepo) List(accountID, userID int, filter device.DeviceFilter,
 func (m *mockDeviceRepo) FindOrCreate(deviceID string) (*device.Device, error) { return nil, nil }
 func (m *mockDeviceRepo) ClaimDevice(deviceID string, userID, accountID int) error { return nil }
 func (m *mockDeviceRepo) UnclaimDevice(deviceID string) error { return nil }
+func (m *mockDeviceRepo) MarkOfflineByHeartbeat(timeout time.Duration) (int, error) { return 0, nil }
 
 type mockFieldRepo struct {
 	mock.Mock

@@ -31,8 +31,8 @@ func (s *Service) GetRule(id int) (*EscalationRule, error) {
 	return s.ruleRepo.GetByID(id)
 }
 
-func (s *Service) ListRules() ([]EscalationRule, error) {
-	return s.ruleRepo.List()
+func (s *Service) ListRules(accountID int) ([]EscalationRule, error) {
+	return s.ruleRepo.List(accountID)
 }
 
 func (s *Service) UpdateRule(id int, rule *EscalationRule) error {
@@ -45,8 +45,8 @@ func (s *Service) UpdateRule(id int, rule *EscalationRule) error {
 	return s.ruleRepo.Update(id, rule)
 }
 
-func (s *Service) DeleteRule(id int) error {
-	return s.ruleRepo.Delete(id)
+func (s *Service) DeleteRule(id int, accountID int) error {
+	return s.ruleRepo.Delete(id, accountID)
 }
 
 func (s *Service) GetHistory(alertID int) ([]EscalationHistoryEntry, error) {

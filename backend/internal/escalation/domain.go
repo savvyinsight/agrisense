@@ -11,6 +11,7 @@ type EscalationRule struct {
 	TriggerSeverity string            `json:"trigger_severity"`
 	Levels          []EscalationLevel `json:"levels"`
 	Enabled         bool              `json:"enabled"`
+	AccountID       *int              `json:"account_id,omitempty"`
 	CreatedAt       time.Time         `json:"created_at"`
 	UpdatedAt       time.Time         `json:"updated_at"`
 }
@@ -37,9 +38,10 @@ type EscalationHistoryEntry struct {
 type EscalationRuleRepository interface {
 	Create(rule *EscalationRule) error
 	GetByID(id int) (*EscalationRule, error)
-	List() ([]EscalationRule, error)
+	List(accountID int) ([]EscalationRule, error)
+	GetEnabledByAccountID(accountID int) ([]EscalationRule, error)
 	Update(id int, rule *EscalationRule) error
-	Delete(id int) error
+	Delete(id int, accountID int) error
 }
 
 type EscalationHistoryRepository interface {

@@ -4,6 +4,8 @@ import (
 	"database/sql"
 	"fmt"
 	"time"
+
+	"github.com/lib/pq"
 )
 
 type PostgresEscalationRuleRepository struct {
@@ -22,9 +24,9 @@ func (r *PostgresEscalationRuleRepository) Create(rule *EscalationRule) error {
 	rule.UpdatedAt = now
 
 	err = tx.QueryRow(
-		`INSERT INTO escalation_rules (name, trigger_severity, enabled, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5) RETURNING id`,
-		rule.Name, rule.TriggerSeverity, rule.Enabled, now, now,
+		`INSERT INTO escalation_rules (name, trigger_severity, enabled, account_id, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
+		rule.Name, rule.TriggerSeverity, rule.Enabled, rule.AccountID, now, now,
 	).Scan(&rule.ID)
 	if err != nil {
 		return fmt.Errorf("failed to create escalation rule: %w", err)
@@ -51,9 +53,9 @@ func (r *PostgresEscalationRuleRepository) Create(rule *EscalationRule) error {
 func (r *PostgresEscalationRuleRepository) GetByID(id int) (*EscalationRule, error) {
 	var rule EscalationRule
 	err := r.DB.QueryRow(
-		`SELECT id, name, trigger_severity, enabled, created_at, updated_at
+		`SELECT id, name, trigger_severity, enabled, account_id, created_at, updated_at
 		FROM escalation_rules WHERE id = $1`, id,
-	).Scan(&rule.ID, &rule.Name, &rule.TriggerSeverity, &rule.Enabled, &rule.CreatedAt, &rule.UpdatedAt)
+	).Scan(&rule.ID, &rule.Name, &rule.TriggerSeverity, &rule.Enabled, &rule.AccountID, &rule.CreatedAt, &rule.UpdatedAt)
 	if err == sql.ErrNoRows {
 		return nil, fmt.Errorf("escalation rule not found")
 	}
@@ -70,10 +72,10 @@ func (r *PostgresEscalationRuleRepository) GetByID(id int) (*EscalationRule, err
 	return &rule, nil
 }
 
-func (r *PostgresEscalationRuleRepository) List() ([]EscalationRule, error) {
+func (r *PostgresEscalationRuleRepository) List(accountID int) ([]EscalationRule, error) {
 	rows, err := r.DB.Query(
-		`SELECT id, name, trigger_severity, enabled, created_at, updated_at
-		FROM escalation_rules ORDER BY created_at DESC`,
+		`SELECT id, name, trigger_severity, enabled, account_id, created_at, updated_at
+		FROM escalation_rules WHERE account_id = $1 ORDER BY created_at DESC`, accountID,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list escalation rules: %w", err)
@@ -83,7 +85,35 @@ func (r *PostgresEscalationRuleRepository) List() ([]EscalationRule, error) {
 	rules := make([]EscalationRule, 0)
 	for rows.Next() {
 		var rule EscalationRule
-		if err := rows.Scan(&rule.ID, &rule.Name, &rule.TriggerSeverity, &rule.Enabled, &rule.CreatedAt, &rule.UpdatedAt); err != nil {
+		if err := rows.Scan(&rule.ID, &rule.Name, &rule.TriggerSeverity, &rule.Enabled, &rule.AccountID, &rule.CreatedAt, &rule.UpdatedAt); err != nil {
+			return nil, fmt.Errorf("failed to scan escalation rule: %w", err)
+		}
+
+		levels, err := r.getLevels(rule.ID)
+		if err != nil {
+			return nil, err
+		}
+		rule.Levels = levels
+		rules = append(rules, rule)
+	}
+
+	return rules, nil
+}
+
+func (r *PostgresEscalationRuleRepository) GetEnabledByAccountID(accountID int) ([]EscalationRule, error) {
+	rows, err := r.DB.Query(
+		`SELECT id, name, trigger_severity, enabled, account_id, created_at, updated_at
+		FROM escalation_rules WHERE account_id = $1 AND enabled = true ORDER BY created_at DESC`, accountID,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list enabled escalation rules: %w", err)
+	}
+	defer func() { _ = rows.Close() }()
+
+	rules := make([]EscalationRule, 0)
+	for rows.Next() {
+		var rule EscalationRule
+		if err := rows.Scan(&rule.ID, &rule.Name, &rule.TriggerSeverity, &rule.Enabled, &rule.AccountID, &rule.CreatedAt, &rule.UpdatedAt); err != nil {
 			return nil, fmt.Errorf("failed to scan escalation rule: %w", err)
 		}
 
@@ -147,8 +177,8 @@ func (r *PostgresEscalationRuleRepository) Update(id int, rule *EscalationRule) 
 	return tx.Commit()
 }
 
-func (r *PostgresEscalationRuleRepository) Delete(id int) error {
-	result, err := r.DB.Exec(`DELETE FROM escalation_rules WHERE id = $1`, id)
+func (r *PostgresEscalationRuleRepository) Delete(id int, accountID int) error {
+	result, err := r.DB.Exec(`DELETE FROM escalation_rules WHERE id = $1 AND account_id = $2`, id, accountID)
 	if err != nil {
 		return fmt.Errorf("failed to delete escalation rule: %w", err)
 	}
@@ -176,7 +206,7 @@ func (r *PostgresEscalationRuleRepository) getLevels(ruleID int) ([]EscalationLe
 	levels := make([]EscalationLevel, 0)
 	for rows.Next() {
 		var level EscalationLevel
-		if err := rows.Scan(&level.ID, &level.RuleID, &level.LevelOrder, &level.DelayMinutes, &level.Severity, &level.ChannelIDs); err != nil {
+		if err := rows.Scan(&level.ID, &level.RuleID, &level.LevelOrder, &level.DelayMinutes, &level.Severity, pq.Array(&level.ChannelIDs)); err != nil {
 			return nil, fmt.Errorf("failed to scan escalation level: %w", err)
 		}
 		levels = append(levels, level)

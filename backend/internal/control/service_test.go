@@ -100,7 +100,8 @@ func (f *fakeDeviceRepo) FindOrCreate(deviceID string) (*device.Device, error) {
 	return nil, nil
 }
 func (f *fakeDeviceRepo) ClaimDevice(deviceID string, userID, accountID int) error { return nil }
-func (f *fakeDeviceRepo) UnclaimDevice(deviceID string) error { return nil }
+func (f *fakeDeviceRepo) UnclaimDevice(deviceID string) error                      { return nil }
+func (f *fakeDeviceRepo) MarkOfflineByHeartbeat(timeout time.Duration) (int, error) { return 0, nil }
 
 func TestExecuteCommand_SendsPayloadAndUpdatesDelivery(t *testing.T) {
 	deviceRepo := &fakeDeviceRepo{
@@ -141,7 +142,7 @@ func TestExecuteCommand_SendsPayloadAndUpdatesDelivery(t *testing.T) {
 
 	service := NewService(cmdRepo, deviceRepo, publishFunc)
 
-	cmd, err := service.ExecuteCommand(10, "turn_on", map[string]interface{}{"timeout": 5}, nil)
+	cmd, err := service.ExecuteCommand(10, "turn_on", map[string]interface{}{"timeout": 5}, nil, nil)
 	assert.NoError(t, err)
 	assert.NotNil(t, cmd)
 	assert.Equal(t, 1, cmd.ID)
