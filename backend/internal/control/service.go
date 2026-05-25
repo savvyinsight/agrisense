@@ -130,8 +130,9 @@ func (s *Service) SetPublishFunc(fn func(deviceID string, payload []byte) error)
 	s.publishFunc = fn
 }
 
-// ExecuteCommand executes a command (used by automation service)
-func (s *Service) ExecuteCommand(deviceID int, command string, parameters map[string]interface{}, userID *int) (*Command, error) {
+// ExecuteCommand executes a command (used by automation service).
+// onStatusChange is an optional callback invoked after the async publish completes.
+func (s *Service) ExecuteCommand(deviceID int, command string, parameters map[string]interface{}, userID *int, onStatusChange func(commandID int, status string)) (*Command, error) {
 	// Get device to verify it exists and get its external ID
 	device, err := s.deviceRepo.GetByID(deviceID)
 	if err != nil {
@@ -169,6 +170,9 @@ func (s *Service) ExecuteCommand(deviceID int, command string, parameters map[st
 			if err2 := s.cmdRepo.UpdateStatus(cmd.ID, CommandStatusFailed); err2 != nil {
 				log.Printf("Failed to update command status for %d: %v", cmd.ID, err2)
 			}
+			if onStatusChange != nil {
+				onStatusChange(cmd.ID, string(CommandStatusFailed))
+			}
 			return
 		}
 
@@ -176,6 +180,9 @@ func (s *Service) ExecuteCommand(deviceID int, command string, parameters map[st
 		now := time.Now()
 		if err := s.cmdRepo.UpdateDelivery(cmd.ID, &now, nil, nil); err != nil {
 			log.Printf("Failed to update delivery for command %d: %v", cmd.ID, err)
+		}
+		if onStatusChange != nil {
+			onStatusChange(cmd.ID, string(CommandStatusSent))
 		}
 	}()
 

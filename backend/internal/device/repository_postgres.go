@@ -401,3 +401,15 @@ func (r *PostgresDeviceRepository) Delete(id, accountID int) error {
 
 	return nil
 }
+
+func (r *PostgresDeviceRepository) MarkOfflineByHeartbeat(timeout time.Duration) (int, error) {
+	cutoff := time.Now().Add(-timeout)
+	result, err := r.DB.Exec(
+		`UPDATE devices SET status = 'offline', updated_at = NOW()
+		 WHERE status = 'online' AND last_heartbeat < $1`, cutoff)
+	if err != nil {
+		return 0, err
+	}
+	n, _ := result.RowsAffected()
+	return int(n), nil
+}

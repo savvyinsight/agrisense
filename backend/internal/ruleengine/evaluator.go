@@ -2,6 +2,7 @@ package ruleengine
 
 import (
 	"fmt"
+	"math"
 
 	"github.com/savvyinsight/agrisense/internal/alert"
 	"github.com/savvyinsight/agrisense/internal/sensor"
@@ -27,7 +28,7 @@ func (e *Evaluator) Evaluate(rule *alert.AlertRule, data *sensor.SensorData) boo
 			return true
 		}
 	case alert.ConditionEQ:
-		if data.Value == *rule.ThresholdValue {
+		if math.Abs(data.Value-*rule.ThresholdValue) < 1e-9 {
 			return true
 		}
 	case alert.ConditionGTE:

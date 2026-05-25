@@ -23,8 +23,8 @@ func (m *mockEscalationRuleRepo) GetByID(id int) (*EscalationRule, error) {
 	return args.Get(0).(*EscalationRule), args.Error(1)
 }
 
-func (m *mockEscalationRuleRepo) List() ([]EscalationRule, error) {
-	args := m.Called()
+func (m *mockEscalationRuleRepo) List(accountID int) ([]EscalationRule, error) {
+	args := m.Called(accountID)
 	return args.Get(0).([]EscalationRule), args.Error(1)
 }
 
@@ -32,8 +32,8 @@ func (m *mockEscalationRuleRepo) Update(id int, rule *EscalationRule) error {
 	return m.Called(id, rule).Error(0)
 }
 
-func (m *mockEscalationRuleRepo) Delete(id int) error {
-	return m.Called(id).Error(0)
+func (m *mockEscalationRuleRepo) Delete(id int, accountID int) error {
+	return m.Called(id, accountID).Error(0)
 }
 
 type mockEscalationHistoryRepo struct {
@@ -107,9 +107,9 @@ func TestListRules(t *testing.T) {
 		{ID: 1, Name: "rule1", TriggerSeverity: "critical"},
 		{ID: 2, Name: "rule2", TriggerSeverity: "warning"},
 	}
-	ruleRepo.On("List").Return(expected, nil)
+	ruleRepo.On("List", 1).Return(expected, nil)
 
-	rules, err := service.ListRules()
+	rules, err := service.ListRules(1)
 	assert.NoError(t, err)
 	assert.Equal(t, expected, rules)
 }
@@ -134,9 +134,9 @@ func TestDeleteRule(t *testing.T) {
 	ruleRepo := new(mockEscalationRuleRepo)
 	service := NewService(ruleRepo, new(mockEscalationHistoryRepo))
 
-	ruleRepo.On("Delete", 1).Return(nil)
+	ruleRepo.On("Delete", 1, 1).Return(nil)
 
-	err := service.DeleteRule(1)
+	err := service.DeleteRule(1, 1)
 	assert.NoError(t, err)
 	ruleRepo.AssertExpectations(t)
 }

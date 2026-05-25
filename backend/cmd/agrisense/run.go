@@ -27,8 +27,8 @@ import (
 	"github.com/savvyinsight/agrisense/internal/escalation"
 	"github.com/savvyinsight/agrisense/internal/field"
 	"github.com/savvyinsight/agrisense/internal/infra/postgres"
-	"github.com/savvyinsight/agrisense/internal/irrigation"
 	"github.com/savvyinsight/agrisense/internal/infra/redis"
+	"github.com/savvyinsight/agrisense/internal/irrigation"
 	"github.com/savvyinsight/agrisense/internal/middleware"
 	"github.com/savvyinsight/agrisense/internal/mqtt"
 	mqtthandlers "github.com/savvyinsight/agrisense/internal/mqtt/handlers"
@@ -116,7 +116,7 @@ func runServer(cliCtx *cli.Context) error {
 	wsHandler := websocket.NewHander(authService)
 
 	// Rule engine
-	ruleEngine := ruleengine.NewEngine(alertRuleRepo, alertRepo, deviceRepo, fieldRepo)
+	ruleEngine := ruleengine.NewEngine(alertRuleRepo, alertRepo, deviceRepo, fieldRepo, sensorTypeRepo)
 	if err := ruleEngine.Start(); err != nil {
 		log.Fatalf("Failed to start rule engine: %v", err)
 	}
@@ -145,7 +145,7 @@ func runServer(cliCtx *cli.Context) error {
 	// Automation service
 	automationService := automation.NewService(
 		&automation.PostgresAutomationRuleRepository{DB: pgDB},
-		deviceRepo, controlService,
+		deviceRepo, controlService, sensorTypeRepo,
 	)
 	if err := automationService.Start(); err != nil {
 		log.Fatalf("Failed to start automation service: %v", err)
@@ -212,7 +212,7 @@ func runServer(cliCtx *cli.Context) error {
 	analyticsHandler := analytics.NewAnalyticsHandler(analyticsService, deviceRepo)
 	notifHandler := notification.NewHandler(notifService)
 	escHandler := escalation.NewHandler(escalationService)
-	
+
 	// Multi-tenant RBAC handler
 	userHandler := &user.UserHandler{
 		UserRepo:       userRepo,
@@ -404,7 +404,7 @@ func runServer(cliCtx *cli.Context) error {
 		// Platform admin routes (admin role only — no tenant isolation)
 		admin := api.Group("/admin", middleware.PlatformAdminMiddleware())
 		{
-		admin.GET("/accounts", adminHandler.ListAccountsHandler)
+			admin.GET("/accounts", adminHandler.ListAccountsHandler)
 			admin.GET("/accounts/:id", adminHandler.GetAccountDetailHandler)
 			admin.PATCH("/accounts/:id", adminHandler.UpdateAccountHandler)
 			admin.POST("/accounts/:id/users", adminHandler.CreateUserInAccountHandler)
@@ -487,6 +487,6 @@ type irrigationCmdAdapter struct {
 }
 
 func (a irrigationCmdAdapter) SendCommand(deviceID int, command string, parameters map[string]interface{}, userID int) error {
-	_, err := a.svc.ExecuteCommand(deviceID, command, parameters, &userID)
+	_, err := a.svc.ExecuteCommand(deviceID, command, parameters, &userID, nil)
 	return err
 }

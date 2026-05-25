@@ -80,6 +80,7 @@ func main() {
 		&alert.PostgresAlertRepository{DB: pgDB},
 		&device.PostgresDeviceRepository{DB: pgDB},
 		fieldRepo,
+		sensorTypeRepo,
 	)
 	if err := ruleEngine.Start(); err != nil {
 		log.Fatalf("Failed to start rule engine: %v", err)

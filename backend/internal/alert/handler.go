@@ -292,9 +292,25 @@ func (h *AlertHandler) GetAlertHistory(c *gin.Context) {
 }
 
 func (h *AlertHandler) SnoozeAlert(c *gin.Context) {
+	accountID, ok := middleware.MustGetAccountID(c)
+	if !ok {
+		return
+	}
+
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid alert id"})
+		return
+	}
+
+	// Verify account ownership
+	alert, err := h.alertService.GetAlertByID(id)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "alert not found"})
+		return
+	}
+	if alert.AccountID != nil && *alert.AccountID != accountID {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
 		return
 	}
 
@@ -316,9 +332,25 @@ func (h *AlertHandler) SnoozeAlert(c *gin.Context) {
 }
 
 func (h *AlertHandler) UnsnoozeAlert(c *gin.Context) {
+	accountID, ok := middleware.MustGetAccountID(c)
+	if !ok {
+		return
+	}
+
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid alert id"})
+		return
+	}
+
+	// Verify account ownership
+	alert, err := h.alertService.GetAlertByID(id)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "alert not found"})
+		return
+	}
+	if alert.AccountID != nil && *alert.AccountID != accountID {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
 		return
 	}
 

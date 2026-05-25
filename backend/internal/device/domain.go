@@ -52,4 +52,5 @@ type DeviceRepository interface {
 	FindOrCreate(deviceID string) (*Device, error)
 	ClaimDevice(deviceID string, userID, accountID int) error
 	UnclaimDevice(deviceID string) error
+	MarkOfflineByHeartbeat(timeout time.Duration) (int, error)
 }

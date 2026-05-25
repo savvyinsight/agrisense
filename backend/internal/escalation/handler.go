@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"github.com/savvyinsight/agrisense/internal/middleware"
 )
 
 type Handler struct {
@@ -30,7 +31,12 @@ type updateEscalationRuleRequest struct {
 }
 
 func (h *Handler) ListRules(c *gin.Context) {
-	rules, err := h.service.ListRules()
+	accountID, ok := middleware.MustGetAccountID(c)
+	if !ok {
+		return
+	}
+
+	rules, err := h.service.ListRules(accountID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -40,6 +46,11 @@ func (h *Handler) ListRules(c *gin.Context) {
 }
 
 func (h *Handler) CreateRule(c *gin.Context) {
+	accountID, ok := middleware.MustGetAccountID(c)
+	if !ok {
+		return
+	}
+
 	var req createEscalationRuleRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -50,6 +61,7 @@ func (h *Handler) CreateRule(c *gin.Context) {
 		Name:            req.Name,
 		TriggerSeverity: req.TriggerSeverity,
 		Levels:          req.Levels,
+		AccountID:       &accountID,
 	}
 	if req.Enabled != nil {
 		rule.Enabled = *req.Enabled
@@ -66,6 +78,11 @@ func (h *Handler) CreateRule(c *gin.Context) {
 }
 
 func (h *Handler) GetRule(c *gin.Context) {
+	accountID, ok := middleware.MustGetAccountID(c)
+	if !ok {
+		return
+	}
+
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid rule id"})
@@ -78,10 +95,20 @@ func (h *Handler) GetRule(c *gin.Context) {
 		return
 	}
 
+	if rule.AccountID != nil && *rule.AccountID != accountID {
+		c.JSON(http.StatusNotFound, gin.H{"error": "rule not found"})
+		return
+	}
+
 	c.JSON(http.StatusOK, rule)
 }
 
 func (h *Handler) UpdateRule(c *gin.Context) {
+	accountID, ok := middleware.MustGetAccountID(c)
+	if !ok {
+		return
+	}
+
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid rule id"})
@@ -96,6 +123,11 @@ func (h *Handler) UpdateRule(c *gin.Context) {
 
 	existing, err := h.service.GetRule(id)
 	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "rule not found"})
+		return
+	}
+
+	if existing.AccountID != nil && *existing.AccountID != accountID {
 		c.JSON(http.StatusNotFound, gin.H{"error": "rule not found"})
 		return
 	}
@@ -122,13 +154,29 @@ func (h *Handler) UpdateRule(c *gin.Context) {
 }
 
 func (h *Handler) DeleteRule(c *gin.Context) {
+	accountID, ok := middleware.MustGetAccountID(c)
+	if !ok {
+		return
+	}
+
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid rule id"})
 		return
 	}
 
-	if err := h.service.DeleteRule(id); err != nil {
+	existing, err := h.service.GetRule(id)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "rule not found"})
+		return
+	}
+
+	if existing.AccountID != nil && *existing.AccountID != accountID {
+		c.JSON(http.StatusNotFound, gin.H{"error": "rule not found"})
+		return
+	}
+
+	if err := h.service.DeleteRule(id, accountID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}

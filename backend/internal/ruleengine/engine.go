@@ -13,29 +13,36 @@ import (
 )
 
 type Engine struct {
-	rules      map[int]*alert.AlertRule
-	rulesMutex sync.RWMutex
-	evaluator  *Evaluator
-	alertSvc   alert.AlertRepository
-	ruleRepo   alert.AlertRuleRepository
-	deviceRepo device.DeviceRepository
-	fieldRepo  field.FieldRepository
-	stopChan   chan struct{}
+	rules          map[int]*alert.AlertRule
+	rulesMutex     sync.RWMutex
+	evaluator      *Evaluator
+	alertSvc       alert.AlertRepository
+	ruleRepo       alert.AlertRuleRepository
+	deviceRepo     device.DeviceRepository
+	fieldRepo      field.FieldRepository
+	sensorTypeRepo sensor.SensorTypeRepository
+	sensorTypeCache map[string]int
+	stopChan       chan struct{}
 }
 
 func NewEngine(ruleRepo alert.AlertRuleRepository,
 	alertSvc alert.AlertRepository,
 	deviceRepo device.DeviceRepository,
-	fieldRepo field.FieldRepository) *Engine {
-	return &Engine{
-		rules:      make(map[int]*alert.AlertRule),
-		evaluator:  NewEvaluator(),
-		ruleRepo:   ruleRepo,
-		alertSvc:   alertSvc,
-		deviceRepo: deviceRepo,
-		fieldRepo:  fieldRepo,
-		stopChan:   make(chan struct{}),
+	fieldRepo field.FieldRepository,
+	sensorTypeRepo sensor.SensorTypeRepository) *Engine {
+	e := &Engine{
+		rules:          make(map[int]*alert.AlertRule),
+		evaluator:      NewEvaluator(),
+		ruleRepo:       ruleRepo,
+		alertSvc:       alertSvc,
+		deviceRepo:     deviceRepo,
+		fieldRepo:      fieldRepo,
+		sensorTypeRepo: sensorTypeRepo,
+		sensorTypeCache: make(map[string]int),
+		stopChan:       make(chan struct{}),
 	}
+	e.loadSensorTypeCache()
+	return e
 }
 
 // SetFieldRepo allows setting fieldRepo after construction (for circular dependency resolution).
@@ -50,6 +57,9 @@ func (e *Engine) Start() error {
 	if err := e.loadRules(); err != nil {
 		return err
 	}
+
+	// Refresh sensor type cache
+	e.loadSensorTypeCache()
 
 	// Start background rule refresh (every 5 minutes)
 	go e.refreshRulesPeriodically()
@@ -77,6 +87,17 @@ func (e *Engine) loadRules() error {
 
 	log.Printf("Loaded %d enabled rules", len(e.rules))
 	return nil
+}
+
+func (e *Engine) loadSensorTypeCache() {
+	sensorTypes, err := e.sensorTypeRepo.GetSensorTypes()
+	if err != nil {
+		log.Printf("Warning: failed to load sensor types: %v", err)
+		return
+	}
+	for _, st := range sensorTypes {
+		e.sensorTypeCache[st.Name] = st.ID
+	}
 }
 
 func (e *Engine) refreshRulesPeriodically() {
@@ -131,20 +152,10 @@ func (e *Engine) Evaluate(data *sensor.SensorData) {
 }
 
 func (e *Engine) getSensorTypeID(sensorType string) int {
-	// This should be cached/mapped from sensor_type_repo
-	// For now, hardcode common types
-	switch sensorType {
-	case "temperature":
-		return 1
-	case "humidity":
-		return 2
-	case "soil_moisture":
-		return 3
-	case "light_intensity":
-		return 4
-	default:
-		return 0
+	if id, ok := e.sensorTypeCache[sensorType]; ok {
+		return id
 	}
+	return 0
 }
 
 func (e *Engine) triggerAlert(rule *alert.AlertRule, data *sensor.SensorData) {
