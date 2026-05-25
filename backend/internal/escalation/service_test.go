@@ -28,6 +28,11 @@ func (m *mockEscalationRuleRepo) List(accountID int) ([]EscalationRule, error) {
 	return args.Get(0).([]EscalationRule), args.Error(1)
 }
 
+func (m *mockEscalationRuleRepo) GetEnabledByAccountID(accountID int) ([]EscalationRule, error) {
+	args := m.Called(accountID)
+	return args.Get(0).([]EscalationRule), args.Error(1)
+}
+
 func (m *mockEscalationRuleRepo) Update(id int, rule *EscalationRule) error {
 	return m.Called(id, rule).Error(0)
 }

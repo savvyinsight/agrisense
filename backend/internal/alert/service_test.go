@@ -92,6 +92,19 @@ func (m *mockAlertRepo) UpdateCorrelation(id int, correlationID string, rootCaus
 	return m.Called(id, correlationID, rootCause).Error(0)
 }
 
+func (m *mockAlertRepo) GetRecentSnoozedByRuleAndDevice(ruleID, deviceID int) (*Alert, error) {
+	args := m.Called(ruleID, deviceID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*Alert), args.Error(1)
+}
+
+func (m *mockAlertRepo) GetRecentByDeviceID(deviceID int, since time.Time) ([]Alert, error) {
+	args := m.Called(deviceID, since)
+	return args.Get(0).([]Alert), args.Error(1)
+}
+
 type mockRuleRepo struct {
 	mock.Mock
 }

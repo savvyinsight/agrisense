@@ -48,6 +48,7 @@ func TestDataPipeline(t *testing.T) {
 		&alert.PostgresAlertRepository{DB: testDB},
 		deviceRepo,
 		fieldRepo,
+		sensorTypeRepo,
 	)
 	if err := ruleEngine.Start(); err != nil {
 		t.Fatalf("Failed to start rule engine: %v", err)

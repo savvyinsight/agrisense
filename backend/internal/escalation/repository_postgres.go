@@ -100,6 +100,34 @@ func (r *PostgresEscalationRuleRepository) List(accountID int) ([]EscalationRule
 	return rules, nil
 }
 
+func (r *PostgresEscalationRuleRepository) GetEnabledByAccountID(accountID int) ([]EscalationRule, error) {
+	rows, err := r.DB.Query(
+		`SELECT id, name, trigger_severity, enabled, account_id, created_at, updated_at
+		FROM escalation_rules WHERE account_id = $1 AND enabled = true ORDER BY created_at DESC`, accountID,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list enabled escalation rules: %w", err)
+	}
+	defer func() { _ = rows.Close() }()
+
+	rules := make([]EscalationRule, 0)
+	for rows.Next() {
+		var rule EscalationRule
+		if err := rows.Scan(&rule.ID, &rule.Name, &rule.TriggerSeverity, &rule.Enabled, &rule.AccountID, &rule.CreatedAt, &rule.UpdatedAt); err != nil {
+			return nil, fmt.Errorf("failed to scan escalation rule: %w", err)
+		}
+
+		levels, err := r.getLevels(rule.ID)
+		if err != nil {
+			return nil, err
+		}
+		rule.Levels = levels
+		rules = append(rules, rule)
+	}
+
+	return rules, nil
+}
+
 func (r *PostgresEscalationRuleRepository) Update(id int, rule *EscalationRule) error {
 	tx, err := r.DB.Begin()
 	if err != nil {

@@ -382,3 +382,53 @@ func (r *PostgresAlertRepository) UpdateCorrelation(id int, correlationID string
 	_, err := r.DB.Exec(query, correlationID, rootCause, id)
 	return err
 }
+
+func (r *PostgresAlertRepository) GetRecentSnoozedByRuleAndDevice(ruleID, deviceID int) (*Alert, error) {
+	query := `SELECT ` + alertColumns + ` FROM alerts
+		WHERE rule_id = $1 AND device_id = $2
+		AND snoozed_until IS NOT NULL AND snoozed_until > NOW()
+		ORDER BY triggered_at DESC LIMIT 1`
+	a := &Alert{}
+	err := r.DB.QueryRow(query, ruleID, deviceID).Scan(
+		&a.ID, &a.RuleID, &a.DeviceID, &a.SensorValue, &a.Message,
+		&a.Severity, &a.Status, &a.TriggeredAt, &a.AcknowledgedAt,
+		&a.ResolvedAt, &a.AccountID, &a.Metadata,
+		&a.IsFlapping, &a.FlapCount, &a.SnoozedUntil, &a.SnoozeReason,
+		&a.CorrelationID, &a.RootCauseSuggestion,
+	)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to get snoozed alert: %w", err)
+	}
+	return a, nil
+}
+
+func (r *PostgresAlertRepository) GetRecentByDeviceID(deviceID int, since time.Time) ([]Alert, error) {
+	query := `SELECT ` + alertColumns + ` FROM alerts
+		WHERE device_id = $1 AND triggered_at >= $2
+		AND status IN ('triggered', 'acknowledged')
+		ORDER BY triggered_at ASC`
+	rows, err := r.DB.Query(query, deviceID, since)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get recent alerts: %w", err)
+	}
+	defer func() { _ = rows.Close() }()
+
+	alerts := make([]Alert, 0)
+	for rows.Next() {
+		var a Alert
+		if err := rows.Scan(
+			&a.ID, &a.RuleID, &a.DeviceID, &a.SensorValue, &a.Message,
+			&a.Severity, &a.Status, &a.TriggeredAt, &a.AcknowledgedAt,
+			&a.ResolvedAt, &a.AccountID, &a.Metadata,
+			&a.IsFlapping, &a.FlapCount, &a.SnoozedUntil, &a.SnoozeReason,
+			&a.CorrelationID, &a.RootCauseSuggestion,
+		); err != nil {
+			return nil, fmt.Errorf("failed to scan alert: %w", err)
+		}
+		alerts = append(alerts, a)
+	}
+	return alerts, nil
+}

@@ -166,6 +166,14 @@ func runServer(cliCtx *cli.Context) error {
 	escHistoryRepo := &escalation.PostgresEscalationHistoryRepository{DB: pgDB}
 	escalationService := escalation.NewService(escRuleRepo, escHistoryRepo)
 
+	// Notification dispatcher (G7)
+	notifDispatcher := notification.NewDispatcher(notifChannelRepo)
+
+	// Escalation executor (G6)
+	escExecutor := escalation.NewExecutor(alertRepo, escRuleRepo, escHistoryRepo, notifDispatcher)
+	escExecutor.Start()
+	defer escExecutor.Stop()
+
 	// Analytics service
 	analyticsService := analytics.NewService(deviceRepo, sensorTypeRepo,
 		dataService.GetHistoricalData,

@@ -110,4 +110,6 @@ type AlertRepository interface {
 	GetAlertCorrelations() ([]AlertCorrelation, error)
 	UpdateFlapping(id int, isFlapping bool, flapCount int) error
 	UpdateCorrelation(id int, correlationID string, rootCause *string) error
+	GetRecentSnoozedByRuleAndDevice(ruleID, deviceID int) (*Alert, error)
+	GetRecentByDeviceID(deviceID int, since time.Time) ([]Alert, error)
 }

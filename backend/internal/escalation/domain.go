@@ -39,6 +39,7 @@ type EscalationRuleRepository interface {
 	Create(rule *EscalationRule) error
 	GetByID(id int) (*EscalationRule, error)
 	List(accountID int) ([]EscalationRule, error)
+	GetEnabledByAccountID(accountID int) ([]EscalationRule, error)
 	Update(id int, rule *EscalationRule) error
 	Delete(id int, accountID int) error
 }

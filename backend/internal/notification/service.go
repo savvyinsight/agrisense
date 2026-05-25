@@ -1,7 +1,11 @@
 package notification
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
+	"net/http"
+	"time"
 )
 
 type Service struct {
@@ -72,9 +76,29 @@ func (s *Service) TestChannel(id int) error {
 		return fmt.Errorf("channel is disabled")
 	}
 
-	// In a real implementation, this would send a test notification
-	// via the appropriate channel type (email, SMS, webhook).
-	// For now, we just validate the channel exists and is enabled.
-	_ = ch
+	if ch.Type == "webhook" {
+		var config WebhookConfig
+		if err := json.Unmarshal(ch.Config, &config); err != nil {
+			return fmt.Errorf("invalid webhook config: %w", err)
+		}
+		if config.URL == "" {
+			return fmt.Errorf("webhook URL is empty")
+		}
+		testPayload := map[string]interface{}{
+			"test":      true,
+			"channel":   ch.Name,
+			"timestamp": time.Now(),
+		}
+		body, _ := json.Marshal(testPayload)
+		resp, err := http.Post(config.URL, "application/json", bytes.NewReader(body))
+		if err != nil {
+			return fmt.Errorf("webhook test failed: %w", err)
+		}
+		defer func() { _ = resp.Body.Close() }()
+		if resp.StatusCode >= 400 {
+			return fmt.Errorf("webhook returned status %d", resp.StatusCode)
+		}
+	}
+
 	return nil
 }

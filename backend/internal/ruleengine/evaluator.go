@@ -50,6 +50,22 @@ func (e *Evaluator) Evaluate(rule *alert.AlertRule, data *sensor.SensorData) boo
 	return false
 }
 
+func (e *Evaluator) CheckRecovery(recoveryCondition alert.AlertCondition, recoveryValue float64, currentValue float64) bool {
+	switch recoveryCondition {
+	case alert.ConditionGT:
+		return currentValue > recoveryValue
+	case alert.ConditionLT:
+		return currentValue < recoveryValue
+	case alert.ConditionEQ:
+		return math.Abs(currentValue-recoveryValue) < 1e-9
+	case alert.ConditionGTE:
+		return currentValue >= recoveryValue
+	case alert.ConditionLTE:
+		return currentValue <= recoveryValue
+	}
+	return false
+}
+
 func (e *Evaluator) FormatMessage(rule *alert.AlertRule, data *sensor.SensorData) string {
 	switch rule.Condition {
 	case alert.ConditionGT:
