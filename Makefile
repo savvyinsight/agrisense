@@ -1,6 +1,7 @@
 .PHONY: dev dev-backend dev-frontend build build-frontend build-backend \
         docker-up docker-down logs migrate test test-backend test-frontend lint frontend-lint \
-        backend-lint tidy deploy deploy-check help
+        backend-lint tidy deploy deploy-check help \
+        seed load-test e2e-load-test bench
 
 # ─── Development ─────────────────────────────────────────────────────────
 
@@ -88,6 +89,20 @@ deploy-down:                           ## Stop production services
 
 deploy-ps:                             ## Show production service status
 	docker compose -f docker-compose.prod.yml ps
+
+# ─── Performance Testing ───────────────────────────────────────────────────
+
+seed:                                ## Seed test user + 100 devices (via API)
+	cd backend && go run ./test/fixtures/seed.go
+
+load-test:                           ## Run MQTT load test (broker ACK latency only)
+	cd backend && go run ./test/load/mqtt_load_test.go
+
+e2e-load-test:                       ## Run E2E MQTT load test (full pipeline: device → broker → backend → InfluxDB)
+	cd backend && go run ./test/load/e2e_load_test.go
+
+bench:                               ## Run Go micro-benchmarks
+	cd backend && go test -bench=. -benchmem ./test/benchmark/
 
 # ─── Utilities ────────────────────────────────────────────────────────────
 
