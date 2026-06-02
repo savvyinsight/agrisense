@@ -11,15 +11,20 @@ import (
 func (r *Repository) WriteData(data *SensorData) error {
 	writeAPI := r.client.WriteAPIBlocking(r.org, r.bucket)
 
+	fields := map[string]interface{}{
+		"value": data.Value,
+	}
+	if !data.ReceivedAt.IsZero() {
+		fields["received_at"] = data.ReceivedAt.UnixNano()
+	}
+
 	point := influxdb2.NewPoint(
 		"sensor_data",
 		map[string]string{
 			"device_id":   data.DeviceID,
 			"sensor_type": data.SensorType,
 		},
-		map[string]interface{}{
-			"value": data.Value,
-		},
+		fields,
 		data.Timestamp,
 	)
 
@@ -36,15 +41,20 @@ func (r *Repository) WriteBatch(data []SensorData) error {
 	defer cancel()
 
 	for _, d := range data {
+		fields := map[string]interface{}{
+			"value": d.Value,
+		}
+		if !d.ReceivedAt.IsZero() {
+			fields["received_at"] = d.ReceivedAt.UnixNano()
+		}
+
 		point := influxdb2.NewPoint(
 			"sensor_data",
 			map[string]string{
 				"device_id":   d.DeviceID,
 				"sensor_type": d.SensorType,
 			},
-			map[string]interface{}{
-				"value": d.Value,
-			},
+			fields,
 			d.Timestamp,
 		)
 
@@ -82,6 +92,64 @@ func (r *Repository) Query(deviceID string, sensorType string, start, end time.T
 			Value:      record.Value().(float64),
 			Timestamp:  record.Time(),
 		})
+	}
+
+	if result.Err() != nil {
+		return nil, result.Err()
+	}
+
+	return data, nil
+}
+
+// QueryVerification retrieves all sensor data records in a time window with their
+// received_at timestamps, used by the E2E load test to verify data integrity and
+// compute end-to-end latency.
+func (r *Repository) QueryVerification(start, end time.Time) ([]SensorData, error) {
+	queryAPI := r.client.QueryAPI(r.org)
+
+	flux := fmt.Sprintf(`
+        data = from(bucket: "%s")
+            |> range(start: %s, stop: %s)
+            |> filter(fn: (r) => r._measurement == "sensor_data")
+            |> filter(fn: (r) => r._field == "value" or r._field == "received_at")
+            |> pivot(rowKey: ["_time", "device_id", "sensor_type"],
+                     columnKey: ["_field"], valueColumn: "_value")
+
+        data
+            |> map(fn: (r) => ({
+                r with
+                _value: r.value
+            }))
+            |> yield(name: "verification")
+    `, r.bucket, start.Format(time.RFC3339), end.Format(time.RFC3339))
+
+	result, err := queryAPI.Query(context.Background(), flux)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query InfluxDB for verification: %w", err)
+	}
+
+	var data []SensorData
+	for result.Next() {
+		record := result.Record()
+		sd := SensorData{
+			DeviceID:   record.ValueByKey("device_id").(string),
+			SensorType: record.ValueByKey("sensor_type").(string),
+			Timestamp:  record.Time(),
+		}
+		if v := record.Value(); v != nil {
+			if fv, ok := v.(float64); ok {
+				sd.Value = fv
+			}
+		}
+		// received_at is stored as a separate field via pivot
+		if ra := record.ValueByKey("received_at"); ra != nil {
+			if nanos, ok := ra.(int64); ok {
+				sd.ReceivedAt = time.Unix(0, nanos)
+			} else if nanos, ok := ra.(float64); ok {
+				sd.ReceivedAt = time.Unix(0, int64(nanos))
+			}
+		}
+		data = append(data, sd)
 	}
 
 	if result.Err() != nil {

@@ -18,6 +18,7 @@ type SensorData struct {
 	SensorType string    `json:"sensor_type"`
 	Value      float64   `json:"value"`
 	Timestamp  time.Time `json:"timestamp"`
+	ReceivedAt time.Time `json:"received_at,omitempty"` // when backend processed the message
 }
 
 type AggregatedData struct {
@@ -41,6 +42,7 @@ type InfluxRepository interface {
 	WriteBatch(data []SensorData) error
 	Query(deviceID string, sensorType string, start, end time.Time) ([]SensorData, error)
 	QueryAggregate(deviceID string, sensorType string, start, end time.Time, interval string) ([]AggregatedData, error)
+	QueryVerification(start, end time.Time) ([]SensorData, error) // E2E verification: returns records with ReceivedAt
 }
 
 // CacheRepository interface for Redis operations

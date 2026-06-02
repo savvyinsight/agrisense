@@ -83,6 +83,12 @@ func (s *Service) ProcessTelemetry(deviceID string, payload []byte) error {
 		}
 	}
 
+	// Record when the backend received this data for E2E latency measurement
+	now := time.Now()
+	for i := range sensorData {
+		sensorData[i].ReceivedAt = now
+	}
+
 	if err := s.influxRepo.WriteBatch(sensorData); err != nil {
 		return err
 	}
