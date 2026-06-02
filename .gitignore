@@ -18,3 +18,6 @@ frontend/node_modules/
 .env
 .env.local
 .env.prod
+
+# Test artifacts
+backend/results/
