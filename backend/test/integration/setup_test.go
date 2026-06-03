@@ -12,13 +12,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/redis/go-redis/v9"
 	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
+	_ "github.com/lib/pq"
+	"github.com/redis/go-redis/v9"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
 	tcRedis "github.com/testcontainers/testcontainers-go/modules/redis"
 	"github.com/testcontainers/testcontainers-go/wait"
-	_ "github.com/lib/pq"
 )
 
 var testDB *sql.DB
@@ -61,11 +61,6 @@ func TestMain(m *testing.M) {
 	testDB.SetMaxOpenConns(1)
 	if err := testDB.PingContext(ctx); err != nil {
 		panic(err)
-	}
-
-	// Create stub for farms table (referenced by migrations but not created by any)
-	if _, err := testDB.Exec("CREATE TABLE IF NOT EXISTS farms (id SERIAL PRIMARY KEY)"); err != nil {
-		panic(fmt.Errorf("failed to create farms stub: %w", err))
 	}
 
 	// Run all migrations from the canonical migrations directory

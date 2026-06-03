@@ -14,6 +14,17 @@ CREATE TABLE accounts (
 
 CREATE INDEX idx_accounts_owner_id ON accounts(owner_id);
 
+CREATE TABLE IF NOT EXISTS farms (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    account_id INTEGER REFERENCES accounts(id) ON DELETE CASCADE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_farms_account_id ON farms(account_id);
+
 -- Add account_id to users table
 ALTER TABLE users ADD COLUMN account_id INTEGER REFERENCES accounts(id) ON DELETE RESTRICT;
 CREATE INDEX idx_users_account_id ON users(account_id);
