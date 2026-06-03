@@ -66,7 +66,7 @@ agrisense/
 
 - **Docker & Docker Compose** (for full stack)
 - **Go 1.25+** (for backend development)
-- **Node.js 18+** (for frontend development)
+- **Node.js 18.x** (for frontend development)
 - **Make** (for convenient commands)
 
 ### Local Development
@@ -75,14 +75,21 @@ agrisense/
    ```bash
    git clone https://github.com/savvyinsight/agrisense.git
    cd agrisense
+   nvm use  # optional, uses .nvmrc if available
+   make setup
    ```
 
-2. **Start infrastructure (PostgreSQL, InfluxDB, Redis, EMQX, Prometheus, Grafana)**
+2. **Copy environment config**
+   ```bash
+   cp backend/.env.example backend/.env
+   ```
+
+3. **Start infrastructure (PostgreSQL, InfluxDB, Redis, EMQX, Prometheus, Grafana)**
    ```bash
    docker-compose up -d
    ```
 
-3. **Initialize database**
+4. **Initialize database**
    ```bash
    cd backend
    make migrate-up

@@ -44,7 +44,7 @@ The backend services live in the same monorepo under `../backend`.
 ```bash
 git clone https://github.com/savvyinsight/agrisense.git
 cd agrisense/frontend
-npm install
+npm ci
 npm run dev
 ```
 

@@ -4,7 +4,9 @@
         seed load-test e2e-load-test bench
 
 # ─── Development ─────────────────────────────────────────────────────────
-
+setup:                              ## Install backend and frontend dependencies
+	cd backend && go mod download
+	cd frontend && npm ci
 dev: dev-backend dev-frontend       ## Start both backend and frontend
 
 dev-backend:                        ## Start Go backend server
