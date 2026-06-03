@@ -45,7 +45,9 @@ func BenchmarkTelemetryUnmarshal_Structured(b *testing.B) {
 				Value  float64 `json:"value"`
 			} `json:"readings"`
 		}
-		json.Unmarshal(payload, &td)
+		if err := json.Unmarshal(payload, &td); err != nil {
+			b.Fatal(err)
+		}
 	}
 }
 
@@ -55,7 +57,9 @@ func BenchmarkTelemetryUnmarshal_Simple(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		var readings map[string]float64
-		json.Unmarshal(payload, &readings)
+		if err := json.Unmarshal(payload, &readings); err != nil {
+			b.Fatal(err)
+		}
 	}
 }
 
@@ -79,7 +83,9 @@ func BenchmarkTelemetryMarshal(b *testing.B) {
 				{Sensor: "temperature", Value: math.Round(23.456*100) / 100},
 			},
 		}
-		json.Marshal(p)
+		if _, err := json.Marshal(p); err != nil {
+			b.Fatal(err)
+		}
 	}
 }
 
@@ -99,7 +105,9 @@ func BenchmarkProcessTelemetry(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		svc.ProcessTelemetry("sensor-001", payload)
+		if err := svc.ProcessTelemetry("sensor-001", payload); err != nil {
+			b.Fatal(err)
+		}
 	}
 }
 
@@ -117,7 +125,9 @@ func BenchmarkProcessTelemetry_MultiSensor(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		svc.ProcessTelemetry("sensor-001", payload)
+		if err := svc.ProcessTelemetry("sensor-001", payload); err != nil {
+			b.Fatal(err)
+		}
 	}
 }
 
