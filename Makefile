@@ -96,10 +96,10 @@ seed:                                ## Seed test user + 100 devices (via API)
 	cd backend && go run ./test/fixtures/seed.go
 
 load-test:                           ## Run MQTT load test (broker ACK latency only)
-	cd backend && go run ./test/load/mqtt_load_test.go
+	cd backend && go run ./test/load/mqtt_load.go
 
 e2e-load-test:                       ## Run E2E MQTT load test (full pipeline: device → broker → backend → InfluxDB)
-	cd backend && go run ./test/load/e2e_load_test.go
+	cd backend && go run ./test/load/e2e_load.go
 
 bench:                               ## Run Go micro-benchmarks
 	cd backend && go test -bench=. -benchmem ./test/benchmark/
