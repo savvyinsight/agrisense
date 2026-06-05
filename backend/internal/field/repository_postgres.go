@@ -13,8 +13,8 @@ type PostgresFieldRepository struct {
 
 func (r *PostgresFieldRepository) Create(field *Field) error {
 	query := `
-		INSERT INTO fields (name, crop, area_hectares, health, soil_moisture, temperature, humidity, last_irrigation, latitude, longitude, geometry, user_id, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+		INSERT INTO fields (name, crop, area_hectares, health, soil_moisture, temperature, humidity, last_irrigation, latitude, longitude, geometry, user_id, account_id, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
 		RETURNING id
 	`
 
@@ -24,7 +24,7 @@ func (r *PostgresFieldRepository) Create(field *Field) error {
 		field.Name, field.Crop, field.AreaHectares, field.Health,
 		field.SoilMoisture, field.Temperature, field.Humidity,
 		field.LastIrrigation, field.Latitude, field.Longitude,
-		field.Geometry, field.UserID, now, now,
+		field.Geometry, field.UserID, field.AccountID, now, now,
 	).Scan(&field.ID)
 
 	return err
@@ -33,7 +33,7 @@ func (r *PostgresFieldRepository) Create(field *Field) error {
 func (r *PostgresFieldRepository) GetByID(id int) (*Field, error) {
 	query := `
 		SELECT id, name, crop, area_hectares, health, soil_moisture, temperature, humidity,
-		       last_irrigation, latitude, longitude, geometry, user_id, created_at, updated_at
+			   last_irrigation, latitude, longitude, geometry, user_id, account_id, created_at, updated_at
 		FROM fields WHERE id = $1
 	`
 
@@ -47,7 +47,7 @@ func (r *PostgresFieldRepository) GetByID(id int) (*Field, error) {
 	err := r.DB.QueryRow(query, id).Scan(
 		&f.ID, &f.Name, &crop, &area, &f.Health,
 		&soilMoisture, &temperature, &humidity,
-		&lastIrrigation, &lat, &lng, &geometryBytes, &f.UserID, &f.CreatedAt, &f.UpdatedAt,
+		&lastIrrigation, &lat, &lng, &geometryBytes, &f.UserID, &f.AccountID, &f.CreatedAt, &f.UpdatedAt,
 	)
 
 	if err == sql.ErrNoRows {
@@ -94,7 +94,7 @@ func (r *PostgresFieldRepository) GetByID(id int) (*Field, error) {
 func (r *PostgresFieldRepository) List(userID int) ([]Field, error) {
 	query := `
 		SELECT id, name, crop, area_hectares, health, soil_moisture, temperature, humidity,
-		       last_irrigation, latitude, longitude, geometry, user_id, created_at, updated_at
+			   last_irrigation, latitude, longitude, geometry, user_id, account_id, created_at, updated_at
 		FROM fields WHERE user_id = $1 OR $1 = 0
 		ORDER BY id
 	`
@@ -117,7 +117,7 @@ func (r *PostgresFieldRepository) List(userID int) ([]Field, error) {
 		err := rows.Scan(
 			&f.ID, &f.Name, &crop, &area, &f.Health,
 			&soilMoisture, &temperature, &humidity,
-			&lastIrrigation, &lat, &lng, &geometryBytes, &f.UserID, &f.CreatedAt, &f.UpdatedAt,
+			&lastIrrigation, &lat, &lng, &geometryBytes, &f.UserID, &f.AccountID, &f.CreatedAt, &f.UpdatedAt,
 		)
 		if err != nil {
 			return nil, err

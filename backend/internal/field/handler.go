@@ -29,6 +29,10 @@ func (h *FieldHandler) Create(c *gin.Context) {
 		return
 	}
 	field.UserID = userID.(int)
+	if accountID, ok := c.Get("account_id"); ok {
+		v := accountID.(int)
+		field.AccountID = &v
+	}
 	field.Health = FieldHealthHealthy
 
 	if err := h.repo.Create(&field); err != nil {
