@@ -34,16 +34,18 @@ func AuthMiddleware(authService *Service) gin.HandlerFunc {
 		c.Set("user_id", claims.UserID)
 		c.Set("user_email", claims.Email)
 		c.Set("user_role", claims.Role)
+		c.Set("is_platform_admin", claims.IsPlatformAdmin)
 		if claims.AccountID != nil {
 			c.Set("account_id", *claims.AccountID)
 		}
 
 		// Set full User object for handlers that expect it (multi-tenant handlers)
 		usr := &User{
-			ID:        claims.UserID,
-			Email:     claims.Email,
-			Role:      claims.Role,
-			AccountID: claims.AccountID,
+			ID:              claims.UserID,
+			Email:           claims.Email,
+			Role:            claims.Role,
+			IsPlatformAdmin: claims.IsPlatformAdmin,
+			AccountID:       claims.AccountID,
 		}
 		c.Set("user", usr)
 

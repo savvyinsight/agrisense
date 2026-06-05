@@ -35,30 +35,65 @@ AgriSense is a production-ready IoT platform that enables real-time monitoring a
 
 ### Installation
 
+**For a complete setup guide with troubleshooting, see [docs/SETUP_GUIDE.md](../docs/SETUP_GUIDE.md)**
+
 ```bash
 # Clone repository
 git clone https://github.com/savvyinsight/agrisense.git
 cd agrisense
 
-# Download dependencies (go.mod & go.sum are committed to repo)
-go mod download
-
 # Copy environment configuration
+cd backend
 cp .env.example .env
+cd ..
 
-# Start all services
+# Start all services (PostgreSQL, Redis, InfluxDB, EMQX, etc.)
 make docker-up
 
-# Run database migrations (auto-runs on docker-up, or manual:)
-make migrate-up
+# Verify services are running
+docker compose ps
+```
 
-# Start the backend server
+### Create Platform Admin
+
+The platform admin is the superuser account that manages all accounts, users, and system settings.
+
+**Create the first platform admin account:**
+
+```bash
 cd backend
-go run cmd/agrisense/main.go
+go run ./cmd/agrisense admin create \
+  --email admin@agrisense.local \
+  --password "AgriSense@123" \
+  --username admin
+```
 
-# Run device simulator (optional)
-go run scripts/generate-device-simulator/main.go
+Expected output:
+```
+Admin user created: admin@agrisense.local (id=1)
+```
 
+**Important:**
+- This command only succeeds if no platform admin exists yet
+- To reset and create a new admin, see [Troubleshooting](#troubleshooting) below
+- Use a strong password in production
+
+### Running the Server
+
+```bash
+cd backend
+go run ./cmd/agrisense
+```
+```
+
+The server starts on `http://localhost:8080` with routes like:
+- `GET /health` — Health check
+- `POST /api/v1/auth/login` — User login
+- `GET /api/v1/admin/accounts` — List all accounts (admin only)
+
+### Example user onboarding
+
+```bash
 # Register a user
 curl -X POST http://localhost:8080/api/v1/auth/register \
   -H "Content-Type: application/json" \
@@ -93,8 +128,63 @@ Full API documentation is available in [docs/api.md](docs/api.md)
 | GET  | `/api/v1/alerts/active` | Get active alerts |
 | POST | `/api/v1/devices/:id/commands` | Send command to device |
 
+## 🔧 Troubleshooting
 
-🧪 Testing
+### Port already in use (8080)
+
+```bash
+# Kill process using port 8080
+lsof -i :8080 | tail -1 | awk '{print $2}' | xargs kill -9
+
+# Or restart Docker completely
+docker compose down -v && docker compose up -d
+```
+
+### "email already registered" when creating admin
+
+Reset the database and create a new admin:
+
+```bash
+docker compose down -v
+docker compose up -d
+go run ./cmd/agrisense admin create \
+  --email admin@agrisense.local \
+  --password "AgriSense@123"
+```
+
+### Database migrations failed
+
+Check Postgres logs and reset:
+
+```bash
+docker logs agrisense-postgres
+docker compose down -v && docker compose up -d
+```
+
+### Cannot connect to PostgreSQL
+
+Verify the connection string in `.env`:
+
+```bash
+POSTGRES_HOST=localhost
+POSTGRES_PORT=5432
+POSTGRES_USER=agrisense
+POSTGRES_PASSWORD=agrisense
+POSTGRES_DB=agrisense_db
+```
+
+### MQTT connection refused
+
+Ensure EMQX container is running:
+
+```bash
+docker logs agrisense-emqx
+docker compose restart emqx
+```
+
+For more help, see [docs/SETUP_GUIDE.md](../docs/SETUP_GUIDE.md)
+
+## 🧪 Testing
 
 # Run all tests
 

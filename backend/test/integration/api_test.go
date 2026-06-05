@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/stretchr/testify/require"
 	"github.com/savvyinsight/agrisense/internal/alert"
 	"github.com/savvyinsight/agrisense/internal/data"
 	"github.com/savvyinsight/agrisense/internal/device"
@@ -21,6 +20,7 @@ import (
 	"github.com/savvyinsight/agrisense/internal/ruleengine"
 	"github.com/savvyinsight/agrisense/internal/sensor"
 	"github.com/savvyinsight/agrisense/internal/user"
+	"github.com/stretchr/testify/require"
 )
 
 type registerResponse struct {
@@ -30,8 +30,8 @@ type registerResponse struct {
 }
 
 type loginResponse struct {
-	Token string         `json:"token"`
-	User  user.User      `json:"user"`
+	Token string    `json:"token"`
+	User  user.User `json:"user"`
 }
 
 type deviceResponse struct {
@@ -82,7 +82,8 @@ func setupAPIRouter(t *testing.T) (*gin.Engine, *data.Service) {
 		fieldRepo,
 	)
 
-	authService := user.NewService(userRepo, accountRepo, permissionRepo, invitationRepo, "test-secret", time.Hour)
+	platformAdminRepo := &user.PostgresPlatformAdminRepository{DB: testDB}
+	authService := user.NewService(userRepo, accountRepo, permissionRepo, invitationRepo, platformAdminRepo, "test-secret", time.Hour)
 	authHandler := user.NewAuthHandler(authService)
 	deviceHandler := device.NewDeviceHandler(deviceRepo, accountRepo)
 	dataHandler := data.NewDataHandler(dataService, deviceRepo)

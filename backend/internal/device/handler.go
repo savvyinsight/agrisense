@@ -97,11 +97,16 @@ func (h *DeviceHandler) GetByID(c *gin.Context) {
 
 func (h *DeviceHandler) List(c *gin.Context) {
 	userID, _ := c.Get("user_id")
-	role, _ := c.Get("user_role")
-
 	listUserID := userID.(int)
-	if role == "admin" {
+
+	isPlatformAdmin, _ := c.Get("is_platform_admin")
+	if isPlatformAdmin == true {
 		listUserID = 0 // admin sees all devices (including unclaimed)
+	} else {
+		role, _ := c.Get("user_role")
+		if role == "admin" {
+			listUserID = 0
+		}
 	}
 
 	accountID, ok := middleware.MustGetAccountID(c)
@@ -160,9 +165,15 @@ func (h *DeviceHandler) Update(c *gin.Context) {
 		return
 	}
 
-	if v, ok := updates["name"]; ok { existing.Name = v.(string) }
-	if v, ok := updates["device_id"]; ok { existing.DeviceID = v.(string) }
-	if v, ok := updates["type"]; ok { existing.Type = DeviceType(v.(string)) }
+	if v, ok := updates["name"]; ok {
+		existing.Name = v.(string)
+	}
+	if v, ok := updates["device_id"]; ok {
+		existing.DeviceID = v.(string)
+	}
+	if v, ok := updates["type"]; ok {
+		existing.Type = DeviceType(v.(string))
+	}
 	if v, ok := updates["location"]; ok {
 		s := v.(string)
 		existing.Location = &s
@@ -179,7 +190,9 @@ func (h *DeviceHandler) Update(c *gin.Context) {
 		s := v.(string)
 		existing.FirmwareVersion = &s
 	}
-	if v, ok := updates["config"]; ok { existing.Config = v.(map[string]interface{}) }
+	if v, ok := updates["config"]; ok {
+		existing.Config = v.(map[string]interface{})
+	}
 	if v, ok := updates["field_id"]; ok {
 		f := int(v.(float64))
 		existing.FieldID = &f

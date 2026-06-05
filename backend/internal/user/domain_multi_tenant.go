@@ -19,14 +19,15 @@ type Account struct {
 
 // User represents an individual person
 type User struct {
-	ID        int       `json:"id"`
-	Username  string    `json:"username"`
-	Email     string    `json:"email"`
-	Password  string    `json:"-"`          // excluded from JSON
-	Role      string    `json:"role"`       // DEPRECATED - use UserPermission instead
-	AccountID *int      `json:"account_id"` // Account ownership (NULL until account created)
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	ID              int       `json:"id"`
+	Username        string    `json:"username"`
+	Email           string    `json:"email"`
+	Password        string    `json:"-"`    // excluded from JSON
+	Role            string    `json:"role"` // DEPRECATED - use UserPermission instead
+	IsPlatformAdmin bool      `json:"is_platform_admin,omitempty"`
+	AccountID       *int      `json:"account_id"` // Account ownership (NULL until account created)
+	CreatedAt       time.Time `json:"created_at"`
+	UpdatedAt       time.Time `json:"updated_at"`
 }
 
 // UserPermission represents granular role assignment
@@ -95,6 +96,22 @@ type UserRepository interface {
 	Update(user *User) error
 	Delete(id int) error
 	List(limit, offset int) ([]User, int64, error)
+}
+
+// PlatformAdmin represents a system-level admin account mapping for platform-level access.
+type PlatformAdmin struct {
+	ID        int       `json:"id"`
+	UserID    int       `json:"user_id"`
+	CreatedAt time.Time `json:"created_at"`
+	CreatedBy *int      `json:"created_by"`
+	Note      string    `json:"note"`
+}
+
+// PlatformAdminRepository interface
+type PlatformAdminRepository interface {
+	CreatePlatformAdmin(admin *PlatformAdmin) error
+	GetPlatformAdmin() (*PlatformAdmin, error)
+	IsPlatformAdmin(userID int) (bool, error)
 }
 
 // AccountRepository interface

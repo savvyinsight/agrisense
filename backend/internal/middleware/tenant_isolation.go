@@ -105,7 +105,7 @@ func PermissionCheckMiddleware(requiredRoles []string) func(http.Handler) http.H
 			// For now, check legacy role field as fallback
 			hasPermission := false
 			for _, role := range requiredRoles {
-				if usr.Role == role || 
+				if usr.Role == role ||
 					(usr.Role == "admin" && (role == "account_owner" || role == "farm_manager")) ||
 					(usr.Role == "viewer" && role == "operator") {
 					hasPermission = true
@@ -170,10 +170,13 @@ func GinTenantIsolationMiddleware() gin.HandlerFunc {
 // since the admin can see all accounts.
 func PlatformAdminMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		role, exists := c.Get("user_role")
-		if !exists || role != "admin" {
-			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Platform admin access required"})
-			return
+		isAdmin, exists := c.Get("is_platform_admin")
+		if !exists || isAdmin != true {
+			role, _ := c.Get("user_role")
+			if role != "admin" {
+				c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Platform admin access required"})
+				return
+			}
 		}
 		c.Next()
 	}

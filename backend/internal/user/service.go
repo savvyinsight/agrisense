@@ -10,19 +10,21 @@ import (
 )
 
 type Service struct {
-	userRepo       UserRepository
-	accountRepo    AccountRepository
-	permissionRepo PermissionRepository
-	invitationRepo InvitationRepository
-	jwtSecret      []byte
-	tokenExpiry    time.Duration
+	userRepo          UserRepository
+	accountRepo       AccountRepository
+	permissionRepo    PermissionRepository
+	invitationRepo    InvitationRepository
+	platformAdminRepo PlatformAdminRepository
+	jwtSecret         []byte
+	tokenExpiry       time.Duration
 }
 
 type Claims struct {
-	UserID    int    `json:"user_id"`
-	Email     string `json:"email"`
-	Role      string `json:"role"`
-	AccountID *int   `json:"account_id"`
+	UserID          int    `json:"user_id"`
+	Email           string `json:"email"`
+	Role            string `json:"role"`
+	IsPlatformAdmin bool   `json:"is_platform_admin"`
+	AccountID       *int   `json:"account_id"`
 	jwt.RegisteredClaims
 }
 
@@ -38,6 +40,12 @@ type RegisterRequest struct {
 	InvitationToken string `json:"invitation_token"`
 }
 
+type AdminCreateRequest struct {
+	Username string `json:"username" binding:"required"`
+	Email    string `json:"email" binding:"required,email"`
+	Password string `json:"password" binding:"required,min=6"`
+}
+
 type LoginResponse struct {
 	Token       string           `json:"token"`
 	User        User             `json:"user"`
@@ -45,15 +53,59 @@ type LoginResponse struct {
 	Permissions []UserPermission `json:"permissions,omitempty"`
 }
 
-func NewService(userRepo UserRepository, accountRepo AccountRepository, permissionRepo PermissionRepository, invitationRepo InvitationRepository, jwtSecret string, tokenExpiry time.Duration) *Service {
+func NewService(userRepo UserRepository, accountRepo AccountRepository, permissionRepo PermissionRepository, invitationRepo InvitationRepository, platformAdminRepo PlatformAdminRepository, jwtSecret string, tokenExpiry time.Duration) *Service {
 	return &Service{
-		userRepo:       userRepo,
-		accountRepo:    accountRepo,
-		permissionRepo: permissionRepo,
-		invitationRepo: invitationRepo,
-		jwtSecret:      []byte(jwtSecret),
-		tokenExpiry:    tokenExpiry,
+		userRepo:          userRepo,
+		accountRepo:       accountRepo,
+		permissionRepo:    permissionRepo,
+		invitationRepo:    invitationRepo,
+		platformAdminRepo: platformAdminRepo,
+		jwtSecret:         []byte(jwtSecret),
+		tokenExpiry:       tokenExpiry,
 	}
+}
+
+func (s *Service) BootstrapAdmin(req AdminCreateRequest) (*User, error) {
+	if s.platformAdminRepo == nil {
+		return nil, errors.New("platform admin repository not configured")
+	}
+
+	existing, _ := s.userRepo.GetByEmail(req.Email)
+	if existing != nil {
+		return nil, errors.New("email already registered")
+	}
+
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+	if err != nil {
+		return nil, err
+	}
+
+	user := &User{
+		Username: req.Username,
+		Email:    req.Email,
+		Password: string(hashedPassword),
+		Role:     "admin",
+	}
+
+	err = s.userRepo.Create(user)
+	if err != nil {
+		return nil, err
+	}
+
+	admin := &PlatformAdmin{
+		UserID:    user.ID,
+		CreatedBy: nil,
+		Note:      "bootstrap platform admin",
+	}
+
+	err = s.platformAdminRepo.CreatePlatformAdmin(admin)
+	if err != nil {
+		return nil, err
+	}
+
+	user.IsPlatformAdmin = true
+	user.Password = ""
+	return user, nil
 }
 
 func (s *Service) Register(req RegisterRequest) (*User, error) {
@@ -168,6 +220,14 @@ func (s *Service) Login(req LoginRequest) (*LoginResponse, error) {
 		return nil, errors.New("invalid email or password")
 	}
 
+	// Determine platform admin status from dedicated table
+	if s.platformAdminRepo != nil {
+		isAdmin, err := s.platformAdminRepo.IsPlatformAdmin(user.ID)
+		if err == nil {
+			user.IsPlatformAdmin = isAdmin
+		}
+	}
+
 	// Verify password
 	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.Password))
 	if err != nil {
@@ -213,10 +273,11 @@ func (s *Service) generateToken(user *User) (string, error) {
 	expirationTime := time.Now().Add(s.tokenExpiry)
 
 	claims := &Claims{
-		UserID:    user.ID,
-		Email:     user.Email,
-		Role:      user.Role,
-		AccountID: user.AccountID,
+		UserID:          user.ID,
+		Email:           user.Email,
+		Role:            user.Role,
+		IsPlatformAdmin: user.IsPlatformAdmin,
+		AccountID:       user.AccountID,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(expirationTime),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),

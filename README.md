@@ -71,51 +71,55 @@ agrisense/
 
 ### Local Development
 
+**For a complete setup guide with troubleshooting, see [docs/SETUP_GUIDE.md](docs/SETUP_GUIDE.md)**
+
 1. **Clone and setup**
    ```bash
    git clone https://github.com/savvyinsight/agrisense.git
    cd agrisense
-   nvm use  # optional, uses .nvmrc if available
-   make setup
    ```
 
 2. **Copy environment config**
    ```bash
-   cp backend/.env.example backend/.env
+   cd backend && cp .env.example .env && cd ..
    ```
 
-3. **Start infrastructure (PostgreSQL, InfluxDB, Redis, EMQX, Prometheus, Grafana)**
+3. **Start infrastructure** (PostgreSQL, InfluxDB, Redis, EMQX, Prometheus, Grafana)
    ```bash
-   docker-compose up -d
+   make docker-up
    ```
 
-4. **Initialize database**
-   ```bash
-   cd backend
-   make migrate-up
-   ```
-
-4. **Start the backend server**
+4. **Create the first platform admin** (superuser account)
    ```bash
    cd backend
-   go run cmd/agrisense/main.go
+  go run ./cmd/agrisense admin create \
+     --email admin@agrisense.local \
+     --password "AgriSense@123" \
+     --username admin
    ```
 
-   This launches the unified AgriSense backend, including the HTTP API, WebSocket hub, and MQTT handling.
+   Output: `Admin user created: admin@agrisense.local (id=1)`
 
-5. **Start frontend (in separate terminal)**
+5. **Start backend** (in terminal 1)
+   ```bash
+   cd backend
+  go run ./cmd/agrisense
+   ```
+
+6. **Start frontend** (in terminal 2)
    ```bash
    cd frontend
-   npm install
+   npm install  # first time only
    npm run dev
    ```
 
-6. **Access services**
-   - **Frontend**: http://localhost:5173
-   - **API**: http://localhost:8080
-   - **EMQX Dashboard**: http://localhost:18083 (admin/public)
-   - **Prometheus**: http://localhost:9090
-   - **Grafana**: http://localhost:3000 (admin/admin)
+7. **Access the platform**
+   - **Frontend**: http://localhost:5173 → Login with admin credentials
+   - **API**: http://localhost:8080/health
+   - **Monitoring**:
+     - Prometheus: http://localhost:9090
+     - Grafana: http://localhost:3000 (admin/admin)
+     - EMQX: http://localhost:18083 (admin/public)
 
 ### Register a Test User
 

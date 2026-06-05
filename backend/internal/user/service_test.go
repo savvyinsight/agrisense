@@ -165,12 +165,32 @@ func (m *mockPermissionRepo) HasPermission(userID, accountID int, farmID *int, r
 	return args.Bool(0), args.Error(1)
 }
 
+type mockPlatformAdminRepo struct{ mock.Mock }
+
+func (m *mockPlatformAdminRepo) CreatePlatformAdmin(admin *PlatformAdmin) error {
+	args := m.Called(admin)
+	return args.Error(0)
+}
+
+func (m *mockPlatformAdminRepo) GetPlatformAdmin() (*PlatformAdmin, error) {
+	args := m.Called()
+	if admin, ok := args.Get(0).(*PlatformAdmin); ok {
+		return admin, args.Error(1)
+	}
+	return nil, args.Error(1)
+}
+
+func (m *mockPlatformAdminRepo) IsPlatformAdmin(userID int) (bool, error) {
+	args := m.Called(userID)
+	return args.Bool(0), args.Error(1)
+}
+
 func TestRegister_Success(t *testing.T) {
 	repo := new(mockUserRepo)
 	accountRepo := new(mockAccountRepo)
 	permRepo := new(mockPermissionRepo)
 	invRepo := new(mockInvitationRepo)
-	service := NewService(repo, accountRepo, permRepo, invRepo, "secret-key", time.Hour)
+	service := NewService(repo, accountRepo, permRepo, invRepo, nil, "secret-key", time.Hour)
 
 	req := RegisterRequest{
 		Username: "tester",
@@ -209,7 +229,7 @@ func TestRegister_DuplicateEmail(t *testing.T) {
 	accountRepo := new(mockAccountRepo)
 	permRepo := new(mockPermissionRepo)
 	invRepo := new(mockInvitationRepo)
-	service := NewService(repo, accountRepo, permRepo, invRepo, "secret-key", time.Hour)
+	service := NewService(repo, accountRepo, permRepo, invRepo, nil, "secret-key", time.Hour)
 
 	repo.On("GetByEmail", "tester@example.com").Return(&User{ID: 5, Email: "tester@example.com"}, nil)
 
@@ -222,12 +242,42 @@ func TestRegister_DuplicateEmail(t *testing.T) {
 	repo.AssertExpectations(t)
 }
 
+func TestBootstrapAdmin_CreatesPlatformAdmin(t *testing.T) {
+	repo := new(mockUserRepo)
+	platformAdminRepo := new(mockPlatformAdminRepo)
+	service := NewService(repo, nil, nil, nil, platformAdminRepo, "secret-key", time.Hour)
+
+	req := AdminCreateRequest{
+		Username: "sysadmin",
+		Email:    "admin@example.com",
+		Password: "secure-password",
+	}
+
+	repo.On("GetByEmail", req.Email).Return((*User)(nil), nil)
+	repo.On("Create", mock.AnythingOfType("*user.User")).Return(nil).Run(func(args mock.Arguments) {
+		userArg := args.Get(0).(*User)
+		userArg.ID = 42
+	})
+	platformAdminRepo.On("CreatePlatformAdmin", mock.AnythingOfType("*user.PlatformAdmin")).Return(nil)
+
+	admin, err := service.BootstrapAdmin(req)
+
+	assert.NoError(t, err)
+	assert.NotNil(t, admin)
+	assert.Equal(t, 42, admin.ID)
+	assert.True(t, admin.IsPlatformAdmin)
+	assert.Equal(t, "admin@example.com", admin.Email)
+
+	repo.AssertExpectations(t)
+	platformAdminRepo.AssertExpectations(t)
+}
+
 func TestLogin_Success(t *testing.T) {
 	repo := new(mockUserRepo)
 	accountRepo := new(mockAccountRepo)
 	permRepo := new(mockPermissionRepo)
 	invRepo := new(mockInvitationRepo)
-	service := NewService(repo, accountRepo, permRepo, invRepo, "secret-key", time.Hour)
+	service := NewService(repo, accountRepo, permRepo, invRepo, nil, "secret-key", time.Hour)
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte("strong-password"), bcrypt.DefaultCost)
 	assert.NoError(t, err)
@@ -255,7 +305,7 @@ func TestLogin_InvalidPassword(t *testing.T) {
 	accountRepo := new(mockAccountRepo)
 	permRepo := new(mockPermissionRepo)
 	invRepo := new(mockInvitationRepo)
-	service := NewService(repo, accountRepo, permRepo, invRepo, "secret-key", time.Hour)
+	service := NewService(repo, accountRepo, permRepo, invRepo, nil, "secret-key", time.Hour)
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte("strong-password"), bcrypt.DefaultCost)
 	assert.NoError(t, err)

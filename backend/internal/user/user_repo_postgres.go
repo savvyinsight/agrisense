@@ -117,3 +117,30 @@ func (r *PostgresUserRepository) GetByAccountID(accountID int, limit, offset int
 
 	return users, total, nil
 }
+
+type PostgresPlatformAdminRepository struct {
+	DB *sql.DB
+}
+
+func (r *PostgresPlatformAdminRepository) CreatePlatformAdmin(admin *PlatformAdmin) error {
+	query := `INSERT INTO platform_admins (user_id, created_by, note, created_at) VALUES ($1, $2, $3, $4) RETURNING id`
+	err := r.DB.QueryRow(query, admin.UserID, admin.CreatedBy, admin.Note, time.Now()).Scan(&admin.ID)
+	return err
+}
+
+func (r *PostgresPlatformAdminRepository) GetPlatformAdmin() (*PlatformAdmin, error) {
+	query := `SELECT id, user_id, created_by, note, created_at FROM platform_admins ORDER BY id ASC LIMIT 1`
+	var admin PlatformAdmin
+	err := r.DB.QueryRow(query).Scan(&admin.ID, &admin.UserID, &admin.CreatedBy, &admin.Note, &admin.CreatedAt)
+	if err != nil {
+		return nil, err
+	}
+	return &admin, nil
+}
+
+func (r *PostgresPlatformAdminRepository) IsPlatformAdmin(userID int) (bool, error) {
+	query := `SELECT EXISTS(SELECT 1 FROM platform_admins WHERE user_id = $1)`
+	var exists bool
+	err := r.DB.QueryRow(query, userID).Scan(&exists)
+	return exists, err
+}

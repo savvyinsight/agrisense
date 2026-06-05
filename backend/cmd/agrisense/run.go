@@ -110,9 +110,10 @@ func runServer(cliCtx *cli.Context) error {
 	permissionRepo := &user.PostgresPermissionRepository{DB: pgDB}
 	invitationRepo := &user.PostgresInvitationRepository{DB: pgDB}
 	auditRepo := &user.PostgresAuditLogRepository{DB: pgDB}
+	platformAdminRepo := &user.PostgresPlatformAdminRepository{DB: pgDB}
 
 	// ── 4. Create services ─────────────────────────────────────────
-	authService := user.NewService(userRepo, accountRepo, permissionRepo, invitationRepo, cfg.JWTSecret, 24*time.Hour)
+	authService := user.NewService(userRepo, accountRepo, permissionRepo, invitationRepo, platformAdminRepo, cfg.JWTSecret, 24*time.Hour)
 	wsHandler := websocket.NewHander(authService)
 
 	// Rule engine
@@ -245,7 +246,8 @@ func runServer(cliCtx *cli.Context) error {
 		AllowOriginFunc: func(origin string) bool {
 			return origin == "" ||
 				strings.HasPrefix(origin, "http://localhost:") ||
-				origin == "https://agrisense-frontend-bice.vercel.app"
+				strings.HasPrefix(origin, "http://127.0.0.1:") ||
+				strings.HasSuffix(origin, ".vercel.app")
 		},
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
