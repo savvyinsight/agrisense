@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import Select from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
 import InputLabel from '@mui/material/InputLabel';
@@ -44,6 +45,7 @@ const roleColors: Record<string, string> = {
 };
 
 export default function AdminAccountDetail() {
+  const { t } = useTranslation();
   const { id } = useParams();
   const navigate = useNavigate();
   const [account, setAccount] = useState<AccountDetail | null>(null);
@@ -185,28 +187,28 @@ export default function AdminAccountDetail() {
   };
 
   if (loading) {
-    return <div className="max-w-5xl mx-auto py-12 text-center text-sm text-text-muted">Loading...</div>;
+    return <div className="max-w-5xl mx-auto py-12 text-center text-sm text-text-muted">{t('common.loading')}</div>;
   }
 
   if (!account) {
     return (
       <div className="max-w-5xl mx-auto py-12 text-center">
-        <p className="text-sm text-text-muted">Account not found</p>
-        <button onClick={() => navigate('/admin/accounts')} className="mt-4 text-sm text-accent hover:underline">Back to accounts</button>
+        <p className="text-sm text-text-muted">{t('admin.accountNotFound')}</p>
+        <button onClick={() => navigate('/admin/accounts')} className="mt-4 text-sm text-accent hover:underline">{t('admin.backToAccounts')}</button>
       </div>
     );
   }
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
-      <button onClick={() => navigate('/admin/accounts')} className="text-sm text-accent hover:underline">← Back to Accounts</button>
+      <button onClick={() => navigate('/admin/accounts')} className="text-sm text-accent hover:underline">{t('admin.backToAccounts')}</button>
 
       {/* Account info + Edit button */}
       <div className="rounded-lg border border-border-default bg-surface-card p-5">
         <div className="flex items-start justify-between">
           <div>
             <h1 className="text-lg font-bold text-text-primary">{account.name}</h1>
-            <p className="text-xs text-text-muted mt-0.5">ID: {account.id} · Created {new Date(account.created_at).toLocaleDateString()}</p>
+            <p className="text-xs text-text-muted mt-0.5">{t('admin.accountId')} {account.id} · {t('admin.createdLabel')} {new Date(account.created_at).toLocaleDateString()}</p>
           </div>
           <div className="flex items-center gap-2">
             <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
@@ -215,9 +217,9 @@ export default function AdminAccountDetail() {
               'bg-gray-100 text-gray-700'
             }`}>{account.subscription_tier}</span>
             <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${account.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-              {account.is_active ? 'Active' : 'Inactive'}
+              {account.is_active ? t('common.active') : t('common.inactive')}
             </span>
-            <button onClick={openEdit} className="text-xs px-3 py-1.5 rounded-md border border-border-default text-text-secondary hover:bg-surface-hover transition-colors">Edit</button>
+            <button onClick={openEdit} className="text-xs px-3 py-1.5 rounded-md border border-border-default text-text-secondary hover:bg-surface-hover transition-colors">{t('common.edit')}</button>
           </div>
         </div>
 
@@ -225,7 +227,7 @@ export default function AdminAccountDetail() {
         <div className="grid grid-cols-2 gap-6 mt-4 pt-4 border-t border-border-default">
           <div>
             <div className="flex justify-between text-xs mb-1">
-              <span className="text-text-muted">Users</span>
+              <span className="text-text-muted">{t('admin.users')}</span>
               <span className="text-text-primary font-medium">{account.user_count} / {userLimit}</span>
             </div>
             <div className="h-2 rounded-full bg-gray-200 overflow-hidden">
@@ -234,7 +236,7 @@ export default function AdminAccountDetail() {
           </div>
           <div>
             <div className="flex justify-between text-xs mb-1">
-              <span className="text-text-muted">Devices</span>
+              <span className="text-text-muted">{t('admin.devices')}</span>
               <span className="text-text-primary font-medium">{account.device_count} / {deviceLimit}</span>
             </div>
             <div className="h-2 rounded-full bg-gray-200 overflow-hidden">
@@ -247,18 +249,18 @@ export default function AdminAccountDetail() {
       {/* Users table */}
       <div className="rounded-lg border border-border-default bg-surface-card overflow-hidden">
         <div className="p-4 border-b border-border-default flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-text-primary">Team Members ({users.length})</h2>
-          <button onClick={openAddUser} className="text-xs px-3 py-1.5 rounded-md bg-accent text-white hover:bg-accent-hover transition-colors">Add User</button>
+          <h2 className="text-sm font-semibold text-text-primary">{t('admin.teamMembers')} ({users.length})</h2>
+          <button onClick={openAddUser} className="text-xs px-3 py-1.5 rounded-md bg-accent text-white hover:bg-accent-hover transition-colors">{t('admin.addUser')}</button>
         </div>
-        {users.length === 0 ? (<div className="p-6 text-center text-sm text-text-muted">No users</div>) : (
+        {users.length === 0 ? (<div className="p-6 text-center text-sm text-text-muted">{t('admin.noUsers')}</div>) : (
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-surface-base text-left">
-                <th className="px-4 py-3 text-text-muted font-medium">Username</th>
-                <th className="px-4 py-3 text-text-muted font-medium">Email</th>
-                <th className="px-4 py-3 text-text-muted font-medium">Role</th>
-                <th className="px-4 py-3 text-text-muted font-medium">Joined</th>
-                <th className="px-4 py-3 text-text-muted font-medium">Actions</th>
+                <th className="px-4 py-3 text-text-muted font-medium">{t('common.username')}</th>
+                <th className="px-4 py-3 text-text-muted font-medium">{t('common.email')}</th>
+                <th className="px-4 py-3 text-text-muted font-medium">{t('common.role')}</th>
+                <th className="px-4 py-3 text-text-muted font-medium">{t('common.joined')}</th>
+                <th className="px-4 py-3 text-text-muted font-medium">{t('common.actions')}</th>
               </tr>
             </thead>
             <tbody>
@@ -271,7 +273,7 @@ export default function AdminAccountDetail() {
                   </td>
                   <td className="px-4 py-3 text-text-muted text-xs">{new Date(u.created_at).toLocaleDateString()}</td>
                   <td className="px-4 py-3">
-                    <button onClick={() => confirmRemoveUser(u.id, u.username)} className="text-xs text-red-600 hover:text-red-700 transition-colors">Remove</button>
+                    <button onClick={() => confirmRemoveUser(u.id, u.username)} className="text-xs text-red-600 hover:text-red-700 transition-colors">{t('common.remove')}</button>
                   </td>
                 </tr>
               ))}
@@ -283,9 +285,9 @@ export default function AdminAccountDetail() {
       {/* Devices table */}
       <div className="rounded-lg border border-border-default bg-surface-card overflow-hidden">
         <div className="p-4 border-b border-border-default">
-          <h2 className="text-sm font-semibold text-text-primary">Devices ({devices.length})</h2>
+          <h2 className="text-sm font-semibold text-text-primary">{t('admin.devices')} ({devices.length})</h2>
         </div>
-        {devices.length === 0 ? (<div className="p-6 text-center text-sm text-text-muted">No devices</div>) : (
+        {devices.length === 0 ? (<div className="p-6 text-center text-sm text-text-muted">{t('admin.noUsers')}</div>) : (
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-surface-base text-left">
@@ -306,7 +308,7 @@ export default function AdminAccountDetail() {
                     <span className={`text-xs font-medium ${d.status === 'online' ? 'text-green-600' : 'text-red-600'}`}>{d.status}</span>
                   </td>
                   <td className="px-4 py-3">
-                    <button onClick={() => setUnclaimDeviceId(d.device_id)} className="text-xs text-warning hover:text-warning-muted transition-colors">Unclaim</button>
+                    <button onClick={() => setUnclaimDeviceId(d.device_id)} className="text-xs text-warning hover:text-warning-muted transition-colors">{t('admin.unclaimDevice')}</button>
                   </td>
                 </tr>
               ))}
@@ -319,23 +321,23 @@ export default function AdminAccountDetail() {
       {showAddUser && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setShowAddUser(false)}>
           <div className="bg-surface-card rounded-xl shadow-xl w-full max-w-md p-6 space-y-4" onClick={e => e.stopPropagation()}>
-            <h2 className="text-base font-bold text-text-primary">Add User to Account</h2>
+            <h2 className="text-base font-bold text-text-primary">{t('admin.addUser')}</h2>
             {addUserError && <div className="text-sm text-red-600 bg-red-50 p-2 rounded">{addUserError}</div>}
             <div>
-              <label className="text-xs text-text-muted block mb-1">Username</label>
+              <label className="text-xs text-text-muted block mb-1">{t('common.username')}</label>
               <input value={addUsername} onChange={e => setAddUsername(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-border-default text-sm" />
             </div>
             <div>
-              <label className="text-xs text-text-muted block mb-1">Email</label>
+              <label className="text-xs text-text-muted block mb-1">{t('common.email')}</label>
               <input type="email" value={addEmail} onChange={e => setAddEmail(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-border-default text-sm" />
             </div>
             <div>
-              <label className="text-xs text-text-muted block mb-1">Password</label>
+              <label className="text-xs text-text-muted block mb-1">{t('auth.password')}</label>
               <input type="password" value={addPassword} onChange={e => setAddPassword(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-border-default text-sm" />
             </div>
             <FormControl fullWidth size="small">
-              <InputLabel sx={{ color: '#9ca3af', '&.Mui-focused': { color: '#2e7d32' } }}>Role</InputLabel>
-              <Select value={addRole} onChange={e => setAddRole(e.target.value)} label="Role">
+              <InputLabel sx={{ color: '#9ca3af', '&.Mui-focused': { color: '#2e7d32' } }}>{t('common.role')}</InputLabel>
+              <Select value={addRole} onChange={e => setAddRole(e.target.value)} label={t('common.role')}>
                 <MenuItem value="account_owner">Account Owner</MenuItem>
                 <MenuItem value="farm_manager">Farm Manager</MenuItem>
                 <MenuItem value="operator">Operator</MenuItem>
@@ -343,9 +345,9 @@ export default function AdminAccountDetail() {
               </Select>
             </FormControl>
             <div className="flex justify-end gap-2 pt-2">
-              <button onClick={() => setShowAddUser(false)} className="px-4 py-2 text-sm rounded-lg border border-border-default text-text-secondary hover:bg-surface-hover">Cancel</button>
+              <button onClick={() => setShowAddUser(false)} className="px-4 py-2 text-sm rounded-lg border border-border-default text-text-secondary hover:bg-surface-hover">{t('common.cancel')}</button>
               <button onClick={handleAddUser} disabled={addUserSaving} className="px-4 py-2 text-sm rounded-lg bg-accent text-white hover:bg-accent-hover disabled:opacity-50">
-                {addUserSaving ? 'Adding...' : 'Add User'}
+                {addUserSaving ? t('admin.adding') : t('admin.addUser')}
               </button>
             </div>
           </div>
@@ -356,12 +358,12 @@ export default function AdminAccountDetail() {
       {removeTarget && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setRemoveTarget(null)}>
           <div className="bg-surface-card rounded-xl shadow-xl w-full max-w-sm p-6 space-y-4" onClick={e => e.stopPropagation()}>
-            <h2 className="text-base font-bold text-text-primary">Remove User</h2>
-            <p className="text-sm text-text-secondary">Remove <strong>{removeTarget.name}</strong> from this account?</p>
+            <h2 className="text-base font-bold text-text-primary">{t('admin.removeUser')}</h2>
+            <p className="text-sm text-text-secondary">{t('admin.removeUserConfirm', { name: removeTarget.name })}</p>
             <div className="flex justify-end gap-2 pt-2">
-              <button onClick={() => setRemoveTarget(null)} className="px-4 py-2 text-sm rounded-lg border border-border-default text-text-secondary hover:bg-surface-hover">Cancel</button>
+              <button onClick={() => setRemoveTarget(null)} className="px-4 py-2 text-sm rounded-lg border border-border-default text-text-secondary hover:bg-surface-hover">{t('common.cancel')}</button>
               <button onClick={handleRemoveUser} disabled={removeSaving} className="px-4 py-2 text-sm rounded-lg bg-red-600 text-white hover:bg-red-700 disabled:opacity-50">
-                {removeSaving ? 'Removing...' : 'Remove'}
+                {removeSaving ? t('admin.removing') : t('common.remove')}
               </button>
             </div>
           </div>
@@ -372,11 +374,11 @@ export default function AdminAccountDetail() {
       {unclaimDeviceId && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setUnclaimDeviceId(null)}>
           <div className="bg-surface-card rounded-xl shadow-xl w-full max-w-sm p-6 space-y-4" onClick={e => e.stopPropagation()}>
-            <h2 className="text-base font-bold text-text-primary">Unclaim Device</h2>
-            <p className="text-sm text-text-secondary">Release device <strong>{unclaimDeviceId}</strong>? It will be available for others to claim.</p>
+            <h2 className="text-base font-bold text-text-primary">{t('admin.unclaimDevice')}</h2>
+            <p className="text-sm text-text-secondary">{t('admin.unclaimDeviceConfirm', { id: unclaimDeviceId })}</p>
             <div className="flex justify-end gap-2 pt-2">
-              <button onClick={() => setUnclaimDeviceId(null)} className="px-4 py-2 text-sm rounded-lg border border-border-default text-text-secondary hover:bg-surface-hover">Cancel</button>
-              <button onClick={handleUnclaimDevice} className="px-4 py-2 text-sm rounded-lg bg-warning text-white hover:bg-warning-muted">Unclaim</button>
+              <button onClick={() => setUnclaimDeviceId(null)} className="px-4 py-2 text-sm rounded-lg border border-border-default text-text-secondary hover:bg-surface-hover">{t('common.cancel')}</button>
+              <button onClick={handleUnclaimDevice} className="px-4 py-2 text-sm rounded-lg bg-warning text-white hover:bg-warning-muted">{t('admin.unclaimDevice')}</button>
             </div>
           </div>
         </div>
@@ -386,41 +388,41 @@ export default function AdminAccountDetail() {
       {showEdit && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setShowEdit(false)}>
           <div className="bg-surface-card rounded-xl shadow-xl w-full max-w-md p-6 space-y-4" onClick={e => e.stopPropagation()}>
-            <h2 className="text-base font-bold text-text-primary">Edit Account</h2>
+            <h2 className="text-base font-bold text-text-primary">{t('admin.editAccount')}</h2>
             {editError && <div className="text-sm text-red-600 bg-red-50 p-2 rounded">{editError}</div>}
 
             <div>
-              <label className="text-xs text-text-muted block mb-1">Account Name</label>
+              <label className="text-xs text-text-muted block mb-1">{t('admin.accountName')}</label>
               <input value={editName} onChange={e => setEditName(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-border-default text-sm focus:outline-none focus:border-accent" />
             </div>
             <FormControl fullWidth size="small">
-              <InputLabel sx={{ color: '#9ca3af', '&.Mui-focused': { color: '#2e7d32' } }}>Subscription Tier</InputLabel>
-              <Select value={editTier} onChange={e => setEditTier(e.target.value)} label="Subscription Tier">
-                <MenuItem value="basic">Basic</MenuItem>
-                <MenuItem value="professional">Professional</MenuItem>
-                <MenuItem value="enterprise">Enterprise</MenuItem>
+              <InputLabel sx={{ color: '#9ca3af', '&.Mui-focused': { color: '#2e7d32' } }}>{t('admin.subscriptionTier')}</InputLabel>
+              <Select value={editTier} onChange={e => setEditTier(e.target.value)} label={t('admin.subscriptionTier')}>
+                <MenuItem value="basic">{t('admin.basic')}</MenuItem>
+                <MenuItem value="professional">{t('admin.professional')}</MenuItem>
+                <MenuItem value="enterprise">{t('admin.enterprise')}</MenuItem>
               </Select>
             </FormControl>
             <div className="flex gap-3">
               <label className="flex items-center gap-2 cursor-pointer">
                 <input type="checkbox" checked={editActive} onChange={e => setEditActive(e.target.checked)} className="rounded" />
-                <span className="text-sm text-text-primary">Active</span>
+                <span className="text-sm text-text-primary">{t('common.active')}</span>
               </label>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-xs text-text-muted block mb-1">Max Users</label>
+                <label className="text-xs text-text-muted block mb-1">{t('admin.maxUsers')}</label>
                 <input type="number" min="1" value={editMaxUsers} onChange={e => setEditMaxUsers(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-border-default text-sm focus:outline-none focus:border-accent" />
               </div>
               <div>
-                <label className="text-xs text-text-muted block mb-1">Max Devices</label>
+                <label className="text-xs text-text-muted block mb-1">{t('admin.maxDevices')}</label>
                 <input type="number" min="1" value={editMaxDevices} onChange={e => setEditMaxDevices(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-border-default text-sm focus:outline-none focus:border-accent" />
               </div>
             </div>
             <div className="flex justify-end gap-2 pt-2">
-              <button onClick={() => setShowEdit(false)} className="px-4 py-2 text-sm rounded-lg border border-border-default text-text-secondary hover:bg-surface-hover transition-colors">Cancel</button>
+              <button onClick={() => setShowEdit(false)} className="px-4 py-2 text-sm rounded-lg border border-border-default text-text-secondary hover:bg-surface-hover transition-colors">{t('common.cancel')}</button>
               <button onClick={saveEdit} disabled={editSaving} className="px-4 py-2 text-sm rounded-lg bg-accent text-white hover:bg-accent-hover disabled:opacity-50 transition-colors">
-                {editSaving ? 'Saving...' : 'Save Changes'}
+                {editSaving ? t('common.saving') : t('common.saveChanges')}
               </button>
             </div>
           </div>

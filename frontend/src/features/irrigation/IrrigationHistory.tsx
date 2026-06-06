@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { getIrrigationEvents } from '@/features/irrigation/api';
 import { cn } from '@/shared/lib/cn';
 import type { IrrigationEvent } from '@/features/irrigation/api';
@@ -9,6 +10,7 @@ interface IrrigationHistoryProps {
 }
 
 export function IrrigationHistory({ zoneId, className }: IrrigationHistoryProps) {
+  const { t } = useTranslation();
   const [events, setEvents] = useState<IrrigationEvent[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -39,8 +41,8 @@ export function IrrigationHistory({ zoneId, className }: IrrigationHistoryProps)
     const date = new Date(dateStr);
     const now = new Date();
     const days = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
-    if (days === 0) return 'Today';
-    if (days === 1) return 'Yesterday';
+    if (days === 0) return t('common.today');
+    if (days === 1) return t('common.yesterday');
     return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
   };
 
@@ -48,33 +50,33 @@ export function IrrigationHistory({ zoneId, className }: IrrigationHistoryProps)
 
   return (
     <div className={cn('rounded-lg border border-border-default bg-surface-card p-4', className)}>
-      <h3 className="text-sm font-semibold text-text-primary mb-4">Irrigation History</h3>
+      <h3 className="text-sm font-semibold text-text-primary mb-4">{t('fields.irrigationHistory')}</h3>
 
       {events.length === 0 ? (
-        <p className="text-sm text-text-muted text-center py-8">No irrigation events yet. Start irrigation to create one.</p>
+        <p className="text-sm text-text-muted text-center py-8">{t('irrigation.noHistoryYet')}</p>
       ) : (
         <>
           {/* Stats Summary */}
           <div className="grid grid-cols-3 gap-3 mb-6 pb-6 border-b border-border-default">
             <div>
-              <p className="text-xs text-text-muted mb-1">Total Water</p>
+              <p className="text-xs text-text-muted mb-1">{t('irrigation.totalWater')}</p>
               <p className="text-lg font-bold text-text-primary">
                 {(stats.totalWater / 1000).toFixed(1)}
                 <span className="text-xs text-text-muted ml-1">k L</span>
               </p>
             </div>
             <div>
-              <p className="text-xs text-text-muted mb-1">Avg Runtime</p>
+              <p className="text-xs text-text-muted mb-1">{t('irrigation.avgRuntime')}</p>
               <p className="text-lg font-bold text-text-primary">
                 {stats.avgDuration}
-                <span className="text-xs text-text-muted ml-1">min</span>
+                <span className="text-xs text-text-muted ml-1">{t('irrigation.minutes')}</span>
               </p>
             </div>
             <div>
-              <p className="text-xs text-text-muted mb-1">Completed</p>
+              <p className="text-xs text-text-muted mb-1">{t('irrigation.completed')}</p>
               <p className="text-lg font-bold text-text-primary">
                 {stats.completedCount}
-                {stats.failedCount > 0 && <span className="text-xs text-critical ml-1">({stats.failedCount} failed)</span>}
+                {stats.failedCount > 0 && <span className="text-xs text-critical ml-1">({t('irrigation.failedCount', { count: stats.failedCount })})</span>}
               </p>
             </div>
           </div>
@@ -91,19 +93,19 @@ export function IrrigationHistory({ zoneId, className }: IrrigationHistoryProps)
                   <div className="flex items-center justify-between mb-1">
                     <span className="text-sm font-semibold text-text-primary">{formatDate(event.start_time)}</span>
                     <span className={cn('text-xs font-medium px-2 py-0.5 rounded-full', event.status === 'completed' ? 'bg-success-bg text-success' : event.status === 'failed' ? 'bg-critical-bg text-critical' : 'bg-info-bg text-info-bright')}>
-                      {event.status === 'completed' ? '✓' : event.status === 'failed' ? '✕' : '⏱'} {event.status.charAt(0).toUpperCase() + event.status.slice(1)}
+                      {event.status === 'completed' ? '✓' : event.status === 'failed' ? '✕' : '⏱'} {t(`irrigation.${event.status}`)}
                     </span>
                   </div>
                   <p className="text-xs text-text-muted mb-2">
-                    {formatTime(event.start_time)}{event.end_time ? ` - ${formatTime(event.end_time)}` : ' - Running'}
+                    {formatTime(event.start_time)}{event.end_time ? ` - ${formatTime(event.end_time)}` : ` - ${t('irrigation.running')}`}
                   </p>
                   <div className="grid grid-cols-2 gap-3 text-xs">
                     <div>
-                      <span className="text-text-muted">Duration</span>
-                      <p className="font-semibold text-text-primary">{event.duration_minutes}m{!event.end_time && event.status === 'running' ? ' (ongoing)' : ''}</p>
+                      <span className="text-text-muted">{t('irrigation.durationLabel')}</span>
+                      <p className="font-semibold text-text-primary">{event.duration_minutes}m{!event.end_time && event.status === 'running' ? ` ${t('irrigation.ongoing')}` : ''}</p>
                     </div>
                     <div>
-                      <span className="text-text-muted">Water Used</span>
+                      <span className="text-text-muted">{t('irrigation.waterUsedLabel')}</span>
                       <p className="font-semibold text-text-primary">{event.water_usage_liters} L</p>
                     </div>
                   </div>

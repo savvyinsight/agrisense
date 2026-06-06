@@ -69,7 +69,7 @@ export default function Irrigation() {
           className="text-xs font-medium text-accent hover:text-accent-hover flex items-center gap-1 min-h-[44px] px-3 py-2 rounded-lg border border-accent/30 hover:bg-accent/5 transition-colors"
         >
           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
-          Add Zone
+          {t('irrigation.addZone')}
         </button>
       </div>
 
@@ -118,14 +118,14 @@ export default function Irrigation() {
                     <button
                       onClick={() => { setEditingZone(zone); setZoneFormOpen(true); }}
                       className="text-text-muted hover:text-text-primary min-h-[36px] min-w-[36px] flex items-center justify-center"
-                      title="Edit zone"
+                      title={t('irrigation.editZone')}
                     >
                       <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
                     </button>
                     <button
                       onClick={() => setDeletingZoneId(zone.id)}
                       className="text-text-muted hover:text-critical min-h-[36px] min-w-[36px] flex items-center justify-center"
-                      title="Delete zone"
+                      title={t('irrigation.deleteZone')}
                     >
                       <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                     </button>
@@ -136,8 +136,8 @@ export default function Irrigation() {
                 {/* Moisture bar with target indicator */}
                 <div className="mb-3">
                   <div className="flex justify-between text-xs text-text-muted mb-1">
-                    <span className={cn('font-medium', hasMoisture ? (moisturePct < 50 ? 'text-critical' : moisturePct < 80 ? 'text-warning' : 'text-success') : 'text-text-muted')}>{hasMoisture ? `${zone.moisture}%` : 'No data'}</span>
-                    <span>Target {zone.target_moisture}%</span>
+                    <span className={cn('font-medium', hasMoisture ? (moisturePct < 50 ? 'text-critical' : moisturePct < 80 ? 'text-warning' : 'text-success') : 'text-text-muted')}>{hasMoisture ? `${zone.moisture}%` : t('fields.noMoistureData')}</span>
+                    <span>{t('irrigation.target')} {zone.target_moisture}%</span>
                   </div>
                   {hasMoisture && (
                     <div className="h-2.5 bg-surface-elevated rounded-full overflow-hidden">
@@ -149,7 +149,7 @@ export default function Irrigation() {
                 <div className="grid grid-cols-2 gap-2 text-xs text-text-muted">
                   <span>{t('irrigation.runtime', { minutes: zone.runtime_minutes })}</span>
                   <span>{t('irrigation.flow', { rate: zone.flow_rate_lpm })}</span>
-                  {zone.device_name ? <span className="text-accent">{zone.device_name}</span> : zone.device_id ? <span className="text-accent">Device #{zone.device_id}</span> : <span className="italic">No controller</span>}
+                  {zone.device_name ? <span className="text-accent">{zone.device_name}</span> : zone.device_id ? <span className="text-accent">{t('fields.deviceNumber', { id: zone.device_id })}</span> : <span className="italic">{t('fields.noController')}</span>}
                 </div>
 
                 {/* Action buttons with loading state */}
@@ -191,16 +191,16 @@ export default function Irrigation() {
       {deletingZoneId !== null && (
         <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/50" onClick={() => setDeletingZoneId(null)}>
           <div className="bg-surface-card rounded-lg border border-border-default w-full max-w-sm mx-4 p-6 shadow-xl" onClick={e => e.stopPropagation()}>
-            <h3 className="text-base font-bold text-text-primary mb-2">Delete Zone</h3>
-            <p className="text-sm text-text-secondary mb-6">Are you sure you want to delete this irrigation zone? This action cannot be undone.</p>
+            <h3 className="text-base font-bold text-text-primary mb-2">{t('fields.deleteZoneTitle')}</h3>
+            <p className="text-sm text-text-secondary mb-6">{t('fields.deleteZoneConfirm')}</p>
             <div className="flex gap-3">
-              <button onClick={() => setDeletingZoneId(null)} className="flex-1 py-2.5 rounded-lg border border-border-default text-sm text-text-secondary hover:text-text-primary transition-colors min-h-[44px]">Cancel</button>
+              <button onClick={() => setDeletingZoneId(null)} className="flex-1 py-2.5 rounded-lg border border-border-default text-sm text-text-secondary hover:text-text-primary transition-colors min-h-[44px]">{t('common.cancel')}</button>
               <button onClick={async () => {
                 const res = await deleteZone(deletingZoneId);
-                if (res.success) { toast('success', 'Zone deleted'); load(); }
-                else { toast('error', res.error || 'Failed to delete zone'); }
+                if (res.success) { toast('success', t('fields.zoneDeleted')); load(); }
+                else { toast('error', res.error || t('fields.failedToDeleteZone')); }
                 setDeletingZoneId(null);
-              }} className="flex-1 py-2.5 rounded-lg bg-critical text-white text-sm font-medium hover:bg-critical/80 transition-colors min-h-[44px]">Delete</button>
+              }} className="flex-1 py-2.5 rounded-lg bg-critical text-white text-sm font-medium hover:bg-critical/80 transition-colors min-h-[44px]">{t('common.delete')}</button>
             </div>
           </div>
         </div>

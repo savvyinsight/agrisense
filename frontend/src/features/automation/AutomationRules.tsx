@@ -39,17 +39,17 @@ const commonTimezones = [
   'Asia/Kolkata', 'Australia/Sydney',
 ];
 
-const weekDays = [
-  { value: '*', label: 'Every day' },
-  { value: '1-5', label: 'Weekdays' },
-  { value: '0,6', label: 'Weekends' },
-  { value: '0', label: 'Sun' },
-  { value: '1', label: 'Mon' },
-  { value: '2', label: 'Tue' },
-  { value: '3', label: 'Wed' },
-  { value: '4', label: 'Thu' },
-  { value: '5', label: 'Fri' },
-  { value: '6', label: 'Sat' },
+const weekDayKeys = [
+  { value: '*', labelKey: 'automation.everyDay' as const },
+  { value: '1-5', labelKey: 'automation.weekdays' as const },
+  { value: '0,6', labelKey: 'automation.weekends' as const },
+  { value: '0', labelKey: 'automation.sun' as const },
+  { value: '1', labelKey: 'automation.mon' as const },
+  { value: '2', labelKey: 'automation.tue' as const },
+  { value: '3', labelKey: 'automation.wed' as const },
+  { value: '4', labelKey: 'automation.thu' as const },
+  { value: '5', labelKey: 'automation.fri' as const },
+  { value: '6', labelKey: 'automation.sat' as const },
 ];
 
 function parseCron(cron: string) {
@@ -61,32 +61,32 @@ function buildCron(minute: string, hour: string, day: string, month: string, wee
   return `${minute} ${hour} ${day} ${month} ${weekday}`;
 }
 
-function describeCron(cron: string): string {
+function describeCron(cron: string, t: (k: string, opts?: Record<string, unknown>) => string): string {
   if (!cron) return '';
   const p = parseCron(cron);
   const parts: string[] = [];
-  if (p.minute === '*') parts.push('every minute');
-  else if (p.minute.startsWith('*/')) parts.push(`every ${p.minute.slice(2)} minutes`);
-  else parts.push(`at minute ${p.minute}`);
-  if (p.hour === '*') parts.push('every hour');
-  else if (p.hour.startsWith('*/')) parts.push(`every ${p.hour.slice(2)} hours`);
-  else parts.push(`at hour ${p.hour}`);
+  if (p.minute === '*') parts.push(t('automation.everyMinute'));
+  else if (p.minute.startsWith('*/')) parts.push(t('automation.everyXMinutes', { n: p.minute.slice(2) }));
+  else parts.push(t('automation.atMinute', { n: p.minute }));
+  if (p.hour === '*') parts.push(t('automation.everyHour'));
+  else if (p.hour.startsWith('*/')) parts.push(t('automation.everyXHours', { n: p.hour.slice(2) }));
+  else parts.push(t('automation.atHour', { n: p.hour }));
   if (p.weekday !== '*') {
-    const dayName = weekDays.find((w) => w.value === p.weekday);
-    parts.push(dayName ? `on ${dayName.label}` : `on day ${p.weekday}`);
+    const dayEntry = weekDayKeys.find((w) => w.value === p.weekday);
+    parts.push(dayEntry ? t('automation.onDay', { day: t(dayEntry.labelKey) }) : t('automation.onDay', { day: p.weekday }));
   }
   return parts.join(', ');
 }
 
-function timeAgo(dateStr: string | null | undefined): string {
+function timeAgo(dateStr: string | null | undefined, t: (k: string, opts?: Record<string, unknown>) => string): string {
   if (!dateStr) return '';
   const diff = Date.now() - new Date(dateStr).getTime();
   const mins = Math.floor(diff / 60000);
-  if (mins < 1) return 'just now';
-  if (mins < 60) return `${mins}m ago`;
+  if (mins < 1) return t('fields.justNow');
+  if (mins < 60) return t('fields.minutesAgo', { mins });
   const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  return `${Math.floor(hrs / 24)}d ago`;
+  if (hrs < 24) return t('fields.hoursAgo', { hrs });
+  return t('fields.daysAgo', { days: Math.floor(hrs / 24) });
 }
 
 export default function AutomationRules() {
@@ -245,7 +245,7 @@ export default function AutomationRules() {
             }},
             { key: 'action', header: t('automation.action'), render: (r: AutomationRule) => t(cmds.find((c) => c.value === r.action_command)?.labelKey || 'automation.turnOn') },
             { key: 'lastTriggered', header: t('automation.lastTriggered'), render: (r: AutomationRule) => (
-              <span className="text-xs text-text-muted">{r.last_triggered_at ? timeAgo(r.last_triggered_at) : t('automation.neverTriggered')}</span>
+              <span className="text-xs text-text-muted">{r.last_triggered_at ? timeAgo(r.last_triggered_at, t) : t('automation.neverTriggered')}</span>
             )},
             { key: 'lastStatus', header: t('automation.lastStatus'), render: (r: AutomationRule) => (
               <CommandStatusStepper status={r.last_command_status} />
@@ -383,13 +383,13 @@ export default function AutomationRules() {
               <div>
                 <label className="block text-[10px] font-medium text-text-muted mb-1">{t('automation.cronWeekday')}</label>
                 <select value={cronParts.weekday} onChange={(e) => setForm({ ...form, schedule_cron: buildCron(cronParts.minute, cronParts.hour, cronParts.day, cronParts.month, e.target.value) })} className="w-full px-2 py-1.5 rounded-lg bg-surface-base border border-border-default text-text-primary text-xs focus:outline-none focus:border-accent">
-                  {weekDays.map((w) => <option key={w.value} value={w.value}>{w.label}</option>)}
+                  {weekDayKeys.map((w) => <option key={w.value} value={w.value}>{t(w.labelKey)}</option>)}
                 </select>
               </div>
             </div>
             <div className="text-xs text-text-muted bg-surface-base rounded-lg px-3 py-2 border border-border-default">
               <span className="font-medium">{t('automation.cronGenerated')}:</span> <code className="text-accent">{form.schedule_cron || '* * * * *'}</code>
-              <span className="ml-2 text-text-muted">— {describeCron(form.schedule_cron || '* * * * *')}</span>
+              <span className="ml-2 text-text-muted">— {describeCron(form.schedule_cron || '* * * * *', t)}</span>
             </div>
             <div>
               <label className="block text-xs font-medium text-text-secondary mb-1.5">{t('automation.timezone')}</label>

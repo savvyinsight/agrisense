@@ -14,6 +14,7 @@ import {
   PersonOutlined as OwnerIcon,
   ExpandMore as ExpandMoreIcon,
 } from '@mui/icons-material';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from './AuthContext';
 import type { Account } from '@/shared/types/api';
 
@@ -38,6 +39,7 @@ const getSubscriptionColor = (tier: string): 'default' | 'primary' | 'secondary'
 };
 
 export const AccountSelector: React.FC<AccountSelectorProps> = ({ accounts = [] }) => {
+  const { t } = useTranslation();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
@@ -154,7 +156,7 @@ export const AccountSelector: React.FC<AccountSelectorProps> = ({ accounts = [] 
         {accountList.length === 0 && (
           <MenuItem disabled>
             <Typography variant="body2" color="text.secondary">
-              No accounts available
+              {t('auth.noAccountsAvailable')}
             </Typography>
           </MenuItem>
         )}

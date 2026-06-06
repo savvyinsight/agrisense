@@ -57,7 +57,7 @@ export default function Dashboard() {
           severity: mapSeverity(p.severity as string),
           status: mapStatus(p.status as string),
           triggered_at: (p.triggered_at as string) || new Date().toISOString(),
-          recommended_action: p.severity === 'critical' ? 'Inspect immediately' : 'Monitor situation',
+          recommended_action: p.severity === 'critical' ? t('alerts.defaultCriticalAction') : t('alerts.defaultMonitorAction'),
           confidence: p.severity === 'critical' ? 95 : 85,
         };
         addAlert(newAlert);
@@ -65,7 +65,7 @@ export default function Dashboard() {
       }
       case 'device_connected': {
         const device = (data as any).payload as { device_id: string; name?: string };
-        toast('success', `Device ${device.name || device.device_id} connected`);
+        toast('success', t('dashboard.deviceBackOnline', { name: device.name || device.device_id }));
         break;
       }
       case 'device_disconnected': {
@@ -111,7 +111,7 @@ export default function Dashboard() {
           status: mapStatus(a.status),
           triggered_at: a.triggered_at,
           confidence: 85,
-          recommended_action: a.severity === 'critical' ? 'Inspect immediately' : 'Monitor situation',
+          recommended_action: a.severity === 'critical' ? t('alerts.defaultCriticalAction') : t('alerts.defaultMonitorAction'),
         })));
       }
       if (fieldRes.success && fieldRes.data) setFields(fieldRes.data);
@@ -418,7 +418,7 @@ export default function Dashboard() {
                         </span>
                         <span className="text-text-muted"> / {zone.target_moisture}%</span>
                       </span>
-                      <span className="text-text-muted">Target</span>
+                      <span className="text-text-muted">{t('common.target')}</span>
                     </div>
                     <div className="h-2 bg-surface-elevated rounded-full overflow-hidden">
                       <div

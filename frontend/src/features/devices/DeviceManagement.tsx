@@ -107,12 +107,12 @@ export default function DeviceManagement() {
     setClaimError('');
     const res = await claimDevice(claimDeviceId);
     if (res.success) {
-      toast('success', 'Device claimed successfully');
+      toast('success', t('devices.deviceClaimed'));
       setShowClaim(false);
       setClaimDeviceId('');
       load(search, page, limit);
     } else {
-      setClaimError(res.error || 'Failed to claim device');
+      setClaimError(res.error || t('devices.failedToClaim'));
     }
     setClaiming(false);
   };
@@ -125,10 +125,10 @@ export default function DeviceManagement() {
     const res = await unclaimDevice(dId);
     setUnclaimTarget(null);
     if (res.success) {
-      toast('success', 'Device unclaimed');
+      toast('success', t('devices.deviceUnclaimed'));
       load(search, page, limit);
     } else {
-      toast('error', res.error || 'Failed to unclaim');
+      toast('error', res.error || t('devices.failedToUnclaim'));
     }
   };
 
@@ -148,7 +148,7 @@ export default function DeviceManagement() {
           <p className="text-sm text-text-muted mt-0.5">{t('devices.subtitle')}</p>
         </div>
         <div className="flex gap-2">
-          <button onClick={() => setShowClaim(true)} className="px-3 py-2 rounded-lg border border-border-default text-text-secondary hover:bg-surface-hover text-sm font-medium transition-colors">Claim Device</button>
+          <button onClick={() => setShowClaim(true)} className="px-3 py-2 rounded-lg border border-border-default text-text-secondary hover:bg-surface-hover text-sm font-medium transition-colors">{t('devices.claimDevice')}</button>
           <button onClick={openNew} className="px-3 py-2 rounded-lg bg-accent hover:bg-accent-hover text-white text-sm font-medium transition-colors">+ {t('devices.addDevice')}</button>
         </div>
       </div>
@@ -162,7 +162,7 @@ export default function DeviceManagement() {
         <input
           value={searchInput}
           onChange={(e) => setSearchInput(e.target.value)}
-          placeholder="Search device ID or name..."
+          placeholder={t('devices.searchPlaceholder')}
           className="w-full pl-10 pr-4 py-2 rounded-lg bg-surface-card border border-border-default text-text-primary text-sm focus:outline-none focus:border-accent"
         />
       </div>
@@ -174,10 +174,13 @@ export default function DeviceManagement() {
           columns={[
             { key: 'device_id', header: t('devices.deviceId') },
             { key: 'name', header: t('devices.deviceName') },
-            { key: 'type', header: t('devices.deviceType') },
-            { key: 'field', header: 'Field', render: (d: Device) => {
+            { key: 'type', header: t('devices.deviceType'), render: (d: Device) => {
+              const typeMap: Record<string, string> = { sensor: t('devices.sensor'), controller: t('devices.controller'), both: t('devices.gateway') };
+              return typeMap[d.type] || d.type;
+            }},
+            { key: 'field', header: t('devices.field'), render: (d: Device) => {
               const f = d.field_id ? fields.find(f => f.id === d.field_id) : null;
-              return f ? <span className="text-text-primary">{f.name}</span> : <span className="text-text-muted italic">No field</span>;
+              return f ? <span className="text-text-primary">{f.name}</span> : <span className="text-text-muted italic">{t('devices.noField')}</span>;
             }},
             { key: 'status', header: t('devices.status'), render: (d: Device) => <span className={`text-xs font-medium px-2 py-0.5 rounded-full border ${statusColor(d.status)}`}>{t(`devices.${d.status}`)}</span> },
           ]}
@@ -187,7 +190,7 @@ export default function DeviceManagement() {
           onDelete={confirmRemove}
           renderActions={(d: Device) =>
             (user?.role === 'admin' || d.user_id === user?.id) ? (
-              <button onClick={() => confirmUnclaim(d)} className="p-3 md:p-1.5 min-h-[44px] min-w-[44px] flex items-center justify-center text-text-muted hover:text-warning rounded-md hover:bg-warning-bg transition-colors" title="Unclaim">
+              <button onClick={() => confirmUnclaim(d)} className="p-3 md:p-1.5 min-h-[44px] min-w-[44px] flex items-center justify-center text-text-muted hover:text-warning rounded-md hover:bg-warning-bg transition-colors" title={t('devices.unclaim')}>
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
                 </svg>
@@ -201,14 +204,14 @@ export default function DeviceManagement() {
       {total > 0 && (
         <div className="flex items-center justify-between text-sm">
           <div className="flex items-center gap-2">
-            <span className="text-text-muted">{total} device{total !== 1 ? 's' : ''}</span>
+            <span className="text-text-muted">{t('devices.deviceCount', { count: total })}</span>
             <select
               value={limit}
               onChange={(e) => { setLimit(Number(e.target.value)); setPage(1); }}
               className="px-2 py-1 rounded border border-border-default bg-surface-card text-text-primary text-xs focus:outline-none focus:border-accent"
             >
               {PAGE_SIZES.map((s) => (
-                <option key={s} value={s}>{s} per page</option>
+                <option key={s} value={s}>{t('devices.perPage', { size: s })}</option>
               ))}
             </select>
           </div>
@@ -218,17 +221,17 @@ export default function DeviceManagement() {
               disabled={page <= 1}
               className="px-3 py-1.5 rounded border border-border-default text-text-secondary hover:bg-surface-hover disabled:opacity-40 disabled:cursor-not-allowed text-xs font-medium transition-colors"
             >
-              ← Previous
+              {t('devices.previous')}
             </button>
             <span className="text-text-muted text-xs">
-              Page {page} of {totalPages}
+              {t('devices.pageOf', { page, total: totalPages })}
             </span>
             <button
               onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
               disabled={page >= totalPages}
               className="px-3 py-1.5 rounded border border-border-default text-text-secondary hover:bg-surface-hover disabled:opacity-40 disabled:cursor-not-allowed text-xs font-medium transition-colors"
             >
-              Next →
+              {t('devices.next')}
             </button>
           </div>
         </div>
@@ -238,7 +241,7 @@ export default function DeviceManagement() {
         <><button onClick={() => setOpen(false)} className="px-4 py-2 rounded-lg text-sm text-text-secondary hover:text-text-primary hover:bg-surface-hover transition-colors">{t('devices.cancel')}</button><button onClick={save} className="px-4 py-2 rounded-lg bg-accent hover:bg-accent-hover text-white text-sm font-medium transition-colors">{t('devices.save')}</button></>
       }>
         <div>
-          <label className="block text-xs font-medium text-text-secondary mb-1.5">{t('devices.deviceId')} <span className="text-text-muted">(from device label)</span></label>
+          <label className="block text-xs font-medium text-text-secondary mb-1.5">{t('devices.deviceId')} <span className="text-text-muted">{t('devices.fromDeviceLabel')}</span></label>
           <input value={form.device_id} onChange={(e) => setForm({ ...form, device_id: e.target.value })} placeholder="e.g. ESP32-AABBCCDD" className="w-full px-3 py-2 rounded-lg bg-surface-base border border-border-default text-text-primary text-sm font-mono focus:outline-none focus:border-accent" />
         </div>
         <div>
@@ -283,25 +286,25 @@ export default function DeviceManagement() {
       </Modal>
 
       {/* Unclaim confirmation modal */}
-      <Modal open={unclaimTarget !== null} onClose={() => setUnclaimTarget(null)} title="Unclaim Device" actions={
-        <><button onClick={() => setUnclaimTarget(null)} className="px-4 py-2 rounded-lg text-sm text-text-secondary hover:text-text-primary hover:bg-surface-hover transition-colors">Cancel</button><button onClick={handleUnclaim} className="px-4 py-2 rounded-lg bg-warning hover:bg-warning-muted text-white text-sm font-medium transition-colors">Unclaim</button></>
+      <Modal open={unclaimTarget !== null} onClose={() => setUnclaimTarget(null)} title={t('devices.unclaimDevice')} actions={
+        <><button onClick={() => setUnclaimTarget(null)} className="px-4 py-2 rounded-lg text-sm text-text-secondary hover:text-text-primary hover:bg-surface-hover transition-colors">{t('common.cancel')}</button><button onClick={handleUnclaim} className="px-4 py-2 rounded-lg bg-warning hover:bg-warning-muted text-white text-sm font-medium transition-colors">{t('devices.unclaim')}</button></>
       }>
         <div className="text-center py-2">
           <span className="text-3xl block mb-3">⚠️</span>
-          <p className="text-sm text-text-primary font-medium mb-1">Unclaim {unclaimTarget?.name || unclaimTarget?.device_id}?</p>
-          <p className="text-xs text-text-muted">This device will be released and available for others to claim.</p>
+          <p className="text-sm text-text-primary font-medium mb-1">{t('devices.unclaimConfirm', { name: unclaimTarget?.name || unclaimTarget?.device_id })}</p>
+          <p className="text-xs text-text-muted">{t('devices.unclaimDesc')}</p>
         </div>
       </Modal>
 
       {/* Claim device modal */}
-      <Modal open={showClaim} onClose={() => { setShowClaim(false); setClaimError(''); }} title="Claim Device" actions={
-        <><button onClick={() => { setShowClaim(false); setClaimError(''); }} className="px-4 py-2 rounded-lg text-sm text-text-secondary hover:text-text-primary hover:bg-surface-hover transition-colors">Cancel</button><button onClick={handleClaim} disabled={claiming || !claimDeviceId} className="px-4 py-2 rounded-lg bg-accent hover:bg-accent-hover text-white text-sm font-medium transition-colors disabled:opacity-50">{claiming ? 'Claiming...' : 'Claim'}</button></>
+      <Modal open={showClaim} onClose={() => { setShowClaim(false); setClaimError(''); }} title={t('devices.claimDevice')} actions={
+        <><button onClick={() => { setShowClaim(false); setClaimError(''); }} className="px-4 py-2 rounded-lg text-sm text-text-secondary hover:text-text-primary hover:bg-surface-hover transition-colors">{t('common.cancel')}</button><button onClick={handleClaim} disabled={claiming || !claimDeviceId} className="px-4 py-2 rounded-lg bg-accent hover:bg-accent-hover text-white text-sm font-medium transition-colors disabled:opacity-50">{claiming ? t('devices.claiming') : t('devices.claim')}</button></>
       }>
         <div>
           {claimError && <div className="text-sm text-red-600 bg-red-50 p-2 rounded mb-3">{claimError}</div>}
-          <label className="block text-xs font-medium text-text-secondary mb-1.5">Device ID</label>
+          <label className="block text-xs font-medium text-text-secondary mb-1.5">{t('devices.deviceId')}</label>
           <input value={claimDeviceId} onChange={(e) => setClaimDeviceId(e.target.value)} placeholder="e.g. ESP32-AABBCCDD" className="w-full px-3 py-2 rounded-lg bg-surface-base border border-border-default text-text-primary text-sm font-mono focus:outline-none focus:border-accent" />
-          <p className="text-xs text-text-muted mt-2">Enter the device ID from the physical device label or MQTT log. The device must not be already claimed by another user.</p>
+          <p className="text-xs text-text-muted mt-2">{t('devices.claimDeviceIdHelp')}</p>
         </div>
       </Modal>
 

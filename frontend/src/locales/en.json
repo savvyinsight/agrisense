@@ -36,7 +36,9 @@
     "zoneUpdated": "Zone updated",
     "failedToUpdateZone": "Failed to update zone",
     "zoneCreated": "Zone created",
-    "failedToCreateZone": "Failed to create zone"
+    "failedToCreateZone": "Failed to create zone",
+    "inactive": "Inactive", "goBack": "Go Back", "yesterday": "Yesterday",
+    "remove": "Remove", "username": "Username", "email": "Email", "role": "Role", "joined": "Joined"
   },
   "auth": {
     "login": "Login", "register": "Register", "username": "Username", "password": "Password",
@@ -44,7 +46,15 @@
     "loginFailed": "Login failed", "registerSuccess": "Registration successful! Please login.",
     "registerFailed": "Registration failed", "appTitle": "AgriSense",
     "appSubtitle": "Operational Intelligence Platform",
-    "yourUsername": "Your username", "yourEmail": "you@example.com", "yourPassword": "Password"
+    "yourUsername": "Your username", "yourEmail": "you@example.com", "yourPassword": "Password",
+    "acceptInvitation": "Accept Invitation", "completeSetup": "Complete your account setup",
+    "invalidInvitation": "Invalid or expired invitation", "loadingInvitation": "Loading invitation...",
+    "creatingAccount": "Creating account...", "minimumChars": "Minimum 6 characters",
+    "acceptAndCreate": "Accept & Create Account", "invitationAccepted": "Invitation accepted! Please log in with your new account.",
+    "noInvitationToken": "No invitation token provided", "failedToLoadInvitation": "Failed to load invitation",
+    "askForNewInvitation": "Please ask the account owner to send you a new invitation.",
+    "invitedToJoin": "You've been invited to join", "noAccountsAvailable": "No accounts available",
+    "currentRoleAccount": "Your current role and account"
   },
   "dashboard": {
     "title": "Dashboard", "welcome": "Welcome to AgriSense IoT",
@@ -64,7 +74,17 @@
     "fieldStatus": "Fields Needing Attention",
     "alertThresholdExceeded": "Temperature threshold exceeded",
     "today": "Today",
-    "riskSafe": "Safe", "riskCaution": "Caution", "riskCritical": "Critical"
+    "riskSafe": "Safe", "riskCaution": "Caution", "riskCritical": "Critical",
+    "deviceWentOffline": "Device {{name}} went offline", "deviceBackOnline": "Device {{name}} is back online",
+    "criticalAlertCount": "{{count}} Critical Alert(s)", "warningCount": "+ {{count}} Warning(s)",
+    "warningAlertCount": "{{count}} Warning(s)", "fieldLabel": "Field: {{name}}",
+    "acknowledgeThisAlert": "Acknowledge this alert", "showingAlerts": "Showing {{shown}} of {{total}} alerts",
+    "viewAllAlertsLink": "View All Alerts →", "criticalIssues": "Critical Issues",
+    "attentionRequired": "Attention Required", "allSystemsHealthy": "All Systems Healthy",
+    "farmStatus": "Farm Status", "requiresImmediateAction": "Requires immediate action",
+    "monitorClosely": "Monitor closely", "fieldsAtRisk": "Fields at Risk",
+    "ofTotal": "of {{count}} total", "viewAllCritical": "View all {{count}} critical alerts →",
+    "viewCriticalAlerts": "View Critical Alerts", "viewDetailsLink": "View Details →"
   },
   "fields": {
     "title": "Fields", "totalFields": "Total Fields",
@@ -190,7 +210,8 @@
     "conditionHolding": "Condition holding", "conditionRequired": "required",
     "correlated": "Correlated", "rootCause": "Root Cause", "relatedAlerts": "Related Alerts", "acknowledgeAll": "Acknowledge All",
     "snooze": "Snooze", "snoozeFor": "Snoozed for {{minutes}} minutes",
-    "snoozedUntil": "Snoozed until", "unsnooze": "Unsnooze", "unsnoozed": "Alert unsnoozed"
+    "snoozedUntil": "Snoozed until", "unsnooze": "Unsnooze", "unsnoozed": "Alert unsnoozed",
+    "snoozeFailed": "Failed to snooze"
   },
   "alertRules": {
     "title": "Alert Rules", "subtitle": "Configure alert conditions for your devices",
@@ -275,7 +296,13 @@
     "retry": "Retry", "verify": "Verify",
     "pending": "Pending", "sent": "Sent", "delivered": "Delivered", "executed": "Executed", "failed": "Failed",
     "noCommandHistory": "No command history yet", "verifySuccess": "State verified", "verifyFailed": "Expected state not detected",
-    "commandRetried": "Command retried", "retryFailed": "Failed to retry command"
+    "commandRetried": "Command retried", "retryFailed": "Failed to retry command",
+    "everyDay": "Every day", "weekdays": "Weekdays", "weekends": "Weekends",
+    "sun": "Sun", "mon": "Mon", "tue": "Tue", "wed": "Wed", "thu": "Thu", "fri": "Fri", "sat": "Sat",
+    "everyMinute": "every minute", "everyXMinutes": "every {{n}} minutes",
+    "atMinute": "at minute {{n}}", "everyHour": "every hour",
+    "everyXHours": "every {{n}} hours", "atHour": "at hour {{n}}",
+    "onDay": "on {{day}}"
   },
   "automationDashboard": {
     "title": "Automation Control", "subtitle": "Monitor and manage all automation rules",
@@ -284,7 +311,8 @@
     "fieldSummary": "Per-Field Summary", "todayRuns": "Today", "lastRun": "Last run",
     "globalOn": "AUTO ON", "globalOff": "AUTO OFF",
     "enabled": "Automation enabled globally", "disabled": "Automation disabled globally",
-    "triggeredBySensor": "Sensor", "triggeredBySchedule": "Schedule", "triggeredByManual": "Manual"
+    "triggeredBySensor": "Sensor", "triggeredBySchedule": "Schedule", "triggeredByManual": "Manual",
+    "failedToToggle": "Failed to toggle", "failedToLoad": "Failed to load dashboard"
   },
   "devices": {
     "title": "Device Management", "subtitle": "Manage and monitor your IoT devices",
@@ -348,7 +376,20 @@
     "noDevice": "No device (manual only)",
     "deviceAssignedHint": "When a device is assigned, Start/Stop commands are sent via MQTT",
     "flowRatePerMin": "Flow Rate (L/min)",
-    "createZone": "Create Zone"
+    "createZone": "Create Zone",
+    "totalWater": "Total Water", "avgRuntime": "Avg Runtime", "minutes": "min",
+    "completed": "Completed", "failedCount": "({{count}} failed)", "running": "- Running",
+    "durationLabel": "Duration", "ongoing": "(ongoing)", "waterUsedLabel": "Water Used",
+    "noHistoryYet": "No irrigation events yet. Start irrigation to create one.",
+    "selectDevice": "Select a device",
+    "efficiencyDashboard": "Water Efficiency Dashboard", "efficiencyLabel": "Efficiency",
+    "vsExpected": "vs expected", "waterSaved": "Water Saved", "liters": "liters",
+    "costSavings": "Cost Savings", "days90": "90 days", "weekTrend": "Week Trend",
+    "waterUsageTrend": "90-Day Water Usage Trend", "actualUsage": "Actual Usage",
+    "expectedUsage": "Expected Usage", "weeklySummary": "Weekly Summary",
+    "week": "Week", "used": "Used", "expected": "Expected", "savings": "Savings",
+    "last7days": "Last 7 days", "week2": "Week 2", "week3": "Week 3", "week4": "Week 4",
+    "less": "less", "more": "more", "noChange": "No change"
   },
 
   "reports": {
@@ -399,7 +440,8 @@
     "team": "Team Management", "auditLog": "Audit Log",
     "dangerZone": "Danger Zone", "dangerZoneDesc": "Once you log out, you will need to re-enter your credentials.",
     "logOut": "Log Out", "role": "Role", "userId": "User ID",
-    "english": "English", "chinese": "中文"
+    "english": "English", "chinese": "中文",
+    "logoutConfirm": "Are you sure you want to log out?"
   },
   "language": {
     "english": "English", "chinese": "中文",
@@ -488,7 +530,11 @@
     "channelCreated": "Channel created", "channelUpdated": "Channel updated", "channelDeleted": "Channel deleted",
     "routing": "Severity Routing", "routingHint": "Choose which channels receive alerts for each severity level.",
     "addChannelsFirst": "Add at least one notification channel to configure routing.",
-    "email": "Email", "sms": "SMS", "webhook": "Webhook"
+    "email": "Email", "sms": "SMS", "webhook": "Webhook",
+    "emailAddress": "Email Address", "emailPlaceholder": "alert@example.com",
+    "phoneNumber": "Phone Number", "phonePlaceholder": "+1234567890",
+    "webhookUrl": "Webhook URL", "webhookPlaceholder": "https://example.com/webhook",
+    "secret": "Secret (optional)", "secretPlaceholder": "Bearer token or secret"
   },
   "component": {
     "acknowledge": "Acknowledge", "recommendation": "Recommendation:",
@@ -499,6 +545,26 @@
     "toggleMenu": "Toggle menu",
     "pageNotFound": "Page not found", "pageNotFoundDesc": "The page you're looking for doesn't exist.",
     "errorTitle": "Something went wrong", "errorDefault": "An unexpected error occurred",
-    "returnToDashboard": "Return to Dashboard", "loading": "Loading..."
+    "returnToDashboard": "Return to Dashboard", "loading": "Loading...",
+    "accessDenied": "Access Denied", "noPermission": "You do not have permission to access this resource.",
+    "currentRole": "Current Role: {{role}}", "goBack": "Go Back",
+    "snoozeFailed": "Failed to snooze", "failedToLoad": "Failed to load"
+  },
+  "admin": {
+    "platformAdmin": "Platform Admin", "manageAccounts": "Manage all farm accounts",
+    "totalAccounts": "Total Accounts", "totalUsers": "Total Users", "totalDevices": "Total Devices",
+    "allAccounts": "All Accounts ({{count}})", "noAccounts": "No accounts found",
+    "tier": "Tier", "owner": "Owner", "users": "Users", "devices": "Devices", "created": "Created",
+    "accountNotFound": "Account not found", "backToAccounts": "← Back to Accounts",
+    "accountId": "ID:", "createdLabel": "Created",
+    "teamMembers": "Team Members", "addUser": "Add User", "noUsers": "No users",
+    "removeUser": "Remove User", "removeUserConfirm": "Remove {{name}} from this account?",
+    "removing": "Removing...", "adding": "Adding...",
+    "unclaimDevice": "Unclaim Device", "unclaimDeviceConfirm": "Release device {{id}}? It will be available for others to claim.",
+    "editAccount": "Edit Account", "accountName": "Account Name",
+    "subscriptionTier": "Subscription Tier", "basic": "Basic", "professional": "Professional", "enterprise": "Enterprise",
+    "maxUsers": "Max Users", "maxDevices": "Max Devices",
+    "pageVisibility": "Page Visibility", "togglePages": "Toggle which pages appear in your sidebar",
+    "sidebarPages": "Sidebar Pages", "hiddenPages": "Hidden pages: {{pages}}"
   }
 }

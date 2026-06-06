@@ -36,7 +36,9 @@
     "zoneUpdated": "区域已更新",
     "failedToUpdateZone": "更新区域失败",
     "zoneCreated": "区域已创建",
-    "failedToCreateZone": "创建区域失败"
+    "failedToCreateZone": "创建区域失败",
+    "inactive": "未激活", "goBack": "返回", "yesterday": "昨天",
+    "remove": "移除", "username": "用户名", "email": "邮箱", "role": "角色", "joined": "加入时间"
   },
   "auth": {
     "login": "登录", "register": "注册", "username": "用户名", "password": "密码",
@@ -44,7 +46,15 @@
     "loginFailed": "登录失败", "registerSuccess": "注册成功！请登录。",
     "registerFailed": "注册失败", "appTitle": "AgriSense",
     "appSubtitle": "农业运营智能平台",
-    "yourUsername": "您的用户名", "yourEmail": "you@example.com", "yourPassword": "密码"
+    "yourUsername": "您的用户名", "yourEmail": "you@example.com", "yourPassword": "密码",
+    "acceptInvitation": "接受邀请", "completeSetup": "完成账户设置",
+    "invalidInvitation": "邀请无效或已过期", "loadingInvitation": "加载邀请中...",
+    "creatingAccount": "创建账户中...", "minimumChars": "至少6个字符",
+    "acceptAndCreate": "接受并创建账户", "invitationAccepted": "邀请已接受！请使用新账户登录。",
+    "noInvitationToken": "未提供邀请令牌", "failedToLoadInvitation": "加载邀请失败",
+    "askForNewInvitation": "请联系账户所有者重新发送邀请。",
+    "invitedToJoin": "您被邀请加入", "noAccountsAvailable": "没有可用账户",
+    "currentRoleAccount": "您当前的角色和账户"
   },
   "dashboard": {
     "title": "仪表板", "welcome": "欢迎使用 AgriSense IoT",
@@ -63,7 +73,17 @@
     "irrigationToday": "今日灌溉",
     "fieldStatus": "需要关注的田地",
     "alertThresholdExceeded": "温度超过阈值",
-    "today": "今天"
+    "today": "今天",
+    "deviceWentOffline": "设备 {{name}} 已离线", "deviceBackOnline": "设备 {{name}} 已恢复在线",
+    "criticalAlertCount": "{{count}} 条严重警报", "warningCount": "+ {{count}} 条警告",
+    "warningAlertCount": "{{count}} 条警告", "fieldLabel": "田块: {{name}}",
+    "acknowledgeThisAlert": "确认此警报", "showingAlerts": "显示 {{shown}} / {{total}} 条警报",
+    "viewAllAlertsLink": "查看所有警报 →", "criticalIssues": "严重问题",
+    "attentionRequired": "需要关注", "allSystemsHealthy": "所有系统健康",
+    "farmStatus": "农场状态", "requiresImmediateAction": "需要立即处理",
+    "monitorClosely": "密切监控", "fieldsAtRisk": "风险田块",
+    "ofTotal": "共 {{count}} 个", "viewAllCritical": "查看全部 {{count}} 条严重警报 →",
+    "viewCriticalAlerts": "查看严重警报", "viewDetailsLink": "查看详情 →"
   },
   "fields": {
     "title": "田地", "totalFields": "田地总数",
@@ -189,7 +209,8 @@
     "conditionHolding": "条件持续", "conditionRequired": "需要",
     "correlated": "关联警报", "rootCause": "根本原因", "relatedAlerts": "相关警报", "acknowledgeAll": "全部确认",
     "snooze": "暂停", "snoozeFor": "已暂停 {{minutes}} 分钟",
-    "snoozedUntil": "暂停至", "unsnooze": "取消暂停", "unsnoozed": "已取消暂停"
+    "snoozedUntil": "暂停至", "unsnooze": "取消暂停", "unsnoozed": "已取消暂停",
+    "snoozeFailed": "暂停失败"
   },
   "alertRules": {
     "title": "警报规则", "subtitle": "为设备配置警报条件",
@@ -274,7 +295,13 @@
     "retry": "重试", "verify": "验证",
     "pending": "待处理", "sent": "已发送", "delivered": "已送达", "executed": "已执行", "failed": "失败",
     "noCommandHistory": "暂无命令历史", "verifySuccess": "状态已验证", "verifyFailed": "未检测到预期状态",
-    "commandRetried": "命令已重试", "retryFailed": "重试命令失败"
+    "commandRetried": "命令已重试", "retryFailed": "重试命令失败",
+    "everyDay": "每天", "weekdays": "工作日", "weekends": "周末",
+    "sun": "周日", "mon": "周一", "tue": "周二", "wed": "周三", "thu": "周四", "fri": "周五", "sat": "周六",
+    "everyMinute": "每分钟", "everyXMinutes": "每 {{n}} 分钟",
+    "atMinute": "第 {{n}} 分钟", "everyHour": "每小时",
+    "everyXHours": "每 {{n}} 小时", "atHour": "第 {{n}} 小时",
+    "onDay": "在 {{day}}"
   },
   "automationDashboard": {
     "title": "自动化控制", "subtitle": "监控和管理所有自动化规则",
@@ -283,7 +310,8 @@
     "fieldSummary": "按田块汇总", "todayRuns": "今日", "lastRun": "上次运行",
     "globalOn": "自动开启", "globalOff": "自动关闭",
     "enabled": "全局自动化已启用", "disabled": "全局自动化已禁用",
-    "triggeredBySensor": "传感器", "triggeredBySchedule": "定时", "triggeredByManual": "手动"
+    "triggeredBySensor": "传感器", "triggeredBySchedule": "定时", "triggeredByManual": "手动",
+    "failedToToggle": "切换失败", "failedToLoad": "加载仪表盘失败"
   },
   "devices": {
     "title": "设备管理", "subtitle": "管理和监控您的物联网设备",
@@ -347,7 +375,20 @@
     "noDevice": "无设备（手动模式）",
     "deviceAssignedHint": "分配设备后，将通过MQTT发送开始/停止命令",
     "flowRatePerMin": "流量（升/分钟）",
-    "createZone": "创建区域"
+    "createZone": "创建区域",
+    "totalWater": "总用水量", "avgRuntime": "平均运行时间", "minutes": "分钟",
+    "completed": "已完成", "failedCount": "({{count}} 次失败)", "running": "- 运行中",
+    "durationLabel": "持续时间", "ongoing": "(进行中)", "waterUsedLabel": "用水量",
+    "noHistoryYet": "暂无灌溉记录。开始灌溉以创建记录。",
+    "selectDevice": "选择设备",
+    "efficiencyDashboard": "灌溉效率仪表盘", "efficiencyLabel": "效率",
+    "vsExpected": "对比预期", "waterSaved": "节水量", "liters": "升",
+    "costSavings": "节省成本", "days90": "90天", "weekTrend": "周趋势",
+    "waterUsageTrend": "90天用水趋势", "actualUsage": "实际用量",
+    "expectedUsage": "预期用量", "weeklySummary": "每周汇总",
+    "week": "周", "used": "已用", "expected": "预期", "savings": "节省",
+    "last7days": "最近7天", "week2": "第2周", "week3": "第3周", "week4": "第4周",
+    "less": "减少", "more": "增加", "noChange": "无变化"
   },
 
   "reports": {
@@ -398,7 +439,8 @@
     "team": "团队管理", "auditLog": "审计日志",
     "dangerZone": "危险区域", "dangerZoneDesc": "登出后，您需要重新输入凭证。",
     "logOut": "登出", "role": "角色", "userId": "用户ID",
-    "english": "English", "chinese": "中文"
+    "english": "English", "chinese": "中文",
+    "logoutConfirm": "确定要登出吗？"
   },
   "language": {
     "english": "English", "chinese": "中文",
@@ -487,7 +529,11 @@
     "channelCreated": "渠道已创建", "channelUpdated": "渠道已更新", "channelDeleted": "渠道已删除",
     "routing": "严重程度路由", "routingHint": "选择每个严重级别接收通知的渠道。",
     "addChannelsFirst": "请先添加至少一个通知渠道以配置路由。",
-    "email": "邮件", "sms": "短信", "webhook": "Webhook"
+    "email": "邮件", "sms": "短信", "webhook": "Webhook",
+    "emailAddress": "邮箱地址", "emailPlaceholder": "alert@example.com",
+    "phoneNumber": "手机号码", "phonePlaceholder": "+1234567890",
+    "webhookUrl": "Webhook URL", "webhookPlaceholder": "https://example.com/webhook",
+    "secret": "密钥（可选）", "secretPlaceholder": "Bearer token 或密钥"
   },
   "component": {
     "acknowledge": "确认", "recommendation": "建议:",
@@ -498,6 +544,26 @@
     "toggleMenu": "切换菜单",
     "pageNotFound": "页面未找到", "pageNotFoundDesc": "您查找的页面不存在。",
     "errorTitle": "出现错误", "errorDefault": "发生未知错误",
-    "returnToDashboard": "返回仪表板", "loading": "加载中..."
+    "returnToDashboard": "返回仪表板", "loading": "加载中...",
+    "accessDenied": "访问被拒绝", "noPermission": "您没有权限访问此资源。",
+    "currentRole": "当前角色: {{role}}", "goBack": "返回",
+    "snoozeFailed": "暂停失败", "failedToLoad": "加载失败"
+  },
+  "admin": {
+    "platformAdmin": "平台管理", "manageAccounts": "管理所有农场账户",
+    "totalAccounts": "账户总数", "totalUsers": "用户总数", "totalDevices": "设备总数",
+    "allAccounts": "所有账户 ({{count}})", "noAccounts": "未找到账户",
+    "tier": "套餐", "owner": "所有者", "users": "用户", "devices": "设备", "created": "创建时间",
+    "accountNotFound": "未找到账户", "backToAccounts": "← 返回账户列表",
+    "accountId": "ID:", "createdLabel": "创建时间",
+    "teamMembers": "团队成员", "addUser": "添加用户", "noUsers": "暂无用户",
+    "removeUser": "移除用户", "removeUserConfirm": "从账户中移除 {{name}}？",
+    "removing": "移除中...", "adding": "添加中...",
+    "unclaimDevice": "取消认领设备", "unclaimDeviceConfirm": "释放设备 {{id}}？释放后其他人可以认领。",
+    "editAccount": "编辑账户", "accountName": "账户名称",
+    "subscriptionTier": "订阅套餐", "basic": "基础版", "professional": "专业版", "enterprise": "企业版",
+    "maxUsers": "最大用户数", "maxDevices": "最大设备数",
+    "pageVisibility": "页面可见性", "togglePages": "切换侧边栏中显示的页面",
+    "sidebarPages": "侧边栏页面", "hiddenPages": "隐藏页面: {{pages}}"
   }
 }

@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 
 interface PageOption {
   key: string;
@@ -6,21 +7,37 @@ interface PageOption {
   path: string;
 }
 
-const allPages: PageOption[] = [
-  { key: 'dashboard', label: 'Dashboard', path: '/dashboard' },
-  { key: 'fields', label: 'Fields', path: '/fields' },
-  { key: 'alerts', label: 'Alerts', path: '/alerts' },
-  { key: 'irrigation', label: 'Irrigation', path: '/irrigation' },
-  { key: 'analytics', label: 'Analytics', path: '/analytics' },
-  { key: 'reports', label: 'Reports', path: '/reports' },
-  { key: 'devices', label: 'Devices', path: '/devices' },
-  { key: 'alertRules', label: 'Alert Rules', path: '/alert-rules' },
-  { key: 'automation', label: 'Automation', path: '/automation' },
-  { key: 'team', label: 'Team', path: '/settings/team' },
-  { key: 'settings', label: 'Settings', path: '/settings' },
-  { key: 'adminAccounts', label: 'Accounts (Admin)', path: '/admin/accounts' },
-  { key: 'adminAudit', label: 'Audit Log (Admin)', path: '/admin/audit' },
+const pageConfigs: Omit<PageOption, 'label'>[] = [
+  { key: 'dashboard', path: '/dashboard' },
+  { key: 'fields', path: '/fields' },
+  { key: 'alerts', path: '/alerts' },
+  { key: 'irrigation', path: '/irrigation' },
+  { key: 'analytics', path: '/analytics' },
+  { key: 'reports', path: '/reports' },
+  { key: 'devices', path: '/devices' },
+  { key: 'alertRules', path: '/alert-rules' },
+  { key: 'automation', path: '/automation' },
+  { key: 'team', path: '/settings/team' },
+  { key: 'settings', path: '/settings' },
+  { key: 'adminAccounts', path: '/admin/accounts' },
+  { key: 'adminAudit', path: '/admin/audit' },
 ];
+
+const navKeyMap: Record<string, string> = {
+  dashboard: 'nav.dashboard',
+  fields: 'nav.fields',
+  alerts: 'nav.alerts',
+  irrigation: 'nav.irrigation',
+  analytics: 'nav.analytics',
+  reports: 'nav.reports',
+  devices: 'nav.devices',
+  alertRules: 'nav.alertRules',
+  automation: 'nav.automation',
+  team: 'nav.team',
+  settings: 'nav.settings',
+  adminAccounts: 'nav.adminAccounts',
+  adminAudit: 'nav.adminAudit',
+};
 
 const STORAGE_KEY = 'admin_hidden_pages';
 
@@ -36,7 +53,13 @@ function saveHidden(paths: string[]) {
 }
 
 export default function AdminPreferences() {
+  const { t } = useTranslation();
   const [hidden, setHidden] = useState<string[]>(loadHidden);
+
+  const allPages: PageOption[] = useMemo(
+    () => pageConfigs.map(p => ({ ...p, label: t(navKeyMap[p.key]) })),
+    [t]
+  );
 
   useEffect(() => { saveHidden(hidden); }, [hidden]);
 
@@ -49,13 +72,13 @@ export default function AdminPreferences() {
   return (
     <div className="max-w-3xl mx-auto space-y-6">
       <div>
-        <h1 className="text-lg font-bold text-text-primary">Page Visibility</h1>
-        <p className="text-sm text-text-muted mt-0.5">Toggle which pages appear in your sidebar</p>
+        <h1 className="text-lg font-bold text-text-primary">{t('admin.pageVisibility')}</h1>
+        <p className="text-sm text-text-muted mt-0.5">{t('admin.togglePages')}</p>
       </div>
 
       <div className="rounded-lg border border-border-default bg-surface-card overflow-hidden">
         <div className="p-4 border-b border-border-default">
-          <h2 className="text-sm font-semibold text-text-primary">Sidebar Pages</h2>
+          <h2 className="text-sm font-semibold text-text-primary">{t('admin.sidebarPages')}</h2>
         </div>
         <div className="divide-y divide-border-default">
           {allPages.map(page => {
@@ -79,7 +102,7 @@ export default function AdminPreferences() {
       </div>
 
       <div className="text-xs text-text-muted">
-        Hidden pages: {hidden.length === 0 ? 'none' : hidden.join(', ')}
+        {t('admin.hiddenPages', { pages: hidden.length === 0 ? t('common.no') : hidden.join(', ') })}
       </div>
     </div>
   );

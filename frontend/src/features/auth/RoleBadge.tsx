@@ -1,15 +1,16 @@
 import React from 'react';
 import { Box, Chip, Tooltip, Typography, useMediaQuery, useTheme } from '@mui/material';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/features/auth/AuthContext';
 
-const getRoleLabel = (role: string): string => {
+const getRoleLabel = (role: string, t: (key: string) => string): string => {
   const labels: { [key: string]: string } = {
-    admin: 'Admin',
+    admin: t('teamManagement.accountOwner'),
     viewer: 'Viewer',
-    account_owner: 'Owner',
-    farm_manager: 'Farm Manager',
-    operator: 'Operator',
-    technician: 'Technician',
+    account_owner: t('teamManagement.accountOwner'),
+    farm_manager: t('teamManagement.farmManager'),
+    operator: t('teamManagement.operator'),
+    technician: t('teamManagement.technician'),
   };
   return labels[role] || role;
 };
@@ -27,13 +28,14 @@ const getRoleColor = (role: string): any => {
 };
 
 export const RoleBadge: React.FC = () => {
+  const { t } = useTranslation();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const { user, account } = useAuth();
 
   if (!user || !account) return null;
 
-  const roleLabel = getRoleLabel(user.role);
+  const roleLabel = getRoleLabel(user.role, t);
   const fullText = `${user.username} (${roleLabel}) — ${account.name}`;
 
   if (isMobile) {
@@ -51,7 +53,7 @@ export const RoleBadge: React.FC = () => {
   }
 
   return (
-    <Tooltip title="Your current role and account">
+    <Tooltip title={t('auth.currentRoleAccount')}>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 0 }}>
         <Typography variant="body2" sx={{ fontSize: '0.9rem' }}>
           {user.username}
