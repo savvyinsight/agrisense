@@ -52,5 +52,9 @@ type DeviceRepository interface {
 	FindOrCreate(deviceID string) (*Device, error)
 	ClaimDevice(deviceID string, userID, accountID int) error
 	UnclaimDevice(deviceID string) error
-	MarkOfflineByHeartbeat(timeout time.Duration) (int, error)
+	GetAndMarkOfflineByHeartbeat(timeout time.Duration) ([]Device, error)
+	CountByStatus(status DeviceStatus) (int, error)
+	// UpdateStatusIfChanged atomically sets the device to newStatus only if it is
+	// currently different. Returns true if the status was actually changed.
+	UpdateStatusIfChanged(deviceID string, newStatus DeviceStatus) (changed bool, err error)
 }

@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { TrendChart } from '@/shared/components/TrendChart';
 import { cn } from '@/shared/lib/cn';
 
@@ -13,6 +14,7 @@ interface EfficiencyData {
 }
 
 export function WaterEfficiencyMetrics({ className }: WaterEfficiencyMetricsProps) {
+  const { t } = useTranslation();
   // Generate 90-day trend data
   const efficiencyData = useMemo(() => {
     const data: EfficiencyData[] = [];
@@ -65,36 +67,36 @@ export function WaterEfficiencyMetrics({ className }: WaterEfficiencyMetricsProp
 
   return (
     <div className={cn('rounded-lg border border-border-default bg-surface-card p-6', className)}>
-      <h2 className="text-base font-semibold text-text-primary mb-6">Water Efficiency Dashboard</h2>
+      <h2 className="text-base font-semibold text-text-primary mb-6">{t('irrigation.efficiencyDashboard')}</h2>
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
         {[
           {
-            label: 'Efficiency',
+            label: t('irrigation.efficiencyLabel'),
             value: `${metrics.efficiency}%`,
-            unit: 'vs expected',
+            unit: t('irrigation.vsExpected'),
             status: metrics.efficiency > 95 ? 'warning' : metrics.efficiency > 90 ? 'healthy' : 'critical',
             icon: '📊',
           },
           {
-            label: 'Water Saved',
+            label: t('irrigation.waterSaved'),
             value: `${(metrics.saved / 1000).toFixed(1)}k`,
-            unit: 'liters',
+            unit: t('irrigation.liters'),
             status: metrics.saved > 10000 ? 'healthy' : 'info',
             icon: '💰',
           },
           {
-            label: 'Cost Savings',
+            label: t('irrigation.costSavings'),
             value: `$${metrics.costSavings.toFixed(0)}`,
-            unit: '90 days',
+            unit: t('irrigation.days90'),
             status: 'healthy',
             icon: '💵',
           },
           {
-            label: 'Week Trend',
+            label: t('irrigation.weekTrend'),
             value: metrics.weekTrend.toFixed(1) + '%',
-            unit: weekTrendSign(metrics.weekTrend),
+            unit: weekTrendSign(metrics.weekTrend, t),
             status: metrics.weekTrend < 0 ? 'healthy' : 'warning',
             icon: metrics.weekTrend < 0 ? '↓' : '↑',
           },
@@ -112,7 +114,7 @@ export function WaterEfficiencyMetrics({ className }: WaterEfficiencyMetricsProp
 
       {/* Trend Chart */}
       <div className="mb-8">
-        <h3 className="text-sm font-semibold text-text-primary mb-4">90-Day Water Usage Trend</h3>
+        <h3 className="text-sm font-semibold text-text-primary mb-4">{t('irrigation.waterUsageTrend')}</h3>
         <TrendChart
           data={chartData}
           type="area"
@@ -125,35 +127,35 @@ export function WaterEfficiencyMetrics({ className }: WaterEfficiencyMetricsProp
         <div className="flex gap-4 mt-4 text-xs">
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded-full bg-blue-500" />
-            <span className="text-text-muted">Actual Usage</span>
+            <span className="text-text-muted">{t('irrigation.actualUsage')}</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded-full bg-red-500" />
-            <span className="text-text-muted">Expected Usage</span>
+            <span className="text-text-muted">{t('irrigation.expectedUsage')}</span>
           </div>
         </div>
       </div>
 
       {/* Weekly Breakdown Table */}
       <div>
-        <h3 className="text-sm font-semibold text-text-primary mb-4">Weekly Summary</h3>
+        <h3 className="text-sm font-semibold text-text-primary mb-4">{t('irrigation.weeklySummary')}</h3>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border-default">
-                <th className="text-left py-2 px-3 font-semibold text-text-secondary">Week</th>
-                <th className="text-right py-2 px-3 font-semibold text-text-secondary">Used</th>
-                <th className="text-right py-2 px-3 font-semibold text-text-secondary">Expected</th>
-                <th className="text-right py-2 px-3 font-semibold text-text-secondary">Efficiency</th>
-                <th className="text-right py-2 px-3 font-semibold text-text-secondary">Savings</th>
+                <th className="text-left py-2 px-3 font-semibold text-text-secondary">{t('irrigation.week')}</th>
+                <th className="text-right py-2 px-3 font-semibold text-text-secondary">{t('irrigation.used')}</th>
+                <th className="text-right py-2 px-3 font-semibold text-text-secondary">{t('irrigation.expected')}</th>
+                <th className="text-right py-2 px-3 font-semibold text-text-secondary">{t('irrigation.efficiencyLabel')}</th>
+                <th className="text-right py-2 px-3 font-semibold text-text-secondary">{t('irrigation.savings')}</th>
               </tr>
             </thead>
             <tbody>
               {[
-                { week: 'Last 7 days', used: efficiencyData.slice(-7).reduce((s, d) => s + d.used, 0), expected: efficiencyData.slice(-7).reduce((s, d) => s + d.expected, 0) },
-                { week: 'Week 2', used: efficiencyData.slice(-14, -7).reduce((s, d) => s + d.used, 0), expected: efficiencyData.slice(-14, -7).reduce((s, d) => s + d.expected, 0) },
-                { week: 'Week 3', used: efficiencyData.slice(-21, -14).reduce((s, d) => s + d.used, 0), expected: efficiencyData.slice(-21, -14).reduce((s, d) => s + d.expected, 0) },
-                { week: 'Week 4', used: efficiencyData.slice(-28, -21).reduce((s, d) => s + d.used, 0), expected: efficiencyData.slice(-28, -21).reduce((s, d) => s + d.expected, 0) },
+                { week: t('irrigation.last7days'), used: efficiencyData.slice(-7).reduce((s, d) => s + d.used, 0), expected: efficiencyData.slice(-7).reduce((s, d) => s + d.expected, 0) },
+                { week: t('irrigation.week2'), used: efficiencyData.slice(-14, -7).reduce((s, d) => s + d.used, 0), expected: efficiencyData.slice(-14, -7).reduce((s, d) => s + d.expected, 0) },
+                { week: t('irrigation.week3'), used: efficiencyData.slice(-21, -14).reduce((s, d) => s + d.used, 0), expected: efficiencyData.slice(-21, -14).reduce((s, d) => s + d.expected, 0) },
+                { week: t('irrigation.week4'), used: efficiencyData.slice(-28, -21).reduce((s, d) => s + d.used, 0), expected: efficiencyData.slice(-28, -21).reduce((s, d) => s + d.expected, 0) },
               ].map((row) => {
                 const eff = Math.round((row.used / row.expected) * 100);
                 const savings = row.expected - row.used;
@@ -185,8 +187,8 @@ export function WaterEfficiencyMetrics({ className }: WaterEfficiencyMetricsProp
   );
 }
 
-function weekTrendSign(trend: number): string {
-  if (trend < 0) return `${Math.abs(trend).toFixed(1)}% less`;
-  if (trend > 0) return `${trend.toFixed(1)}% more`;
-  return 'No change';
+function weekTrendSign(trend: number, t: (key: string) => string): string {
+  if (trend < 0) return `${Math.abs(trend).toFixed(1)}% ${t('irrigation.less')}`;
+  if (trend > 0) return `${trend.toFixed(1)}% ${t('irrigation.more')}`;
+  return t('irrigation.noChange');
 }

@@ -70,8 +70,16 @@ func (m *mockDeviceRepo) UnclaimDevice(deviceID string) error {
 	args := m.Called(deviceID)
 	return args.Error(0)
 }
-func (m *mockDeviceRepo) MarkOfflineByHeartbeat(timeout time.Duration) (int, error) {
+func (m *mockDeviceRepo) GetAndMarkOfflineByHeartbeat(timeout time.Duration) ([]Device, error) {
+	return nil, nil
+}
+
+func (m *mockDeviceRepo) CountByStatus(status DeviceStatus) (int, error) {
 	return 0, nil
+}
+
+func (m *mockDeviceRepo) UpdateStatusIfChanged(deviceID string, newStatus DeviceStatus) (bool, error) {
+	return false, nil
 }
 
 type mockAccountQuotaChecker struct {

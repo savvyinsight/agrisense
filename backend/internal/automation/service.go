@@ -423,8 +423,8 @@ type AutomationDashboardData struct {
 	GlobalAutomationEnabled bool                     `json:"global_automation_enabled"`
 }
 
-func (s *Service) GetDashboard(userID int) (*AutomationDashboardData, error) {
-	rules, err := s.automationRepo.GetByUserID(userID, 0)
+func (s *Service) GetDashboard(userID int, accountID int) (*AutomationDashboardData, error) {
+	rules, err := s.automationRepo.GetByUserID(userID, accountID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get rules: %w", err)
 	}

@@ -162,7 +162,9 @@ func (m *mockDeviceRepo) List(accountID, userID int, filter device.DeviceFilter,
 func (m *mockDeviceRepo) FindOrCreate(deviceID string) (*device.Device, error) { return nil, nil }
 func (m *mockDeviceRepo) ClaimDevice(deviceID string, userID, accountID int) error { return nil }
 func (m *mockDeviceRepo) UnclaimDevice(deviceID string) error { return nil }
-func (m *mockDeviceRepo) MarkOfflineByHeartbeat(timeout time.Duration) (int, error) { return 0, nil }
+func (m *mockDeviceRepo) GetAndMarkOfflineByHeartbeat(timeout time.Duration) ([]device.Device, error) { return nil, nil }
+func (m *mockDeviceRepo) CountByStatus(status device.DeviceStatus) (int, error) { return 0, nil }
+func (m *mockDeviceRepo) UpdateStatusIfChanged(deviceID string, newStatus device.DeviceStatus) (bool, error) { return false, nil }
 
 type mockFieldRepo struct {
 	mock.Mock

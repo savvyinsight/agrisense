@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { Device, Alert2, Field } from '@/shared/types';
 import { cn } from '@/shared/lib/cn';
 
@@ -19,7 +20,7 @@ export function StatusSummary({
   onViewAlerts,
   onViewDetails,
 }: StatusSummaryProps) {
-  
+  const { t } = useTranslation();
 
   // Calculate health metrics
   const metrics = useMemo(() => {
@@ -72,10 +73,10 @@ export function StatusSummary({
           <div className="flex items-center gap-2 mb-2">
             <span className="text-2xl">{statusIcon}</span>
             <h2 className={cn('text-lg md:text-xl font-bold', statusTextColor)}>
-              {metrics.healthStatus === 'critical' && 'Critical Issues'}
-              {metrics.healthStatus === 'warning' && 'Attention Required'}
-              {metrics.healthStatus === 'healthy' && 'All Systems Healthy'}
-              {metrics.healthStatus === 'info' && 'Farm Status'}
+              {metrics.healthStatus === 'critical' && t('dashboard.criticalIssues')}
+              {metrics.healthStatus === 'warning' && t('dashboard.attentionRequired')}
+              {metrics.healthStatus === 'healthy' && t('dashboard.allSystemsHealthy')}
+              {metrics.healthStatus === 'info' && t('dashboard.farmStatus')}
             </h2>
           </div>
           {weather && (
@@ -90,9 +91,9 @@ export function StatusSummary({
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
         {/* Health % */}
         <div className="bg-white rounded-lg p-3 border border-border-light">
-          <p className="text-xs text-text-secondary mb-1">Farm Health</p>
+          <p className="text-xs text-text-secondary mb-1">{t('dashboard.farmHealth')}</p>
           <p className="text-2xl font-bold text-text-primary">{metrics.healthPct}%</p>
-          <p className="text-xs text-text-secondary">{metrics.onlineDevices}/{metrics.totalDevices} online</p>
+          <p className="text-xs text-text-secondary">{metrics.onlineDevices}/{metrics.totalDevices} {t('common.online')}</p>
         </div>
 
         {/* Critical Alerts */}
@@ -102,11 +103,11 @@ export function StatusSummary({
             ? 'bg-red-50 border-red-200'
             : 'bg-white border-border-light'
         )}>
-          <p className="text-xs text-text-secondary mb-1">Critical</p>
+          <p className="text-xs text-text-secondary mb-1">{t('common.critical')}</p>
           <p className={cn('text-2xl font-bold', metrics.criticalAlerts > 0 ? 'text-red-600' : 'text-text-primary')}>
             {metrics.criticalAlerts}
           </p>
-          <p className="text-xs text-text-secondary">Requires immediate action</p>
+          <p className="text-xs text-text-secondary">{t('dashboard.requiresImmediateAction')}</p>
         </div>
 
         {/* Warning Alerts */}
@@ -116,11 +117,11 @@ export function StatusSummary({
             ? 'bg-amber-50 border-amber-200'
             : 'bg-white border-border-light'
         )}>
-          <p className="text-xs text-text-secondary mb-1">Warning</p>
+          <p className="text-xs text-text-secondary mb-1">{t('common.warning')}</p>
           <p className={cn('text-2xl font-bold', metrics.warningAlerts > 0 ? 'text-amber-600' : 'text-text-primary')}>
             {metrics.warningAlerts}
           </p>
-          <p className="text-xs text-text-secondary">Monitor closely</p>
+          <p className="text-xs text-text-secondary">{t('dashboard.monitorClosely')}</p>
         </div>
 
         {/* Fields at Risk */}
@@ -130,18 +131,18 @@ export function StatusSummary({
             ? 'bg-orange-50 border-orange-200'
             : 'bg-white border-border-light'
         )}>
-          <p className="text-xs text-text-secondary mb-1">Fields at Risk</p>
+          <p className="text-xs text-text-secondary mb-1">{t('dashboard.fieldsAtRisk')}</p>
           <p className={cn('text-2xl font-bold', metrics.fieldsAtRisk > 0 ? 'text-orange-600' : 'text-text-primary')}>
             {metrics.fieldsAtRisk}
           </p>
-          <p className="text-xs text-text-secondary">of {fields.length} total</p>
+          <p className="text-xs text-text-secondary">{t('dashboard.ofTotal', { count: fields.length })}</p>
         </div>
       </div>
 
       {/* Critical Alert Details */}
       {metrics.criticalAlerts > 0 && (
         <div className="bg-red-50 border border-red-200 rounded p-3 mb-4">
-          <p className="text-sm font-semibold text-red-700 mb-2">🔴 Critical Alerts</p>
+          <p className="text-sm font-semibold text-red-700 mb-2">🔴 {t('dashboard.criticalAlerts')}</p>
           {alerts
             .filter(a => a.status === 'active' && a.severity === 'critical')
             .slice(0, 2)
@@ -158,7 +159,7 @@ export function StatusSummary({
               onClick={onViewAlerts}
               className="text-xs font-semibold text-red-600 hover:text-red-700 mt-2"
             >
-              View all {metrics.criticalAlerts} critical alerts →
+              {t('dashboard.viewAllCritical', { count: metrics.criticalAlerts })}
             </button>
           )}
         </div>
@@ -171,14 +172,14 @@ export function StatusSummary({
             onClick={onViewAlerts}
             className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-semibold hover:bg-red-700 transition-colors"
           >
-            View Critical Alerts
+            {t('dashboard.viewCriticalAlerts')}
           </button>
         )}
         <button
           onClick={onViewDetails}
           className="flex-1 px-4 py-2 bg-text-primary text-white rounded-lg text-sm font-semibold hover:bg-text-secondary transition-colors"
         >
-          View Details →
+          {t('dashboard.viewDetailsLink')}
         </button>
       </div>
     </div>

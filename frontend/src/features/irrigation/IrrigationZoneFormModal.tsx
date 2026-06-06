@@ -60,8 +60,8 @@ export function IrrigationZoneFormModal({ open, onClose, onSaved, zone, preSelec
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!fieldId) { setError('Select a field'); return; }
-    if (!deviceId) { setError('Select a device'); return; }
+    if (!fieldId) { setError(t('irrigation.selectField')); return; }
+    if (!deviceId) { setError(t('irrigation.selectDevice')); return; }
 
     setSaving(true);
     setError('');

@@ -17,6 +17,7 @@ type Handlers struct {
 	TelemetryHandler func(deviceID string, payload []byte)
 	HeartbeatHandler func(deviceID string, payload []byte)
 	ResponseHandler  func(deviceID string, payload []byte)
+	StatusHandler    func(deviceID string, payload []byte) // LWT / explicit device status
 }
 
 type Config struct {
@@ -85,6 +86,9 @@ func (c *Client) Subscribe() error {
 		HeartbeatTopic: c.handleHeartbeat,
 		ResponseTopic:  c.handleResponse,
 	}
+	if c.handlers.StatusHandler != nil {
+		handlers[StatusTopic] = c.handleStatus
+	}
 
 	for topic, handler := range handlers {
 		token := c.client.Subscribe(topic, 1, handler)
@@ -116,6 +120,13 @@ func (c *Client) handleResponse(_ mqtt.Client, msg mqtt.Message) {
 	deviceID := ExtractDeviceIDFromTopic(msg.Topic())
 	if c.handlers.ResponseHandler != nil {
 		c.handlers.ResponseHandler(deviceID, msg.Payload())
+	}
+}
+
+func (c *Client) handleStatus(_ mqtt.Client, msg mqtt.Message) {
+	deviceID := ExtractDeviceIDFromTopic(msg.Topic())
+	if c.handlers.StatusHandler != nil {
+		c.handlers.StatusHandler(deviceID, msg.Payload())
 	}
 }
 

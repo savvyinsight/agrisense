@@ -209,7 +209,9 @@ func (r *noopDeviceRepo) FindOrCreate(deviceID string) (*device.Device, error) {
 }
 func (r *noopDeviceRepo) ClaimDevice(deviceID string, userID, accountID int) error  { return nil }
 func (r *noopDeviceRepo) UnclaimDevice(deviceID string) error                       { return nil }
-func (r *noopDeviceRepo) MarkOfflineByHeartbeat(timeout time.Duration) (int, error) { return 0, nil }
+func (r *noopDeviceRepo) GetAndMarkOfflineByHeartbeat(timeout time.Duration) ([]device.Device, error) { return nil, nil }
+func (r *noopDeviceRepo) CountByStatus(status device.DeviceStatus) (int, error) { return 0, nil }
+func (r *noopDeviceRepo) UpdateStatusIfChanged(deviceID string, newStatus device.DeviceStatus) (bool, error) { return false, nil }
 
 // noopCacheRepo
 type noopCacheRepo struct{}

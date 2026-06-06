@@ -161,7 +161,7 @@ func (h *AutomationHandler) GetRule(c *gin.Context) {
 	}
 
 	// Verify account ownership
-	if rule.AccountID != nil && *rule.AccountID != accountID {
+	if rule.AccountID == nil || *rule.AccountID != accountID {
 		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
 		return
 	}
@@ -196,7 +196,7 @@ func (h *AutomationHandler) UpdateRule(c *gin.Context) {
 	}
 
 	// Verify account ownership
-	if rule.AccountID != nil && *rule.AccountID != accountID {
+	if rule.AccountID == nil || *rule.AccountID != accountID {
 		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
 		return
 	}
@@ -272,7 +272,7 @@ func (h *AutomationHandler) DeleteRule(c *gin.Context) {
 	}
 
 	// Verify account ownership
-	if rule.AccountID != nil && *rule.AccountID != accountID {
+	if rule.AccountID == nil || *rule.AccountID != accountID {
 		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
 		return
 	}
@@ -285,10 +285,36 @@ func (h *AutomationHandler) DeleteRule(c *gin.Context) {
 	c.JSON(http.StatusNoContent, nil)
 }
 
+// requireRuleOwnership fetches the rule by ID and verifies it belongs to the requesting account.
+// Returns the rule if OK, or writes an HTTP error and returns nil/false.
+func (h *AutomationHandler) requireRuleOwnership(c *gin.Context, ruleID int) (*AutomationRule, bool) {
+	accountID, ok := middleware.MustGetAccountID(c)
+	if !ok {
+		return nil, false
+	}
+
+	rule, err := h.automationService.GetRuleByID(ruleID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "rule not found"})
+		return nil, false
+	}
+
+	if rule.AccountID == nil || *rule.AccountID != accountID {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
+		return nil, false
+	}
+
+	return rule, true
+}
+
 func (h *AutomationHandler) PauseRule(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid rule ID"})
+		return
+	}
+
+	if _, ok := h.requireRuleOwnership(c, id); !ok {
 		return
 	}
 
@@ -307,6 +333,10 @@ func (h *AutomationHandler) ResumeRule(c *gin.Context) {
 		return
 	}
 
+	if _, ok := h.requireRuleOwnership(c, id); !ok {
+		return
+	}
+
 	if err := h.automationService.ResumeRule(id); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -322,6 +352,10 @@ func (h *AutomationHandler) ExecuteNow(c *gin.Context) {
 		return
 	}
 
+	if _, ok := h.requireRuleOwnership(c, id); !ok {
+		return
+	}
+
 	cmd, err := h.automationService.ExecuteNow(id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -332,13 +366,18 @@ func (h *AutomationHandler) ExecuteNow(c *gin.Context) {
 }
 
 func (h *AutomationHandler) GetDashboard(c *gin.Context) {
+	accountID, ok := middleware.MustGetAccountID(c)
+	if !ok {
+		return
+	}
+
 	userID, exists := c.Get("user_id")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "user not authenticated"})
 		return
 	}
 
-	data, err := h.automationService.GetDashboard(userID.(int))
+	data, err := h.automationService.GetDashboard(userID.(int), accountID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -368,6 +407,10 @@ func (h *AutomationHandler) GetCommandHistory(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid rule ID"})
+		return
+	}
+
+	if _, ok := h.requireRuleOwnership(c, id); !ok {
 		return
 	}
 

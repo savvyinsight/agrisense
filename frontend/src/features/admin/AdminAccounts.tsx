@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 
 interface AccountRow {
   id: number;
@@ -19,6 +20,7 @@ interface Stats {
 }
 
 export default function AdminAccounts() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [accounts, setAccounts] = useState<AccountRow[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
@@ -62,22 +64,22 @@ export default function AdminAccounts() {
   return (
     <div className="max-w-6xl mx-auto space-y-6">
       <div>
-        <h1 className="text-lg font-bold text-text-primary">Platform Admin</h1>
-        <p className="text-sm text-text-muted mt-0.5">Manage all farm accounts</p>
+        <h1 className="text-lg font-bold text-text-primary">{t('admin.platformAdmin')}</h1>
+        <p className="text-sm text-text-muted mt-0.5">{t('admin.manageAccounts')}</p>
       </div>
 
       {/* Stats cards */}
       <div className="grid grid-cols-3 gap-4">
         <div className="rounded-lg border border-border-default bg-surface-card p-4">
-          <span className="text-xs text-text-muted block">Total Accounts</span>
+          <span className="text-xs text-text-muted block">{t('admin.totalAccounts')}</span>
           <span className="text-2xl font-bold text-text-primary">{stats?.total_accounts ?? '-'}</span>
         </div>
         <div className="rounded-lg border border-border-default bg-surface-card p-4">
-          <span className="text-xs text-text-muted block">Total Users</span>
+          <span className="text-xs text-text-muted block">{t('admin.totalUsers')}</span>
           <span className="text-2xl font-bold text-text-primary">{stats?.total_users ?? '-'}</span>
         </div>
         <div className="rounded-lg border border-border-default bg-surface-card p-4">
-          <span className="text-xs text-text-muted block">Total Devices</span>
+          <span className="text-xs text-text-muted block">{t('admin.totalDevices')}</span>
           <span className="text-2xl font-bold text-text-primary">{stats?.total_devices ?? '-'}</span>
         </div>
       </div>
@@ -85,23 +87,23 @@ export default function AdminAccounts() {
       {/* Accounts table */}
       <div className="rounded-lg border border-border-default bg-surface-card overflow-hidden">
         <div className="p-4 border-b border-border-default">
-          <h2 className="text-sm font-semibold text-text-primary">All Accounts ({total})</h2>
+          <h2 className="text-sm font-semibold text-text-primary">{t('admin.allAccounts', { count: total })}</h2>
         </div>
         {loading ? (
-          <div className="p-8 text-center text-sm text-text-muted">Loading...</div>
+          <div className="p-8 text-center text-sm text-text-muted">{t('common.loading')}</div>
         ) : accounts.length === 0 ? (
-          <div className="p-8 text-center text-sm text-text-muted">No accounts found</div>
+          <div className="p-8 text-center text-sm text-text-muted">{t('admin.noAccounts')}</div>
         ) : (
           <>
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-surface-base text-left">
-                  <th className="px-4 py-3 text-text-muted font-medium">Name</th>
-                  <th className="px-4 py-3 text-text-muted font-medium">Tier</th>
-                  <th className="px-4 py-3 text-text-muted font-medium">Owner</th>
-                  <th className="px-4 py-3 text-text-muted font-medium text-right">Users</th>
-                  <th className="px-4 py-3 text-text-muted font-medium text-right">Devices</th>
-                  <th className="px-4 py-3 text-text-muted font-medium">Created</th>
+                  <th className="px-4 py-3 text-text-muted font-medium">{t('common.name')}</th>
+                  <th className="px-4 py-3 text-text-muted font-medium">{t('admin.tier')}</th>
+                  <th className="px-4 py-3 text-text-muted font-medium">{t('admin.owner')}</th>
+                  <th className="px-4 py-3 text-text-muted font-medium text-right">{t('admin.users')}</th>
+                  <th className="px-4 py-3 text-text-muted font-medium text-right">{t('admin.devices')}</th>
+                  <th className="px-4 py-3 text-text-muted font-medium">{t('admin.created')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -135,7 +137,7 @@ export default function AdminAccounts() {
             {/* Pagination */}
             <div className="flex items-center justify-between px-4 py-3 border-t border-border-default">
               <span className="text-xs text-text-muted">
-                Page {page} of {totalPages || 1}
+                {t('auditLog.pagination', { current: page, total: totalPages || 1 })}
               </span>
               <div className="flex gap-2">
                 <button
@@ -143,14 +145,14 @@ export default function AdminAccounts() {
                   disabled={page <= 1}
                   className="px-3 py-1.5 text-xs font-medium rounded-md border border-border-default text-text-secondary hover:bg-surface-hover disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                 >
-                  Previous
+                  {t('common.previous')}
                 </button>
                 <button
                   onClick={() => setPage(p => p + 1)}
                   disabled={page >= totalPages}
                   className="px-3 py-1.5 text-xs font-medium rounded-md border border-border-default text-text-secondary hover:bg-surface-hover disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                 >
-                  Next
+                  {t('common.next')}
                 </button>
               </div>
             </div>

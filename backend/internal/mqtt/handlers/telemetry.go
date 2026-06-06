@@ -2,21 +2,47 @@ package handlers
 
 import (
 	"log"
+	"sync"
+	"time"
 
 	"github.com/savvyinsight/agrisense/internal/data"
 	"github.com/savvyinsight/agrisense/internal/device"
 	"github.com/savvyinsight/agrisense/internal/middleware"
+	"github.com/savvyinsight/agrisense/internal/websocket"
 )
 
 var (
 	dataService *data.Service
 	deviceRepo  device.DeviceRepository
+
+	// dedupMap prevents duplicate "online" broadcasts when telemetry and heartbeat
+	// arrive in quick succession. Maps deviceID → expiry time.
+	// A single background goroutine cleans up expired entries.
+	dedupMap   sync.Map
+	dedupOnce  sync.Once
+	dedupTTL   = 30 * time.Second
 )
 
 // Init sets the data service and device repository for handlers
 func Init(ds *data.Service, dr device.DeviceRepository) {
 	dataService = ds
 	deviceRepo = dr
+	// Start a single cleanup goroutine for the dedup map (once per process).
+	dedupOnce.Do(func() {
+		go func() {
+			ticker := time.NewTicker(10 * time.Second)
+			defer ticker.Stop()
+			for range ticker.C {
+				now := time.Now()
+				dedupMap.Range(func(key, value any) bool {
+					if now.After(value.(time.Time)) {
+						dedupMap.Delete(key)
+					}
+					return true
+				})
+			}
+		}()
+	})
 }
 
 func HandleTelemetry(deviceID string, payload []byte) {
@@ -28,13 +54,13 @@ func HandleTelemetry(deviceID string, payload []byte) {
 	// Record message for metrics
 	middleware.RecordMessage()
 
-	// Auto-register device if it doesn't exist yet
+	// Atomically transition device offline→online. Only broadcast if the
+	// status actually changed (prevents duplicate toasts from concurrent handlers).
 	if deviceRepo != nil {
 		if _, err := deviceRepo.FindOrCreate(deviceID); err != nil {
 			log.Printf("Failed to find/create device %s: %v", deviceID, err)
-		}
-		if err := deviceRepo.UpdateStatus(deviceID, device.DeviceStatusOnline); err != nil {
-			log.Printf("Failed to update device status to online for %s: %v", deviceID, err)
+		} else {
+			tryBroadcastOnline(deviceID)
 		}
 		if err := deviceRepo.UpdateHeartbeat(deviceID); err != nil {
 			log.Printf("Failed to update heartbeat for device %s: %v", deviceID, err)
@@ -46,30 +72,66 @@ func HandleTelemetry(deviceID string, payload []byte) {
 	}
 }
 
-// type TelemetryData struct {
-//     Timestamp time.Time                `json:"timestamp"`
-//     Readings  []SensorReading          `json:"readings"`
-//     Metadata  map[string]interface{}   `json:"metadata,omitempty"`
-// }
+// tryBroadcastOnline atomically marks the device online and broadcasts a
+// device_status_changed message if the status actually transitioned.
+// Uses dedupMap to prevent duplicate broadcasts within dedupTTL.
+func tryBroadcastOnline(deviceID string) {
+	// Dedup: skip if we recently broadcast "online" for this device
+	if expiry, loaded := dedupMap.Load(deviceID); loaded && time.Now().Before(expiry.(time.Time)) {
+		return
+	}
 
-// type SensorReading struct {
-//     Sensor string  `json:"sensor"` // temperature, humidity, etc.
-//     Value  float64 `json:"value"`
-// }
+	// Atomic transition: UPDATE ... WHERE status != 'online'
+	changed, err := deviceRepo.UpdateStatusIfChanged(deviceID, device.DeviceStatusOnline)
+	if err != nil {
+		log.Printf("Failed to update device status for %s: %v", deviceID, err)
+		return
+	}
+	if !changed {
+		return // already online, no broadcast needed
+	}
 
-// func HandleTelemetry(deviceID string, payload []byte) {
-//     log.Printf("Received telemetry from device %s", deviceID)
+	// Set dedup entry (broadcast just happened)
+	dedupMap.Store(deviceID, time.Now().Add(dedupTTL))
 
-//     var data TelemetryData
-//     if err := json.Unmarshal(payload, &data); err != nil {
-//         log.Printf("Failed to parse telemetry from device %s: %v", deviceID, err)
-//         return
-//     }
+	// Get device info for the broadcast payload
+	dev, err := deviceRepo.GetByDeviceID(deviceID)
+	if err != nil {
+		log.Printf("Failed to get device %s for broadcast: %v", deviceID, err)
+		return
+	}
 
-//     // TODO: Pass to data service for processing
-//     log.Printf("Device %s sent %d readings", deviceID, len(data.Readings))
+	log.Printf("Device %s came back online (was offline)", deviceID)
+	hub := websocket.GetHub()
+	msg := map[string]interface{}{
+		"type": "device_status_changed",
+		"payload": map[string]interface{}{
+			"device_id": dev.DeviceID,
+			"name":      dev.Name,
+			"status":    "online",
+			"field_id":  dev.FieldID,
+			"user_id":   dev.UserID,
+		},
+	}
+	if dev.UserID != nil {
+		hub.BroadcastToUser(*dev.UserID, msg)
+	} else {
+		hub.BroadcastAll(msg)
+	}
 
-//     for _, reading := range data.Readings {
-//         log.Printf("  - %s: %.2f", reading.Sensor, reading.Value)
-//     }
-// }
+	// Update Prometheus metric
+	updateActiveDeviceCount()
+}
+
+// updateActiveDeviceCount queries the current online device count and updates the Prometheus gauge.
+func updateActiveDeviceCount() {
+	if deviceRepo == nil {
+		return
+	}
+	count, err := deviceRepo.CountByStatus(device.DeviceStatusOnline)
+	if err != nil {
+		log.Printf("Failed to count online devices for metrics: %v", err)
+		return
+	}
+	middleware.SetActiveDevices(count)
+}

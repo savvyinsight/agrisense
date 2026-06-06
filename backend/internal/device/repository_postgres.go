@@ -402,14 +402,64 @@ func (r *PostgresDeviceRepository) Delete(id, accountID int) error {
 	return nil
 }
 
-func (r *PostgresDeviceRepository) MarkOfflineByHeartbeat(timeout time.Duration) (int, error) {
+// GetAndMarkOfflineByHeartbeat atomically marks stale devices as offline and returns them.
+// Only returns the columns needed for WebSocket broadcast (id, device_id, name, field_id, user_id)
+// to minimize row-level lock duration and memory usage during batch offline events.
+func (r *PostgresDeviceRepository) GetAndMarkOfflineByHeartbeat(timeout time.Duration) ([]Device, error) {
 	cutoff := time.Now().Add(-timeout)
-	result, err := r.DB.Exec(
-		`UPDATE devices SET status = 'offline', updated_at = NOW()
-		 WHERE status = 'online' AND last_heartbeat < $1`, cutoff)
+	query := `
+		UPDATE devices SET status = 'offline', updated_at = NOW()
+		WHERE status = 'online' AND last_heartbeat < $1
+		RETURNING id, device_id, name, field_id, user_id
+	`
+	rows, err := r.DB.Query(query, cutoff)
 	if err != nil {
-		return 0, err
+		return nil, err
+	}
+	defer rows.Close()
+
+	var devices []Device
+	for rows.Next() {
+		var d Device
+		var fieldID sql.NullInt64
+		var userID sql.NullInt64
+
+		if err := rows.Scan(&d.ID, &d.DeviceID, &d.Name, &fieldID, &userID); err != nil {
+			return nil, err
+		}
+		if fieldID.Valid {
+			fid := int(fieldID.Int64)
+			d.FieldID = &fid
+		}
+		if userID.Valid {
+			uid := int(userID.Int64)
+			d.UserID = &uid
+		}
+		d.Status = DeviceStatusOffline
+		devices = append(devices, d)
+	}
+	return devices, rows.Err()
+}
+
+func (r *PostgresDeviceRepository) CountByStatus(status DeviceStatus) (int, error) {
+	var count int
+	err := r.DB.QueryRow(`SELECT COUNT(*) FROM devices WHERE status = $1`, status).Scan(&count)
+	return count, err
+}
+
+// UpdateStatusIfChanged atomically sets the device to newStatus only if it is
+// currently in a different status. Returns true if the row was actually updated.
+// This prevents duplicate broadcasts when concurrent handlers try to mark the
+// same device online/offline simultaneously.
+func (r *PostgresDeviceRepository) UpdateStatusIfChanged(deviceID string, newStatus DeviceStatus) (bool, error) {
+	result, err := r.DB.Exec(
+		`UPDATE devices SET status = $1, updated_at = NOW()
+		 WHERE device_id = $2 AND status != $1`,
+		newStatus, deviceID,
+	)
+	if err != nil {
+		return false, err
 	}
 	n, _ := result.RowsAffected()
-	return int(n), nil
+	return n > 0, nil
 }

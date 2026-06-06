@@ -16,13 +16,15 @@ func NewService(cfg Config,
 	dataService *data.Service,
 	telemetryHandler func(deviceID string, payload []byte),
 	heartbeatHandler func(deviceID string, payload []byte),
-	responseHandler func(deviceID string, payload []byte), // New param
+	responseHandler func(deviceID string, payload []byte),
+	statusHandler func(deviceID string, payload []byte), // LWT / device status
 ) (*Service, error) {
 	// Store handlers directly
 	handlers := &Handlers{
 		TelemetryHandler: telemetryHandler,
 		HeartbeatHandler: heartbeatHandler,
 		ResponseHandler:  responseHandler,
+		StatusHandler:    statusHandler,
 	}
 
 	client, err := NewClient(cfg, handlers)

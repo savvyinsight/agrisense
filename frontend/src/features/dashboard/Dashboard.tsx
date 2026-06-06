@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/shared/stores/authStore';
 import { useAlertsStore } from '@/shared/stores/alertsStore';
+import { useDevicesStore } from '@/shared/stores/devicesStore';
 import { useWebSocket } from '@/shared/hooks/useWebSocket';
 import { StatusCard } from '@/shared/components/StatusCard';
 import { AlertBanner } from '@/shared/components/AlertBanner';
@@ -14,7 +15,7 @@ import { getActiveAlerts, acknowledgeAlert } from '@/features/alerts/api';
 import { getZones, startZone, stopZone, type IrrigationZone } from '@/features/irrigation/api';
 import { toast } from '@/shared/components/Toast';
 import { getFields } from '@/features/fields/api';
-import type { Field, Alert2, WebSocketMessage, Device } from '@/shared/types';
+import type { Field, Alert2, WebSocketMessage } from '@/shared/types';
 import { cn } from '@/shared/lib/cn';
 
 function mapSeverity(s: string): Alert2['severity'] {
@@ -34,8 +35,8 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const { isAdmin } = useAuthStore();
   const { alerts, setAlerts, addAlert } = useAlertsStore();
+  const { devices, setDevices, updateDeviceStatus } = useDevicesStore();
   const token = useAuthStore((s) => s.token);
-  const [devices, setDevices] = useState<Device[]>([]);
   const [fields, setFields] = useState<Field[]>([]);
   const [totalWater, setTotalWater] = useState(0);
   const [zones, setZones] = useState<IrrigationZone[]>([]);
@@ -57,30 +58,20 @@ export default function Dashboard() {
           severity: mapSeverity(p.severity as string),
           status: mapStatus(p.status as string),
           triggered_at: (p.triggered_at as string) || new Date().toISOString(),
-          recommended_action: p.severity === 'critical' ? 'Inspect immediately' : 'Monitor situation',
+          recommended_action: p.severity === 'critical' ? t('alerts.defaultCriticalAction') : t('alerts.defaultMonitorAction'),
           confidence: p.severity === 'critical' ? 95 : 85,
         };
         addAlert(newAlert);
         break;
       }
-      case 'device_connected': {
-        const device = (data as any).payload as { device_id: string; name?: string };
-        toast('success', `Device ${device.name || device.device_id} connected`);
-        break;
-      }
-      case 'device_disconnected': {
-        const device = (data as any).payload as { device_id: string; name?: string };
-        const rawAlert: Partial<Alert2> = {
-          id: Date.now(),
-          device_id: device.device_id,
-          device_name: device.name,
-          title: `Device offline: ${device.name || device.device_id}`,
-          severity: 'high',
-          status: 'active',
-          triggered_at: new Date().toISOString(),
-          recommended_action: 'Check device connectivity',
-        };
-        addAlert(rawAlert as Alert2);
+      case 'device_status_changed': {
+        const p = data.payload as { device_id: string; name?: string; status: 'online' | 'offline' };
+        updateDeviceStatus(p.device_id, p.status, p.name);
+        if (p.status === 'offline') {
+          toast('info', t('dashboard.deviceWentOffline', { name: p.name || p.device_id }));
+        } else {
+          toast('success', t('dashboard.deviceBackOnline', { name: p.name || p.device_id }));
+        }
         break;
       }
     }
@@ -96,8 +87,9 @@ export default function Dashboard() {
         getFields(),
       ]);
       if (deviceRes.success && deviceRes.data) {
-        setDevices(deviceRes.data.devices || []);
-        const ids = (deviceRes.data.devices || []).map((d: any) => String(d.id));
+        const fetchedDevices = deviceRes.data.devices || [];
+        setDevices(fetchedDevices);
+        const ids = fetchedDevices.map((d: any) => String(d.id));
         await getDevicesDataLatest(ids);
       }
       if (alertRes.success && alertRes.data) {
@@ -111,7 +103,7 @@ export default function Dashboard() {
           status: mapStatus(a.status),
           triggered_at: a.triggered_at,
           confidence: 85,
-          recommended_action: a.severity === 'critical' ? 'Inspect immediately' : 'Monitor situation',
+          recommended_action: a.severity === 'critical' ? t('alerts.defaultCriticalAction') : t('alerts.defaultMonitorAction'),
         })));
       }
       if (fieldRes.success && fieldRes.data) setFields(fieldRes.data);
@@ -418,7 +410,7 @@ export default function Dashboard() {
                         </span>
                         <span className="text-text-muted"> / {zone.target_moisture}%</span>
                       </span>
-                      <span className="text-text-muted">Target</span>
+                      <span className="text-text-muted">{t('common.target')}</span>
                     </div>
                     <div className="h-2 bg-surface-elevated rounded-full overflow-hidden">
                       <div

@@ -59,23 +59,38 @@ func (h *Hub) run() {
 			h.mu.Unlock()
 			log.Printf("WebSocket client unregistered: user %d, total clients: %d", client.userID, len(h.clients))
 		case message := <-h.broadcast:
-			log.Printf("Hub broadcasting to %d clients", len(h.clients))
-			h.mu.Lock()
-			var dead []*Client
-			for client := range h.clients {
-				select {
-				case client.send <- message:
-				default:
-					dead = append(dead, client)
-				}
-			}
-			for _, client := range dead {
+			h.broadcastAll(message)
+		}
+	}
+}
+
+// broadcastAll sends a message to all connected clients.
+// Uses a read lock for the send phase (concurrent sends are safe) and only
+// acquires a write lock to clean up dead clients afterward.
+func (h *Hub) broadcastAll(message []byte) {
+	h.mu.RLock()
+	var dead []*Client
+	for client := range h.clients {
+		select {
+		case client.send <- message:
+		default:
+			dead = append(dead, client)
+		}
+	}
+	h.mu.RUnlock()
+
+	if len(dead) > 0 {
+		h.mu.Lock()
+		for _, client := range dead {
+			// Re-check: another goroutine may have already cleaned this client
+			if _, ok := h.clients[client]; ok {
 				close(client.send)
 				delete(h.clients, client)
 				delete(h.userClients, client.userID)
 			}
-			h.mu.Unlock()
 		}
+		h.mu.Unlock()
+		log.Printf("Hub cleaned up %d dead client(s)", len(dead))
 	}
 }
 
@@ -94,23 +109,29 @@ func (h *Hub) BroadcastToUser(userID int, data interface{}) {
 		return
 	}
 
-	h.mu.Lock()
-	defer h.mu.Unlock()
-
-	var dead []*Client
+	h.mu.RLock()
+	var target *Client
 	for client := range h.clients {
 		if client.userID == userID {
-			select {
-			case client.send <- payload:
-			default:
-				dead = append(dead, client)
-			}
+			target = client
+			break
 		}
 	}
-	for _, client := range dead {
-		close(client.send)
-		delete(h.clients, client)
-		delete(h.userClients, client.userID)
+	h.mu.RUnlock()
+
+	if target != nil {
+		select {
+		case target.send <- payload:
+		default:
+			// Client's buffer is full — clean it up
+			h.mu.Lock()
+			if _, ok := h.clients[target]; ok {
+				close(target.send)
+				delete(h.clients, target)
+				delete(h.userClients, target.userID)
+			}
+			h.mu.Unlock()
+		}
 	}
 }
 

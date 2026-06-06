@@ -183,6 +183,12 @@ func runServer(cliCtx *cli.Context) error {
 	// Create MQTT handler services (same as old mqtt-handler/main.go)
 	mqtthandlers.Init(dataService, deviceRepo)
 
+	// Device status manager — detects devices that stopped heartbeating and marks them offline.
+	// Runs a background loop every 30s, considers devices offline after 2min of silence.
+	statusManager := mqtthandlers.NewStatusManager(deviceRepo, 2*time.Minute, 30*time.Second)
+	statusManager.Start()
+	defer statusManager.Stop()
+
 	// Response callback for command responses
 	responseCallback := func(deviceID string, payload []byte) {
 		controlService.HandleCommandResponse(deviceID, payload)
@@ -198,6 +204,7 @@ func runServer(cliCtx *cli.Context) error {
 		func(deviceID string, payload []byte) {
 			mqtthandlers.HandleResponse(deviceID, payload, responseCallback)
 		},
+		mqtthandlers.HandleStatus,
 	)
 	if err != nil {
 		log.Fatalf("Failed to create MQTT service: %v", err)
@@ -330,12 +337,12 @@ func runServer(cliCtx *cli.Context) error {
 			automation.GET("/rules/:id", automationHandler.GetRule)
 			automation.PUT("/rules/:id", middleware.GinRequireRole(permissionRepo, "account_owner", "farm_manager"), automationHandler.UpdateRule)
 			automation.DELETE("/rules/:id", middleware.GinRequireRole(permissionRepo, "account_owner", "farm_manager"), automationHandler.DeleteRule)
-			automation.PUT("/rules/:id/pause", automationHandler.PauseRule)
-			automation.PUT("/rules/:id/resume", automationHandler.ResumeRule)
-			automation.POST("/rules/:id/execute", automationHandler.ExecuteNow)
+			automation.PUT("/rules/:id/pause", middleware.GinRequireRole(permissionRepo, "account_owner", "farm_manager"), automationHandler.PauseRule)
+			automation.PUT("/rules/:id/resume", middleware.GinRequireRole(permissionRepo, "account_owner", "farm_manager"), automationHandler.ResumeRule)
+			automation.POST("/rules/:id/execute", middleware.GinRequireRole(permissionRepo, "account_owner", "farm_manager", "operator"), automationHandler.ExecuteNow)
 			automation.GET("/rules/:id/commands", automationHandler.GetCommandHistory)
 			automation.GET("/dashboard", automationHandler.GetDashboard)
-			automation.POST("/global-toggle", automationHandler.SetGlobalAutomation)
+			automation.POST("/global-toggle", middleware.GinRequireRole(permissionRepo, "account_owner"), automationHandler.SetGlobalAutomation)
 		}
 
 		// Notification routes

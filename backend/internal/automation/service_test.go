@@ -143,7 +143,9 @@ func (f *fakeDeviceRepo) List(accountID, userID int, filter device.DeviceFilter,
 func (f *fakeDeviceRepo) FindOrCreate(deviceID string) (*device.Device, error)     { return nil, nil }
 func (f *fakeDeviceRepo) ClaimDevice(deviceID string, userID, accountID int) error { return nil }
 func (f *fakeDeviceRepo) UnclaimDevice(deviceID string) error                      { return nil }
-func (f *fakeDeviceRepo) MarkOfflineByHeartbeat(timeout time.Duration) (int, error) { return 0, nil }
+func (f *fakeDeviceRepo) GetAndMarkOfflineByHeartbeat(timeout time.Duration) ([]device.Device, error) { return nil, nil }
+func (f *fakeDeviceRepo) CountByStatus(status device.DeviceStatus) (int, error) { return 0, nil }
+func (f *fakeDeviceRepo) UpdateStatusIfChanged(deviceID string, newStatus device.DeviceStatus) (bool, error) { return false, nil }
 
 type fakeCommandExecutor struct {
 	executeFunc func(deviceID int, command string, parameters map[string]interface{}, userID *int, onStatusChange func(int, string)) (*control.Command, error)

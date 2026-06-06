@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { register } from '@/features/auth/api';
 
 export default function AcceptInvitation() {
+  const { t } = useTranslation();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const token = searchParams.get('token') || '';
@@ -22,7 +24,7 @@ export default function AcceptInvitation() {
 
   useEffect(() => {
     if (!token) {
-      setError('No invitation token provided');
+      setError(t('auth.noInvitationToken'));
       setLoading(false);
       return;
     }
@@ -39,10 +41,10 @@ export default function AcceptInvitation() {
         setError('');
       } else {
         const data = await res.json();
-        setError(data.error || 'Invalid or expired invitation');
+        setError(data.error || t('auth.invalidInvitation'));
       }
     } catch {
-      setError('Failed to load invitation');
+      setError(t('auth.failedToLoadInvitation'));
     }
     setLoading(false);
   };
@@ -57,7 +59,7 @@ export default function AcceptInvitation() {
     if (result.success) {
       navigate('/login?accepted=1');
     } else {
-      setError(result.error || 'Registration failed');
+      setError(result.error || t('auth.registerFailed'));
     }
     setSubmitting(false);
   };
@@ -76,7 +78,7 @@ export default function AcceptInvitation() {
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
           </svg>
-          <p className="text-sm text-text-muted">Loading invitation...</p>
+          <p className="text-sm text-text-muted">{t('auth.loadingInvitation')}</p>
         </div>
       </div>
     );
@@ -92,8 +94,8 @@ export default function AcceptInvitation() {
 
       <div className="w-full max-w-sm relative z-10">
         <div className="text-center mb-8 animate-slide-up">
-          <h1 className="text-3xl font-bold text-text-primary tracking-tight">Accept Invitation</h1>
-          <p className="text-sm text-text-muted mt-2">Complete your account setup</p>
+          <h1 className="text-3xl font-bold text-text-primary tracking-tight">{t('auth.acceptInvitation')}</h1>
+          <p className="text-sm text-text-muted mt-2">{t('auth.completeSetup')}</p>
         </div>
 
         <div className="rounded-xl border border-border-default bg-surface-card p-6 shadow-lg backdrop-blur-sm bg-opacity-95 animate-slide-up" style={{ animationDelay: '0.1s' }}>
@@ -104,7 +106,7 @@ export default function AcceptInvitation() {
                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
               </svg>
               {error}
-              {!token && <span className="block mt-2 text-xs">Please ask the account owner to send you a new invitation.</span>}
+              {!token && <span className="block mt-2 text-xs">{t('auth.askForNewInvitation')}</span>}
             </div>
           )}
 
@@ -112,10 +114,10 @@ export default function AcceptInvitation() {
             <>
               {/* Invitation Info Card */}
               <div className="text-center mb-6 p-4 rounded-lg bg-gradient-to-br from-accent/10 to-accent/5 border border-accent/20 animate-slide-up">
-                <p className="text-sm text-text-secondary">You've been invited to join</p>
+                <p className="text-sm text-text-secondary">{t('auth.invitedToJoin')}</p>
                 <p className="text-lg font-bold text-text-primary mt-2">{invitation.account_name}</p>
                 <div className="mt-3 flex items-center justify-center gap-2">
-                  <span className="text-xs text-text-muted">Role:</span>
+                  <span className="text-xs text-text-muted">{t('settings.role')}:</span>
                   <span className="inline-block px-2 py-1 rounded-md bg-accent/20 text-accent text-xs font-medium capitalize">
                     {invitation.role}
                   </span>
@@ -125,7 +127,7 @@ export default function AcceptInvitation() {
               {/* Form */}
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="animate-slide-up" style={{ animationDelay: '0s' }}>
-                  <label className="block text-sm font-medium text-text-secondary mb-1.5">Username</label>
+                  <label className="block text-sm font-medium text-text-secondary mb-1.5">{t('auth.username')}</label>
                   <input
                     type="text"
                     value={username}
@@ -136,7 +138,7 @@ export default function AcceptInvitation() {
                 </div>
 
                 <div className="animate-slide-up" style={{ animationDelay: '0.1s' }}>
-                  <label className="block text-sm font-medium text-text-secondary mb-1.5">Email</label>
+                  <label className="block text-sm font-medium text-text-secondary mb-1.5">{t('auth.email')}</label>
                   <input
                     type="email"
                     value={invitation.email}
@@ -146,13 +148,13 @@ export default function AcceptInvitation() {
                 </div>
 
                 <div className="animate-slide-up" style={{ animationDelay: '0.2s' }}>
-                  <label className="block text-sm font-medium text-text-secondary mb-1.5">Password</label>
+                  <label className="block text-sm font-medium text-text-secondary mb-1.5">{t('auth.password')}</label>
                   <input
                     type="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     className="w-full px-3 py-2 rounded-lg bg-surface-base border border-border-default text-text-primary placeholder-text-muted text-sm focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/50 focus:shadow-lg transition-all duration-200"
-                    placeholder="Minimum 6 characters"
+                    placeholder={t('auth.minimumChars')}
                     minLength={6}
                     required
                   />
@@ -170,10 +172,10 @@ export default function AcceptInvitation() {
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                       </svg>
-                      Creating account...
+                      {t('auth.creatingAccount')}
                     </span>
                   ) : (
-                    'Accept & Create Account'
+                    t('auth.acceptAndCreate')
                   )}
                 </button>
               </form>

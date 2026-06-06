@@ -10,6 +10,7 @@ const (
 	TelemetryTopic = "device/+/telemetry"
 	HeartbeatTopic = "device/+/heartbeat"
 	ResponseTopic  = "device/+/response"
+	StatusTopic    = "device/+/status" // LWT / explicit status updates from devices
 
 	// Platform → Device
 	CommandTopic = "device/%s/commands"
