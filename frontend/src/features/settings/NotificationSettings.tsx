@@ -13,14 +13,14 @@ import {
 } from '@/features/settings/notificationApi';
 
 const channelIcons: Record<string, string> = { email: '✉️', sms: '💬', webhook: '🔗' };
-const channelFields: Record<string, { key: string; label: string; placeholder: string }[]> = {
-  email: [{ key: 'address', label: 'Email Address', placeholder: 'alert@example.com' }],
-  sms: [{ key: 'phone', label: 'Phone Number', placeholder: '+1234567890' }],
+const getChannelFields = (t: (key: string) => string): Record<string, { key: string; label: string; placeholder: string }[]> => ({
+  email: [{ key: 'address', label: t('notification.emailAddress'), placeholder: t('notification.emailPlaceholder') }],
+  sms: [{ key: 'phone', label: t('notification.phoneNumber'), placeholder: t('notification.phonePlaceholder') }],
   webhook: [
-    { key: 'url', label: 'Webhook URL', placeholder: 'https://example.com/webhook' },
-    { key: 'secret', label: 'Secret (optional)', placeholder: 'Bearer token or secret' },
+    { key: 'url', label: t('notification.webhookUrl'), placeholder: t('notification.webhookPlaceholder') },
+    { key: 'secret', label: t('notification.secret'), placeholder: t('notification.secretPlaceholder') },
   ],
-};
+});
 
 export default function NotificationSettings() {
   const { t } = useTranslation();
@@ -273,7 +273,7 @@ export default function NotificationSettings() {
             />
           </div>
 
-          {(channelFields[channelType] || []).map((field) => (
+          {(getChannelFields(t)[channelType] || []).map((field) => (
             <div key={field.key}>
               <label className="block text-xs font-medium text-text-secondary mb-1.5">{field.label}</label>
               <input

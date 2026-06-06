@@ -1,6 +1,7 @@
 import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { Box, CircularProgress, Alert } from '@mui/material';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/features/auth/AuthContext';
 import usePermission from '@/hooks/usePermission';
 
@@ -17,6 +18,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   farmId,
   fallback,
 }) => {
+  const { t } = useTranslation();
   const { user, loading } = useAuth();
   const { can } = usePermission();
   const location = useLocation();
@@ -50,7 +52,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
       ) : (
         <Box sx={{ p: 2 }}>
           <Alert severity="error">
-            Access Denied. You do not have permission to view this page.
+            {t('component.noPermission')}
           </Alert>
         </Box>
       );

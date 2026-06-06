@@ -195,7 +195,7 @@ export default function Alerts() {
       updateAlert(id, { snoozed_until: snoozeUntil } as any);
       toast('success', t('alerts.snoozedFor', { minutes }));
     } else {
-      toast('error', res.error || 'Failed to snooze');
+      toast('error', res.error || t('alerts.snoozeFailed'));
     }
     setSnoozing((prev) => { const n = new Set(prev); n.delete(id); return n; });
   };

@@ -13,15 +13,15 @@ const statusColor: Record<CommandStatus, string> = {
   executed: 'text-success', failed: 'text-critical',
 };
 
-function timeAgo(dateStr?: string): string {
+function timeAgo(dateStr: string | undefined, t: (k: string, opts?: Record<string, unknown>) => string): string {
   if (!dateStr) return '';
   const diff = Date.now() - new Date(dateStr).getTime();
   const mins = Math.floor(diff / 60000);
-  if (mins < 1) return 'just now';
-  if (mins < 60) return `${mins}m ago`;
+  if (mins < 1) return t('fields.justNow');
+  if (mins < 60) return t('fields.minutesAgo', { mins });
   const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  return `${Math.floor(hrs / 24)}d ago`;
+  if (hrs < 24) return t('fields.hoursAgo', { hrs });
+  return t('fields.daysAgo', { days: Math.floor(hrs / 24) });
 }
 
 export default function AutomationDashboard() {
@@ -55,7 +55,7 @@ export default function AutomationDashboard() {
       setData({ ...data, global_automation_enabled: newValue });
       toast('success', newValue ? t('automationDashboard.enabled') : t('automationDashboard.disabled'));
     } else {
-      toast('error', res.error || 'Failed to toggle');
+      toast('error', res.error || t('automationDashboard.failedToToggle'));
     }
     setToggling(false);
   };
@@ -75,7 +75,7 @@ export default function AutomationDashboard() {
       <div className="max-w-6xl mx-auto">
         <div className="rounded-lg border border-border-default bg-surface-card p-8 text-center">
           <span className="text-3xl block mb-3">🔄</span>
-          <p className="text-sm text-text-muted">Failed to load dashboard</p>
+          <p className="text-sm text-text-muted">{t('automationDashboard.failedToLoad')}</p>
         </div>
       </div>
     );
@@ -142,7 +142,7 @@ export default function AutomationDashboard() {
   );
 }
 
-function ExecutionRow({ execution: e, t }: { execution: AutomationExecution; t: (k: string) => string }) {
+function ExecutionRow({ execution: e, t }: { execution: AutomationExecution; t: (k: string, opts?: Record<string, unknown>) => string }) {
   const triggeredByKey: Record<string, string> = {
     sensor: 'automationDashboard.triggeredBySensor',
     schedule: 'automationDashboard.triggeredBySchedule',
@@ -163,13 +163,13 @@ function ExecutionRow({ execution: e, t }: { execution: AutomationExecution; t: 
       </div>
       <div className="flex items-center gap-3 shrink-0">
         <CommandStatusStepper status={e.status} />
-        <span className="text-[10px] text-text-muted">{timeAgo(e.triggered_at)}</span>
+        <span className="text-[10px] text-text-muted">{timeAgo(e.triggered_at, t)}</span>
       </div>
     </div>
   );
 }
 
-function FieldCard({ field: f, t }: { field: FieldAutomationSummary; t: (k: string) => string }) {
+function FieldCard({ field: f, t }: { field: FieldAutomationSummary; t: (k: string, opts?: Record<string, unknown>) => string }) {
   const statusDot = f.last_execution_status === 'executed' ? 'bg-success' :
     f.last_execution_status === 'failed' ? 'bg-critical' :
     f.last_execution_status === 'sent' ? 'bg-info' : 'bg-text-muted';
@@ -191,7 +191,7 @@ function FieldCard({ field: f, t }: { field: FieldAutomationSummary; t: (k: stri
         </div>
       </div>
       {f.last_execution_at && (
-        <p className="text-[10px] text-text-muted mt-2">{t('automationDashboard.lastRun')}: {timeAgo(f.last_execution_at)}</p>
+        <p className="text-[10px] text-text-muted mt-2">{t('automationDashboard.lastRun')}: {timeAgo(f.last_execution_at, t)}</p>
       )}
     </div>
   );

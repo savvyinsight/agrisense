@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { Alert2 } from '@/shared/types';
 import { cn } from '@/shared/lib/cn';
 
@@ -13,6 +14,7 @@ export function CriticalAlertsSection({
   onViewAll,
   onAcknowledge,
 }: CriticalAlertsSectionProps) {
+  const { t } = useTranslation();
   // Filter for critical and warning alerts only
   const activeAlerts = useMemo(() => {
     return alerts
@@ -44,10 +46,10 @@ export function CriticalAlertsSection({
               <span className="text-2xl">🔴</span>
               <div>
                 <p className="font-bold text-red-700 text-sm md:text-base">
-                  {criticalCount} Critical Alert{criticalCount !== 1 ? 's' : ''}
+                  {t('dashboard.criticalAlertCount', { count: criticalCount })}
                 </p>
                 {warningCount > 0 && (
-                  <p className="text-xs text-amber-700">+ {warningCount} Warning{warningCount !== 1 ? 's' : ''}</p>
+                  <p className="text-xs text-amber-700">{t('dashboard.warningCount', { count: warningCount })}</p>
                 )}
               </div>
             </>
@@ -56,9 +58,9 @@ export function CriticalAlertsSection({
               <span className="text-2xl">🟡</span>
               <div>
                 <p className="font-bold text-amber-700 text-sm md:text-base">
-                  {warningCount} Warning{warningCount !== 1 ? 's' : ''}
+                  {t('dashboard.warningAlertCount', { count: warningCount })}
                 </p>
-                <p className="text-xs text-amber-700">Requires attention</p>
+                <p className="text-xs text-amber-700">{t('dashboard.requiresAttention')}</p>
               </div>
             </>
           )}
@@ -85,13 +87,13 @@ export function CriticalAlertsSection({
                   {alert.severity === 'critical' ? '🔴' : '🟡'} {alert.title}
                 </p>
                 {alert.field_name && (
-                  <p className="text-xs text-text-secondary">Field: {alert.field_name}</p>
+                  <p className="text-xs text-text-secondary">{t('dashboard.fieldLabel', { name: alert.field_name })}</p>
                 )}
               </div>
               <button
                 onClick={() => onAcknowledge?.(alert.id)}
                 className="ml-2 px-2 py-1 text-xs font-medium text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded transition-colors"
-                title="Acknowledge this alert"
+                title={t('dashboard.acknowledgeThisAlert')}
               >
                 ✓
               </button>
@@ -119,14 +121,14 @@ export function CriticalAlertsSection({
       <div className="flex items-center justify-between">
         <p className="text-xs text-amber-700">
           {activeAlerts.length < (alerts.filter(a => a.status === 'active' && (a.severity === 'critical' || a.severity === 'high')).length) && (
-            `Showing ${activeAlerts.length} of ${alerts.filter(a => a.status === 'active' && (a.severity === 'critical' || a.severity === 'high')).length} alerts`
+            t('dashboard.showingAlerts', { shown: activeAlerts.length, total: alerts.filter(a => a.status === 'active' && (a.severity === 'critical' || a.severity === 'high')).length })
           )}
         </p>
         <button
           onClick={onViewAll}
           className="px-3 py-1.5 text-xs font-semibold bg-amber-600 text-white rounded hover:bg-amber-700 transition-colors"
         >
-          View All Alerts →
+          {t('dashboard.viewAllAlertsLink')}
         </button>
       </div>
     </div>
