@@ -4,7 +4,8 @@ run:
 	go run ./cmd/agrisense/
 
 docker-up:
-	docker compose -f deployments/docker-compose.yml down --remove-orphans 2>/dev/null; docker compose -f deployments/docker-compose.yml up -d
+	docker rm -f agrisense-postgres agrisense-influxdb agrisense-redis agrisense-emqx agrisense-prometheus agrisense-grafana 2>/dev/null; true
+	docker compose -f deployments/docker-compose.yml up -d
 
 docker-down:
 	docker compose -f deployments/docker-compose.yml down
