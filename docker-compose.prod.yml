@@ -75,6 +75,8 @@ services:
     environment:
       EMQX_NAME: agrisense
       EMQX_HOST: 0.0.0.0
+      EMQX_DEFAULT_USER: ${EMQX_ADMIN_USERNAME}
+      EMQX_DEFAULT_PASSWORD: ${EMQX_ADMIN_PASSWORD}
     volumes:
       - emqx_data:/opt/emqx/data
     ports:
