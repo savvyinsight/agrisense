@@ -4,6 +4,8 @@
 
 This guide covers deploying AgriSenseIoT to a production server.
 
+> **⚠️ IMPORTANT**: Before deploying, review the [DEPLOYMENT_CHECKLIST.md](../DEPLOYMENT_CHECKLIST.md) to ensure all security requirements are met.
+
 ## Prerequisites
 
 - Ubuntu 22.04+ server (or any Linux with Docker)
