@@ -168,7 +168,7 @@ jobs:
         uses: 8398a7/action-slack@v3
         with:
           status: ${{ job.status }}
-          text: "✅ Deployment to ${{ github.event.inputs.environment || 'production' }} successful\nImage: ${{ needs.build-and-push.outputs.backend-image }}"
+          text: "✅ Deployment successful\nImage: ${{ needs.build-and-push.outputs.backend-image }}"
           webhook_url: ${{ secrets.SLACK_WEBHOOK }}
           fields: repo,message,commit,author,action,eventName,ref
         continue-on-error: true
@@ -178,7 +178,7 @@ jobs:
         uses: 8398a7/action-slack@v3
         with:
           status: ${{ job.status }}
-          text: "❌ Deployment to ${{ github.event.inputs.environment || 'production' }} FAILED"
+          text: "❌ Deployment FAILED"
           webhook_url: ${{ secrets.SLACK_WEBHOOK }}
           fields: repo,message,commit,author,action,eventName,ref
         continue-on-error: true
