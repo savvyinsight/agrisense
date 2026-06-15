@@ -28,25 +28,29 @@ build-frontend:                     ## Build frontend for production
 # ─── Infrastructure (Docker) ──────────────────────────────────────────────
 
 docker-up:                                 ## Start all Docker dependencies
-	cd backend && make docker-up
+	docker compose -f docker-compose.yml up -d --remove-orphans
 
 docker-down:                               ## Stop all Docker dependencies
-	cd backend && make docker-down
+	docker compose -f docker-compose.yml down -v --remove-orphans
 
 logs:                               ## View Docker logs
-	cd backend && make docker-logs
+	docker compose -f docker-compose.yml logs -f
 
-migrate:                            ## Run database migrations
-	cd backend && make migrate-up
+migrate:                            ## Run database migrations (apply all)
+	cd backend && go run ./cmd/migrate up
 
-migrate-down:                       ## Rollback last migration
-	cd backend && make migrate-down
+migrate-down:                       ## Rollback last migration (default 1 step)
+	cd backend && go run ./cmd/migrate down
 
 migrate-version:                    ## Show current migration version
-	cd backend && make migrate-version
+	cd backend && go run ./cmd/migrate version
 
 migrate-create:                     ## Create new migration (requires migrate CLI)
-	cd backend && make migrate-create
+	@echo "Usage: make migrate-create NAME=description"
+	@if [ -z "$(NAME)" ]; then \
+		echo "ERROR: provide NAME=<migration_name>"; exit 1; \
+	fi
+	@docker run --rm -v $(PWD)/migrations:/migrations -w /migrations migrate/migrate create -ext sql -dir /migrations "$(NAME)"
 
 # ─── Testing ──────────────────────────────────────────────────────────────
 
