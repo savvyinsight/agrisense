@@ -8,7 +8,7 @@ services:
       POSTGRES_DB: ${DB_NAME}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./backend/deployments/init/postgres:/docker-entrypoint-initdb.d
+      - ./infra/init/postgres:/docker-entrypoint-initdb.d
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER}"]
       interval: 10s
@@ -96,9 +96,9 @@ services:
   api:
     build:
       context: ./backend
-      dockerfile: deployments/docker/Dockerfile.api
+      dockerfile: Dockerfile
     container_name: agrisense-api
-    env_file: .env
+    env_file: .env.prod
     depends_on:
       postgres:
         condition: service_healthy
@@ -148,7 +148,7 @@ services:
     image: prom/prometheus:latest
     container_name: agrisense-prometheus
     volumes:
-      - ./backend/deployments/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
       - prometheus_data:/prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'

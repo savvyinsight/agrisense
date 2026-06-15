@@ -199,9 +199,9 @@ WS     /ws/live                      - WebSocket for real-time updates
 
 ---
 
-#### **Service 2: MQTT Handler** (`cmd/mqtt-handler/main.go`)
+#### **Service 2: MQTT Processing**
 
-**Purpose**: Background service processing all MQTT messages
+**Purpose**: MQTT message handling is integrated into the main API server binary.
 
 **Responsibilities:**
 1. Subscribe to EMQX telemetry topics
@@ -971,11 +971,9 @@ docker ps
 go run cmd/server/main.go
 # Output: Server listening on :8080
 
-# Run MQTT handler (Terminal 2)
-go run cmd/mqtt-handler/main.go
-# Output: Connected to EMQX, subscribed to device/#
+# MQTT processing is included in the API server
 
-# Run frontend (Terminal 3)
+# Run frontend (Terminal 2)
 cd web && npm run dev
 # Output: Frontend listening on :3000
 ```

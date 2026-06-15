@@ -102,7 +102,6 @@ AgriSenseIoT/
 ├── deployments/                            # Deployment configurations
 │   ├── docker/
 │   │   ├── Dockerfile.api
-│   │   ├── Dockerfile.mqtt
 │   │   └── Dockerfile.rule-engine
 │   ├── docker-compose.yml                   # Local development
 │   ├── docker-compose.prod.yml              # Production
@@ -148,7 +147,6 @@ AgriSenseIoT/
 ### `/cmd`
 Each subdirectory is a **main package** that builds to a binary.
 - `server/`: Main HTTP + WebSocket server
-- `mqtt-handler/`: Dedicated MQTT message processor (can be scaled separately)
 - `rule-engine/`: Separate service for alert evaluation (optional, can be within server initially)
 
 ### `/internal`
@@ -297,7 +295,6 @@ test:
 
 build:
 	go build -o bin/server cmd/server/main.go
-	go build -o bin/mqtt-handler cmd/mqtt-handler/main.go
 
 migrate-up:
 	go run scripts/migrate/main.go up

@@ -12,7 +12,7 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./backend/deployments/init/postgres:/docker-entrypoint-initdb.d
+      - ./infra/init/postgres:/docker-entrypoint-initdb.d
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
@@ -80,47 +80,11 @@ services:
     networks:
       - agrisense-network
 
-  # api:
-  #   build:
-  #     context: ..
-  #     dockerfile: deployments/docker/Dockerfile.api
-  #   container_name: agrisense-api
-  #   environment:
-  #     - ENV=development
-  #     - DB_HOST=postgres
-  #     - DB_PORT=5432
-  #     - DB_USER=postgres
-  #     - DB_PASSWORD=postgres
-  #     - DB_NAME=agrisense
-  #     - DB_SSL_MODE=disable
-  #     - INFLUXDB_URL=http://influxdb:8086
-  #     - INFLUXDB_TOKEN=my-token
-  #     - INFLUXDB_ORG=my-org
-  #     - INFLUXDB_BUCKET=sensor_data
-  #     - REDIS_HOST=redis
-  #     - REDIS_PORT=6379
-  #     - REDIS_DB=0
-  #     - MQTT_BROKER=tcp://emqx:1883
-  #   ports:
-  #     - "8080:8080"
-  #   depends_on:
-  #     postgres:
-  #       condition: service_healthy
-  #     redis:
-  #       condition: service_started
-  #     influxdb:
-  #       condition: service_started
-  #     emqx:
-  #       condition: service_started
-  #   networks:
-  #     - agrisense-network
-  #   restart: unless-stopped
-
   prometheus:
     image: prom/prometheus:latest
     container_name: agrisense-prometheus
     volumes:
-      - ./backend/deployments/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
       - prometheus_data:/prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'

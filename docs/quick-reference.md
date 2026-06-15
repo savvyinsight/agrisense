@@ -392,10 +392,9 @@ make docker-up
 # Terminal 2: API Server
 go run cmd/server/main.go
 
-# Terminal 3: MQTT Handler
-go run cmd/mqtt-handler/main.go
+# MQTT processing is included in the API server
 
-# Terminal 4: Frontend
+# Terminal 3: Frontend
 cd web && npm run dev
 
 # Terminal 5: Device Simulator (optional)

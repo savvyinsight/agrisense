@@ -73,9 +73,9 @@ frontend-lint:                      ## Run ESLint
 deploy-check:                          ## Verify production environment
 	@echo "Checking prerequisites..."
 	@command -v docker >/dev/null 2>&1 || { echo "ERROR: docker is required"; exit 1; }
-	@test -f .env || { echo "ERROR: .env file not found (copy .env.prod.example to .env)"; exit 1; }
+	@test -f .env.prod || { echo "ERROR: .env.prod file not found (copy .env.prod.example to .env.prod)"; exit 1; }
 	@echo "✓ docker found"
-	@echo "✓ .env file found"
+	@echo "✓ .env.prod file found"
 	@echo "All checks passed."
 
 deploy: deploy-check                   ## Build and deploy to production
