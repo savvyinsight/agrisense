@@ -5,6 +5,8 @@
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![CI](https://github.com/savvyinsight/agrisense/actions/workflows/frontend-ci.yml/badge.svg)](https://github.com/savvyinsight/agrisense/actions/workflows/frontend-ci.yml)
 [![CI](https://github.com/savvyinsight/agrisense/actions/workflows/backend-ci.yml/badge.svg)](https://github.com/savvyinsight/agrisense/actions/workflows/backend-ci.yml)
+[![CI Build & Test](https://github.com/savvyinsight/agrisense/actions/workflows/ci.yml/badge.svg)](https://github.com/savvyinsight/agrisense/actions/workflows/ci.yml)
+[![Deploy](https://github.com/savvyinsight/agrisense/actions/workflows/deploy.yml/badge.svg)](https://github.com/savvyinsight/agrisense/actions/workflows/deploy.yml)
 
 ## 📋 Overview
 
@@ -227,6 +229,20 @@ See [Deployment Guide](docs/deployment.md) for containerized production setup wi
 - **Scalability**: Tested with 100+ concurrent devices
 
 See [Performance Results](docs/performance.md) for detailed benchmarks.
+
+## 🔄 CI/CD Pipeline
+
+Automated testing and deployment via GitHub Actions:
+- **Build & Test**: Runs on every PR and push to `main`
+  - Backend Go tests with PostgreSQL/Redis
+  - Frontend linting and TypeScript type checking
+  - Docker image builds and compose validation
+- **Production Deploy**: Triggered via git tag or manual dispatch
+  - Builds and pushes Docker images
+  - Deploys to production server with health checks
+  - Slack notifications
+
+See [CI/CD Documentation](docs/ci-cd.md) for setup and usage.
 
 ## 🤝 Contributing
 

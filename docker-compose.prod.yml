@@ -96,6 +96,7 @@ services:
         max-file: 3
 
   api:
+    image: ${BACKEND_IMAGE:-agrisense-api:latest}
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -128,6 +129,7 @@ services:
         max-file: 3
 
   frontend:
+    image: ${FRONTEND_IMAGE:-agrisense-frontend:latest}
     build:
       context: ./frontend
       dockerfile: Dockerfile
