@@ -244,10 +244,18 @@ func runServer(cliCtx *cli.Context) error {
 	r := gin.Default()
 	r.Use(cors.New(cors.Config{
 		AllowOriginFunc: func(origin string) bool {
-			return origin == "" ||
+			// Allow local development
+			if origin == "" ||
 				strings.HasPrefix(origin, "http://localhost:") ||
-				strings.HasPrefix(origin, "http://127.0.0.1:") ||
-				strings.HasSuffix(origin, ".vercel.app")
+				strings.HasPrefix(origin, "http://127.0.0.1:") {
+				return true
+			}
+			// Allow production domain (set PROD_DOMAIN env var)
+			prodDomain := os.Getenv("PROD_DOMAIN")
+			if prodDomain != "" && strings.Contains(origin, prodDomain) {
+				return true
+			}
+			return false
 		},
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
