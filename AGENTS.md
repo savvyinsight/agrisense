@@ -46,6 +46,6 @@
 - Integration tests use testcontainers-go (Postgres + Redis + InfluxDB containers)
 
 ## Deployment
-- Dockerfiles: `backend/deployments/docker/Dockerfile.api` and `Dockerfile.mqtt`
+- Dockerfiles: `backend/deployments/docker/Dockerfile.api`
 - Prod compose: `backend/deployments/docker-compose.prod.yml`
 - nginx in `backend/deployments/nginx/`

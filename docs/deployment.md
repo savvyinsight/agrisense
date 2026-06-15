@@ -32,26 +32,26 @@ git clone https://github.com/yourusername/agrisenseiot.git
 cd agrisenseiot
 
 # Create production environment file
-cp .env.example .env.prod
+cp .env.prod.example .env.prod
 
 # Edit with secure values
 nano .env.prod
 # Change all passwords, JWT_SECRET, etc.
 Step 3: SSL Certificates (Optional)
-mkdir -p deployments/nginx/ssl
+mkdir -p infra/nginx/ssl
 
 # If using Let's Encrypt
 sudo apt install certbot
 sudo certbot certonly --standalone -d yourdomain.com
 
 # Copy certificates
-sudo cp /etc/letsencrypt/live/yourdomain.com/fullchain.pem deployments/nginx/ssl/
-sudo cp /etc/letsencrypt/live/yourdomain.com/privkey.pem deployments/nginx/ssl/
-sudo chmod 644 deployments/nginx/ssl/*.pem
+sudo cp /etc/letsencrypt/live/yourdomain.com/fullchain.pem infra/nginx/ssl/
+sudo cp /etc/letsencrypt/live/yourdomain.com/privkey.pem infra/nginx/ssl/
+sudo chmod 644 infra/nginx/ssl/*.pem
 Step 4: Nginx Configuration
-mkdir -p deployments/nginx
+mkdir -p infra/nginx
 
-cat > deployments/nginx/nginx.conf << 'EOF'
+cat > infra/nginx/nginx.conf << 'EOF'
 events {
     worker_connections 1024;
 }
@@ -97,9 +97,12 @@ http {
 
 ## Step 5: Deploy
 
+Before deployment, copy `.env.prod.example` to `.env.prod` and fill in all production secrets.
+
 ```bash
-# Pull latest images and start
-cd deployments
+cp ../.env.prod.example ../.env.prod
+# edit ../.env.prod with strong values, then:
+cd .
 
 docker compose -f docker-compose.prod.yml up -d
 
@@ -111,6 +114,8 @@ docker compose -f docker-compose.prod.yml logs -f
 
 docker ps
 ```
+
+> Do not commit `.env.prod`. It is already excluded by `.gitignore`.
 
 ## Step 6: Monitoring
 
