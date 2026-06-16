@@ -132,12 +132,17 @@ jobs:
           export BACKEND_IMAGE=${BACKEND_IMAGE}
           export FRONTEND_IMAGE=${FRONTEND_IMAGE}
 
+          # Source environment variables from .env.prod
+          set -a
+          source .env.prod
+          set +a
+
           # Deploy with pre-built images
           docker compose -f docker-compose.prod.yml down --remove-orphans
           docker compose -f docker-compose.prod.yml up -d --remove-orphans
 
           # Wait for services to be healthy
-          sleep 10
+          sleep 30
           docker compose -f docker-compose.prod.yml ps
 
           # Run database migrations
