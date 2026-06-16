@@ -118,6 +118,8 @@ jobs:
           cd ${DEPLOY_PATH}
 
           # Pull latest config files (docker-compose.yml, nginx, prometheus configs)
+          # Use GitHub mirror for better connectivity in China
+          git remote set-url origin https://gitclone.com/github.com/savvyinsight/agrisense.git
           git pull origin main
 
           # Backup current env
