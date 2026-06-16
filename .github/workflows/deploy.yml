@@ -113,7 +113,7 @@ jobs:
           FRONTEND_IMAGE: ${{ needs.build-and-push.outputs.frontend-image }}
         run: |
           ssh -o ServerAliveInterval=30 -o ServerAliveCountMax=10 -i ~/.ssh/deploy_key ${DEPLOY_USER}@${DEPLOY_HOST} << EOF
-          set -euo pipefail
+          set -e
           cd ${DEPLOY_PATH}
 
           # Pull latest code
