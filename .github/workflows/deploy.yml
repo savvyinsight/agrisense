@@ -119,8 +119,11 @@ jobs:
 
           # Pull latest config files (docker-compose.yml, nginx, prometheus configs)
           # Use GitHub mirror for better connectivity in China
-          git remote set-url origin https://gitclone.com/github.com/savvyinsight/agrisense.git
-          git pull origin main
+          # Try multiple mirrors
+          for mirror in "https://ghproxy.com/https://github.com" "https://gitclone.com/https://github.com" "https://github.com"; do
+            git remote set-url origin "\${mirror}/savvyinsight/agrisense.git" && git pull origin main && break
+            sleep 5
+          done
 
           # Backup current env
           cp .env.prod .env.prod.backup
