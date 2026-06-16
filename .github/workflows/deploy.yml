@@ -113,16 +113,9 @@ jobs:
           FRONTEND_IMAGE: ${{ needs.build-and-push.outputs.frontend-image }}
           ENV_NAME: ${{ github.event.inputs.environment || 'production' }}
         run: |
-          ssh -i ~/.ssh/deploy_key ${DEPLOY_USER}@${DEPLOY_HOST} << EOF
+          ssh -o ServerAliveInterval=30 -o ServerAliveCountMax=10 -i ~/.ssh/deploy_key ${DEPLOY_USER}@${DEPLOY_HOST} << EOF
           set -e
-          echo "Current directory: \$(pwd)"
-          echo "DEPLOY_PATH is: ${DEPLOY_PATH}"
-          echo "Checking if directory exists..."
-          ls -la ${DEPLOY_PATH}
           cd ${DEPLOY_PATH}
-          echo "Now in: \$(pwd)"
-          echo "Checking git status..."
-          git status
 
           # Pull latest config files (docker-compose.yml, nginx, prometheus configs)
           git pull origin main
