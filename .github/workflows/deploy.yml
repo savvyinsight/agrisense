@@ -117,16 +117,16 @@ jobs:
           set -e
           cd ${DEPLOY_PATH}
 
-          # Pull latest config files (docker-compose.yml, nginx, prometheus configs)
-          # Use GitHub mirror for better connectivity in China
-          # Try multiple mirrors
-          for mirror in "https://ghproxy.com/https://github.com" "https://gitclone.com/https://github.com" "https://github.com"; do
-            git remote set-url origin "\${mirror}/savvyinsight/agrisense.git" && git pull origin main && break
-            sleep 5
-          done
+          # Note: Config files are already on server from initial clone
+          # If you need to update config files, manually run: cd /opt/agrisense && git pull
 
           # Backup current env
           cp .env.prod .env.prod.backup
+
+          # Source environment variables from .env.prod
+          set -a
+          . .env.prod
+          set +a
 
           # Pull pre-built images from GitHub Container Registry (ghcr.io)
           # No building on server — images are built in CI
@@ -136,11 +136,6 @@ jobs:
           # Pass image tags to docker compose
           export BACKEND_IMAGE=${BACKEND_IMAGE}
           export FRONTEND_IMAGE=${FRONTEND_IMAGE}
-
-          # Source environment variables from .env.prod
-          set -a
-          source .env.prod
-          set +a
 
           # Deploy with pre-built images
           docker compose -f docker-compose.prod.yml down --remove-orphans
