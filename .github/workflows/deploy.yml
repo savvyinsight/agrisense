@@ -113,7 +113,7 @@ jobs:
           FRONTEND_IMAGE: ${{ needs.build-and-push.outputs.frontend-image }}
           ENV_NAME: ${{ github.event.inputs.environment || 'production' }}
         run: |
-          ssh -i ~/.ssh/deploy_key ${DEPLOY_USER}@${DEPLOY_HOST} << 'EOF'
+          ssh -i ~/.ssh/deploy_key ${DEPLOY_USER}@${DEPLOY_HOST} << EOF
           set -e
           cd ${DEPLOY_PATH}
 
