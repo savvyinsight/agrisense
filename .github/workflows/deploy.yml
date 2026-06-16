@@ -111,33 +111,26 @@ jobs:
           DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
           BACKEND_IMAGE: ${{ needs.build-and-push.outputs.backend-image }}
           FRONTEND_IMAGE: ${{ needs.build-and-push.outputs.frontend-image }}
-          ENV_NAME: ${{ github.event.inputs.environment || 'production' }}
         run: |
           ssh -o ServerAliveInterval=30 -o ServerAliveCountMax=10 -i ~/.ssh/deploy_key ${DEPLOY_USER}@${DEPLOY_HOST} << EOF
-          set -e
+          set -euo pipefail
           cd ${DEPLOY_PATH}
 
-          # Note: Config files are already on server from initial clone
-          # If you need to update config files, manually run: cd /opt/agrisense && git pull
+          # Pull latest code
+          git pull origin main
 
-          # Backup current env
-          cp .env.prod .env.prod.backup
-
-          # Source environment variables from .env.prod
+          # Load environment variables
           set -a
-          . .env.prod
+          . ./.env.prod
           set +a
 
-          # Pull pre-built images from GitHub Container Registry (ghcr.io)
-          # No building on server — images are built in CI
+          # Pull pre-built images
           docker pull ${BACKEND_IMAGE}
           docker pull ${FRONTEND_IMAGE}
 
-          # Pass image tags to docker compose
+          # Deploy
           export BACKEND_IMAGE=${BACKEND_IMAGE}
           export FRONTEND_IMAGE=${FRONTEND_IMAGE}
-
-          # Deploy with pre-built images
           docker compose -f docker-compose.prod.yml down --remove-orphans
           docker compose -f docker-compose.prod.yml up -d --remove-orphans
 
@@ -145,12 +138,19 @@ jobs:
           sleep 30
           docker compose -f docker-compose.prod.yml ps
 
-          # Run database migrations
-          docker compose -f docker-compose.prod.yml exec -T api go run ./cmd/migrate up
+          # Run migrations
+          docker compose -f docker-compose.prod.yml exec -T api ./agrisense migrate up
 
           # Health check
-          curl -f http://localhost:8080/health || exit 1
-          echo "✅ Deployment successful"
+          for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30; do
+            if curl -sf http://localhost:8080/health > /dev/null; then
+              echo "Health check passed"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Health check failed"
+          exit 1
           EOF
 
       - name: Verify deployment
