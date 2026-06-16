@@ -115,7 +115,14 @@ jobs:
         run: |
           ssh -i ~/.ssh/deploy_key ${DEPLOY_USER}@${DEPLOY_HOST} << EOF
           set -e
+          echo "Current directory: \$(pwd)"
+          echo "DEPLOY_PATH is: ${DEPLOY_PATH}"
+          echo "Checking if directory exists..."
+          ls -la ${DEPLOY_PATH}
           cd ${DEPLOY_PATH}
+          echo "Now in: \$(pwd)"
+          echo "Checking git status..."
+          git status
 
           # Pull latest config files (docker-compose.yml, nginx, prometheus configs)
           git pull origin main
