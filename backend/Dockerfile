@@ -10,7 +10,8 @@ RUN apk --no-cache add ca-certificates
 RUN addgroup -S agrisense && adduser -S agrisense -G agrisense
 WORKDIR /home/agrisense
 COPY --from=builder /app/agrisense .
-RUN chown agrisense:agrisense agrisense && chmod 755 agrisense
+COPY --from=builder /app/migrations ./migrations
+RUN chown -R agrisense:agrisense /home/agrisense && chmod 755 agrisense
 USER agrisense
 EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
