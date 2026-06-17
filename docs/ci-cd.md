@@ -61,9 +61,12 @@ Handles production deployments with manual control and automated tagging.
    - Pulls latest config files from repo
    - Pulls pre-built images from ghcr.io
    - Runs `docker compose up` with pre-built images
-   - Runs database migrations
+   - Migrations run automatically when API starts
    - Performs health checks
    - Sends Slack notifications
+
+3. **Post-Deploy** (manual, after first deployment)
+   - Create the first admin user (see [Deployment Guide](deployment.md#step-6-create-first-admin-user))
 
 ## Required Secrets
 

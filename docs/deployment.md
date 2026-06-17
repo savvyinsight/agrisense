@@ -119,7 +119,35 @@ docker ps
 
 > Do not commit `.env.prod`. It is already excluded by `.gitignore`.
 
-## Step 6: Monitoring
+## Step 6: Create First Admin User
+
+After the first successful deployment, create the initial platform admin user:
+
+```bash
+# SSH to your server
+ssh deploy@your-server-ip
+
+# Create admin user (run inside the API container)
+docker compose -f /opt/agrisense/docker-compose.prod.yml exec -T api ./agrisense admin create \
+  --email admin@yourdomain.com \
+  --password YourSecurePassword123 \
+  --username admin
+```
+
+**Command breakdown:**
+- `docker compose exec` — Run a command inside a running container
+- `-T` — Disable pseudo-TTY (for non-interactive commands)
+- `api` — The service name in docker-compose.prod.yml
+- `./agrisense admin create` — The binary inside the container with admin subcommand
+
+**Expected output:**
+```
+Admin user created: admin@yourdomain.com (id=1)
+```
+
+**Note:** This command is safe to run multiple times — it will fail if the email already exists, preventing duplicate admins.
+
+## Step 7: Monitoring
 
 - **API**: <https://yourdomain.com>
 - **EMQX Dashboard**: <http://yourdomain.com:18083>
