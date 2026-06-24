@@ -65,10 +65,10 @@ func main() {
 
 	// Step 2: Create 2 fields
 	fields := []struct {
-		name       string
-		lat, lng   float64
-		crop       string
-		area       float64
+		name     string
+		lat, lng float64
+		crop     string
+		area     float64
 	}{
 		{"North Field", 40.7128, -74.0060, "Corn", 12.5},
 		{"South Field", 40.7000, -73.9900, "Wheat", 8.3},
@@ -137,7 +137,7 @@ func ensurePermission(db *sql.DB, userID, accountID int, role string) {
 		return
 	}
 
-	_, err = db.Exec(`INSERT INTO user_permissions (user_id, account_id, farm_id, role, granted_by_id, created_at) VALUES ($1, $2, NULL, $3, $1, NOW())`, userID, accountID, role)
+	_, err = db.Exec(`INSERT INTO user_permissions (user_id, account_id, farm_id, role, granted_by_id, granted_at) VALUES ($1, $2, NULL, $3, $1, NOW())`, userID, accountID, role)
 	if err != nil {
 		log.Fatalf("Failed to create permission: %v", err)
 	}

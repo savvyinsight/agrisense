@@ -128,9 +128,9 @@ func (r *PostgresIrrigationZoneRepository) Update(zone *IrrigationZone) error {
 	return nil
 }
 
-func (r *PostgresIrrigationZoneRepository) Delete(id int) error {
-	query := `DELETE FROM irrigation_zones WHERE id = $1`
-	result, err := r.DB.Exec(query, id)
+func (r *PostgresIrrigationZoneRepository) Delete(id int, accountID int) error {
+	query := `DELETE FROM irrigation_zones WHERE id = $1 AND account_id = $2`
+	result, err := r.DB.Exec(query, id, accountID)
 	if err != nil {
 		return err
 	}

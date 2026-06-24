@@ -9,3 +9,5 @@ UPDATE irrigation_events e
 SET account_id = z.account_id
 FROM irrigation_zones z
 WHERE e.zone_id = z.id AND e.account_id IS NULL;
+
+ALTER TABLE irrigation_events ALTER COLUMN account_id SET NOT NULL;
