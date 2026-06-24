@@ -112,7 +112,9 @@ func (h *FieldHandler) Update(c *gin.Context) {
 		return
 	}
 
-	if v, ok := updates["name"]; ok { existing.Name = v.(string) }
+	if v, ok := updates["name"]; ok {
+		existing.Name = v.(string)
+	}
 	if v, ok := updates["crop"]; ok {
 		s := v.(string)
 		existing.Crop = &s
@@ -121,7 +123,9 @@ func (h *FieldHandler) Update(c *gin.Context) {
 		f := v.(float64)
 		existing.AreaHectares = &f
 	}
-	if v, ok := updates["health"]; ok { existing.Health = FieldHealth(v.(string)) }
+	if v, ok := updates["health"]; ok {
+		existing.Health = FieldHealth(v.(string))
+	}
 	if v, ok := updates["soil_moisture"]; ok {
 		f := v.(float64)
 		existing.SoilMoisture = &f

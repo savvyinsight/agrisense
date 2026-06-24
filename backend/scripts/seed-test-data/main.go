@@ -60,6 +60,9 @@ func main() {
 	accountID, userID := ensureAccountAndUser(db, accountName, email, "test123", "account_owner")
 	log.Printf("Account ID=%d, User ID=%d", accountID, userID)
 
+	// Grant account_owner permission in user_permissions table
+	ensurePermission(db, userID, accountID, "account_owner")
+
 	// Step 2: Create 2 fields
 	fields := []struct {
 		name       string
@@ -78,7 +81,7 @@ func main() {
 		if f.name == "South Field" {
 			health = "warning"
 		}
-		fieldID := ensureField(db, f.name, f.lat, f.lng, f.crop, f.area, health, userID)
+		fieldID := ensureField(db, f.name, f.lat, f.lng, f.crop, f.area, health, accountID, userID)
 		fieldIDs[f.name] = fieldID
 		log.Printf("Field '%s' ID=%d health=%s", f.name, fieldID, health)
 
@@ -100,7 +103,7 @@ func main() {
 		log.Printf("  Controller '%s' ID=%d", ctrlID, ctrlDevID)
 
 		// Step 5: Create irrigation zone for the controller
-		zoneID := ensureZone(db, fmt.Sprintf("%s Zone", f.name), fieldID, ctrlDevID, userID)
+		zoneID := ensureZone(db, fmt.Sprintf("%s Zone", f.name), fieldID, ctrlDevID, accountID, userID)
 		log.Printf("  Zone ID=%d", zoneID)
 	}
 
@@ -124,6 +127,21 @@ func main() {
 	}
 	fmt.Println()
 	fmt.Println("Run: cd backend && make simulate")
+}
+
+func ensurePermission(db *sql.DB, userID, accountID int, role string) {
+	var existing int
+	err := db.QueryRow(`SELECT id FROM user_permissions WHERE user_id = $1 AND account_id = $2 AND farm_id IS NULL AND role = $3`, userID, accountID, role).Scan(&existing)
+	if err == nil {
+		log.Printf("Permission '%s' already exists for user %d", role, userID)
+		return
+	}
+
+	_, err = db.Exec(`INSERT INTO user_permissions (user_id, account_id, farm_id, role, granted_by_id, created_at) VALUES ($1, $2, NULL, $3, $1, NOW())`, userID, accountID, role)
+	if err != nil {
+		log.Fatalf("Failed to create permission: %v", err)
+	}
+	log.Printf("Granted '%s' permission to user %d on account %d", role, userID, accountID)
 }
 
 func ensureAlertRule(db *sql.DB, name string, fieldID int, sensorTypeID int, condition string, thresholdValue float64, thresholdMax *float64, durationSeconds int, severity string, userID int) {
@@ -171,35 +189,38 @@ func ensureAccountAndUser(db *sql.DB, accountName, email, password, role string)
 		return
 	}
 
-	// Check if account with same name exists
-	err = db.QueryRow(`SELECT id FROM accounts WHERE name = $1`, accountName).Scan(&accountID)
-	if err != nil {
-		// Create account
-		err = db.QueryRow(`INSERT INTO accounts (name, subscription_tier, max_users, max_devices, created_at, updated_at) VALUES ($1, 'professional', 10, 50, NOW(), NOW()) RETURNING id`,
-			accountName).Scan(&accountID)
-		if err != nil {
-			log.Fatalf("Failed to create account: %v", err)
-		}
-		log.Printf("Created account '%s' ID=%d", accountName, accountID)
-	}
-
-	// Create user
+	// Create user first (without account_id to break circular dependency)
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		log.Fatalf("Failed to hash password: %v", err)
 	}
 
-	err = db.QueryRow(`INSERT INTO users (username, email, password_hash, role, account_id, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, NOW(), NOW()) RETURNING id`,
-		email, email, string(hash), role, accountID).Scan(&userID)
+	err = db.QueryRow(`INSERT INTO users (username, email, password_hash, role, created_at, updated_at) VALUES ($1, $2, $3, $4, NOW(), NOW()) RETURNING id`,
+		email, email, string(hash), role).Scan(&userID)
 	if err != nil {
 		log.Fatalf("Failed to create user: %v", err)
 	}
 	log.Printf("Created user '%s' ID=%d", email, userID)
 
+	// Create account with owner_id = user.id
+	err = db.QueryRow(`INSERT INTO accounts (name, subscription_tier, owner_id, max_users, max_devices, created_at, updated_at) VALUES ($1, 'professional', $2, 10, 50, NOW(), NOW()) RETURNING id`,
+		accountName, userID).Scan(&accountID)
+	if err != nil {
+		log.Fatalf("Failed to create account: %v", err)
+	}
+	log.Printf("Created account '%s' ID=%d (owner=%d)", accountName, accountID, userID)
+
+	// Link user to account
+	_, err = db.Exec(`UPDATE users SET account_id = $1 WHERE id = $2`, accountID, userID)
+	if err != nil {
+		log.Fatalf("Failed to link user to account: %v", err)
+	}
+	log.Printf("Linked user %d → account %d", userID, accountID)
+
 	return
 }
 
-func ensureField(db *sql.DB, name string, lat, lng float64, crop string, area float64, health string, userID int) int {
+func ensureField(db *sql.DB, name string, lat, lng float64, crop string, area float64, health string, accountID, userID int) int {
 	var id int
 	err := db.QueryRow(`SELECT id FROM fields WHERE name = $1 AND user_id = $2`, name, userID).Scan(&id)
 	if err == nil {
@@ -213,9 +234,9 @@ func ensureField(db *sql.DB, name string, lat, lng float64, crop string, area fl
 		lng-0.005, lat+0.003,
 		lng-0.005, lat-0.003)
 
-	err = db.QueryRow(`INSERT INTO fields (name, crop, area_hectares, health, soil_moisture, temperature, humidity, user_id, latitude, longitude, geometry, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, 55.0, 24.0, 65.0, $5, $6, $7, $8::jsonb, NOW(), NOW()) RETURNING id`,
-		name, crop, area, health, userID, lat, lng, geometry).Scan(&id)
+	err = db.QueryRow(`INSERT INTO fields (name, crop, area_hectares, health, soil_moisture, temperature, humidity, user_id, account_id, latitude, longitude, geometry, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, 55.0, 24.0, 65.0, $5, $6, $7, $8, $9::jsonb, NOW(), NOW()) RETURNING id`,
+		name, crop, area, health, userID, accountID, lat, lng, geometry).Scan(&id)
 	if err != nil {
 		log.Fatalf("Failed to create field '%s': %v", name, err)
 	}
@@ -238,7 +259,7 @@ func ensureDevice(db *sql.DB, deviceID, name, devType string, fieldID *int, acco
 	return id
 }
 
-func ensureZone(db *sql.DB, name string, fieldID, deviceID, userID int) int {
+func ensureZone(db *sql.DB, name string, fieldID, deviceID, accountID, userID int) int {
 	var id int
 	err := db.QueryRow(`SELECT id FROM irrigation_zones WHERE name = $1 AND field_id = $2`, name, fieldID).Scan(&id)
 	if err == nil {
@@ -246,9 +267,9 @@ func ensureZone(db *sql.DB, name string, fieldID, deviceID, userID int) int {
 	}
 
 	now := time.Now()
-	err = db.QueryRow(`INSERT INTO irrigation_zones (name, field_id, device_id, moisture, target_moisture, status, runtime_minutes, flow_rate_lpm, user_id, created_at, updated_at)
-		VALUES ($1, $2, $3, 0, 60, 'idle', 0, 50.0, $4, $5, $5) RETURNING id`,
-		name, fieldID, deviceID, userID, now).Scan(&id)
+	err = db.QueryRow(`INSERT INTO irrigation_zones (name, field_id, device_id, moisture, target_moisture, status, runtime_minutes, flow_rate_lpm, user_id, account_id, created_at, updated_at)
+		VALUES ($1, $2, $3, 0, 60, 'idle', 0, 50.0, $4, $5, $6, $6) RETURNING id`,
+		name, fieldID, deviceID, userID, accountID, now).Scan(&id)
 	if err != nil {
 		log.Fatalf("Failed to create zone '%s': %v", name, err)
 	}

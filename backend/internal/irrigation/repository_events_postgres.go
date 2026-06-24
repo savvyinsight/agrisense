@@ -12,12 +12,12 @@ type PostgresIrrigationEventRepository struct {
 
 func (r *PostgresIrrigationEventRepository) Create(event *IrrigationEvent) error {
 	query := `INSERT INTO irrigation_events
-		(zone_id, field_id, device_id, status, start_time, trigger_type, triggered_by, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
+		(zone_id, field_id, device_id, status, start_time, trigger_type, triggered_by, account_id, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
 		RETURNING id, created_at`
 	return r.DB.QueryRow(query,
 		event.ZoneID, event.FieldID, event.DeviceID,
-		event.Status, event.StartTime, event.TriggerType, event.TriggeredBy,
+		event.Status, event.StartTime, event.TriggerType, event.TriggeredBy, event.AccountID,
 	).Scan(&event.ID, &event.CreatedAt)
 }
 
@@ -43,24 +43,24 @@ func (r *PostgresIrrigationEventRepository) CompleteLatestRunning(zoneID int, en
 	return nil
 }
 
-func (r *PostgresIrrigationEventRepository) ListByZoneID(zoneID int, limit int) ([]IrrigationEvent, error) {
+func (r *PostgresIrrigationEventRepository) ListByZoneID(zoneID int, accountID int, limit int) ([]IrrigationEvent, error) {
 	query := `SELECT id, zone_id, field_id, device_id, status, start_time, end_time,
-	       duration_minutes, water_usage_liters, trigger_type, triggered_by, created_at
-		FROM irrigation_events WHERE zone_id = $1
-		ORDER BY start_time DESC LIMIT $2`
-	return r.scanEvents(query, zoneID, limit)
+	       duration_minutes, water_usage_liters, trigger_type, triggered_by, account_id, created_at
+		FROM irrigation_events WHERE zone_id = $1 AND (account_id = $2 OR $2 = 0)
+		ORDER BY start_time DESC LIMIT $3`
+	return r.scanEvents(query, zoneID, accountID, limit)
 }
 
-func (r *PostgresIrrigationEventRepository) ListByFieldID(fieldID int, limit int) ([]IrrigationEvent, error) {
+func (r *PostgresIrrigationEventRepository) ListByFieldID(fieldID int, accountID int, limit int) ([]IrrigationEvent, error) {
 	query := `SELECT id, zone_id, field_id, device_id, status, start_time, end_time,
-	       duration_minutes, water_usage_liters, trigger_type, triggered_by, created_at
-		FROM irrigation_events WHERE field_id = $1
-		ORDER BY start_time DESC LIMIT $2`
-	return r.scanEvents(query, fieldID, limit)
+	       duration_minutes, water_usage_liters, trigger_type, triggered_by, account_id, created_at
+		FROM irrigation_events WHERE field_id = $1 AND (account_id = $2 OR $2 = 0)
+		ORDER BY start_time DESC LIMIT $3`
+	return r.scanEvents(query, fieldID, accountID, limit)
 }
 
-func (r *PostgresIrrigationEventRepository) scanEvents(query string, arg int, limit int) ([]IrrigationEvent, error) {
-	rows, err := r.DB.Query(query, arg, limit)
+func (r *PostgresIrrigationEventRepository) scanEvents(query string, args ...interface{}) ([]IrrigationEvent, error) {
+	rows, err := r.DB.Query(query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -74,14 +74,22 @@ func (r *PostgresIrrigationEventRepository) scanEvents(query string, arg int, li
 		err := rows.Scan(
 			&e.ID, &e.ZoneID, &e.FieldID, &devID, &e.Status,
 			&e.StartTime, &endTime, &e.DurationMinutes, &e.WaterUsageLiters,
-			&e.TriggerType, &triggeredBy, &e.CreatedAt,
+			&e.TriggerType, &triggeredBy, &e.AccountID, &e.CreatedAt,
 		)
 		if err != nil {
 			return nil, err
 		}
-		if devID.Valid { v := int(devID.Int64); e.DeviceID = &v }
-		if endTime.Valid { e.EndTime = &endTime.Time }
-		if triggeredBy.Valid { v := int(triggeredBy.Int64); e.TriggeredBy = &v }
+		if devID.Valid {
+			v := int(devID.Int64)
+			e.DeviceID = &v
+		}
+		if endTime.Valid {
+			e.EndTime = &endTime.Time
+		}
+		if triggeredBy.Valid {
+			v := int(triggeredBy.Int64)
+			e.TriggeredBy = &v
+		}
 		events = append(events, e)
 	}
 	if events == nil {

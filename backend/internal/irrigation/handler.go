@@ -26,9 +26,9 @@ type updateZoneRequest struct {
 }
 
 type IrrigationHandler struct {
-	repo     IrrigationZoneRepository
+	repo      IrrigationZoneRepository
 	eventRepo IrrigationEventRepository
-	cmds     CommandSender
+	cmds      CommandSender
 }
 
 func NewIrrigationHandler(repo IrrigationZoneRepository, eventRepo IrrigationEventRepository, cmds CommandSender) *IrrigationHandler {
@@ -48,9 +48,13 @@ func (h *IrrigationHandler) sendZoneCommand(zone *IrrigationZone, command string
 
 func (h *IrrigationHandler) List(c *gin.Context) {
 	userID, _ := c.Get("user_id")
+	accountID, ok := middleware.MustGetAccountID(c)
+	if !ok {
+		return
+	}
 	fieldID, _ := strconv.Atoi(c.DefaultQuery("field_id", "0"))
 
-	zones, err := h.repo.ListByFieldID(fieldID, userID.(int))
+	zones, err := h.repo.ListByFieldID(fieldID, accountID, userID.(int))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -65,6 +69,10 @@ func (h *IrrigationHandler) List(c *gin.Context) {
 
 func (h *IrrigationHandler) Create(c *gin.Context) {
 	userID, _ := c.Get("user_id")
+	accountID, ok := middleware.MustGetAccountID(c)
+	if !ok {
+		return
+	}
 
 	var req createZoneRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -81,6 +89,7 @@ func (h *IrrigationHandler) Create(c *gin.Context) {
 		Status:         ZoneStatusIdle,
 		RuntimeMinutes: 0,
 		FlowRateLPM:    req.FlowRateLPM,
+		AccountID:      accountID,
 		UserID:         userID.(int),
 	}
 
@@ -105,11 +114,11 @@ func (h *IrrigationHandler) Update(c *gin.Context) {
 		return
 	}
 
-	userID, ok := middleware.MustGetUserID(c)
+	accountID, ok := middleware.MustGetAccountID(c)
 	if !ok {
 		return
 	}
-	if existing.UserID != userID {
+	if existing.AccountID != accountID {
 		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
 		return
 	}
@@ -159,16 +168,16 @@ func (h *IrrigationHandler) Delete(c *gin.Context) {
 		return
 	}
 
-	userID, ok := middleware.MustGetUserID(c)
+	accountID, ok := middleware.MustGetAccountID(c)
 	if !ok {
 		return
 	}
-	if existing.UserID != userID {
+	if existing.AccountID != accountID {
 		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
 		return
 	}
 
-	if err := h.repo.Delete(id); err != nil {
+	if err := h.repo.Delete(id, accountID); err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
 	}
@@ -194,7 +203,11 @@ func (h *IrrigationHandler) Start(c *gin.Context) {
 		return
 	}
 
-	if zone.UserID != userID {
+	accountID, ok := middleware.MustGetAccountID(c)
+	if !ok {
+		return
+	}
+	if zone.AccountID != accountID {
 		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
 		return
 	}
@@ -222,6 +235,7 @@ func (h *IrrigationHandler) Start(c *gin.Context) {
 		StartTime:   time.Now(),
 		TriggerType: TriggerManual,
 		TriggeredBy: &userID,
+		AccountID:   accountID,
 	}
 	if err := h.eventRepo.Create(&event); err != nil {
 		log.Printf("Failed to log irrigation start event: %v", err)
@@ -244,11 +258,11 @@ func (h *IrrigationHandler) Stop(c *gin.Context) {
 		return
 	}
 
-	userID, ok := middleware.MustGetUserID(c)
+	accountID, ok := middleware.MustGetAccountID(c)
 	if !ok {
 		return
 	}
-	if zone.UserID != userID {
+	if zone.AccountID != accountID {
 		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
 		return
 	}
@@ -292,11 +306,11 @@ func (h *IrrigationHandler) Retry(c *gin.Context) {
 		return
 	}
 
-	userID, ok := middleware.MustGetUserID(c)
+	accountID, ok := middleware.MustGetAccountID(c)
 	if !ok {
 		return
 	}
-	if zone.UserID != userID {
+	if zone.AccountID != accountID {
 		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
 		return
 	}
@@ -321,6 +335,11 @@ func (h *IrrigationHandler) Retry(c *gin.Context) {
 }
 
 func (h *IrrigationHandler) ListEvents(c *gin.Context) {
+	accountID, ok := middleware.MustGetAccountID(c)
+	if !ok {
+		return
+	}
+
 	zoneID, _ := strconv.Atoi(c.DefaultQuery("zone_id", "0"))
 	fieldID, _ := strconv.Atoi(c.DefaultQuery("field_id", "0"))
 	limit := 20
@@ -329,9 +348,9 @@ func (h *IrrigationHandler) ListEvents(c *gin.Context) {
 	var err error
 
 	if zoneID > 0 {
-		events, err = h.eventRepo.ListByZoneID(zoneID, limit)
+		events, err = h.eventRepo.ListByZoneID(zoneID, accountID, limit)
 	} else if fieldID > 0 {
-		events, err = h.eventRepo.ListByFieldID(fieldID, limit)
+		events, err = h.eventRepo.ListByFieldID(fieldID, accountID, limit)
 	} else {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "zone_id or field_id is required"})
 		return
